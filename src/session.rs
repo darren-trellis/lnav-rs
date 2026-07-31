@@ -56,7 +56,10 @@ impl Session {
         }
     }
 
-    pub fn into_filters(self) -> Result<(Vec<Filter>, bool)> {
+    pub fn into_filters(
+        self,
+        case_mode: crate::config::CaseMode,
+    ) -> Result<(Vec<Filter>, bool)> {
         let mut out = Vec::with_capacity(self.filters.len());
         for f in self.filters {
             let kind = match f.kind.as_str() {
@@ -64,7 +67,7 @@ impl Session {
                 "out" => FilterKind::Exclude,
                 other => anyhow::bail!("unknown filter kind '{other}' (expected in|out)"),
             };
-            let mut filter = Filter::new(kind, &f.pattern)
+            let mut filter = Filter::new(kind, &f.pattern, case_mode)
                 .with_context(|| format!("invalid filter regex /{}/", f.pattern))?;
             filter.enabled = f.enabled;
             out.push(filter);
@@ -155,7 +158,9 @@ mod tests {
         };
         let raw = toml::to_string(&session).unwrap();
         let parsed: Session = toml::from_str(&raw).unwrap();
-        let (filters, enabled) = parsed.into_filters().unwrap();
+        let (filters, enabled) = parsed
+            .into_filters(crate::config::CaseMode::Insensitive)
+            .unwrap();
         assert!(!enabled);
         assert_eq!(filters.len(), 2);
         assert_eq!(filters[0].label(), "out");

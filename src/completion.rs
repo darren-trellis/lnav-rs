@@ -56,6 +56,7 @@ const SET_KEYS: &[(&str, &str)] = &[
     ("relative_line_numbers", "on|off"),
     ("scroll_lines", "mouse wheel step"),
     ("timestamp_format", "strftime or raw"),
+    ("case_mode", "sensitive|insensitive|smart"),
     ("session_filters", "on|off"),
     ("session_stdin", "on|off"),
 ];
@@ -295,6 +296,13 @@ fn set_suggestions(rest: &str, rest_from: usize, _app: &App) -> Vec<Suggestion> 
         | "relative_line_numbers"
         | "session_filters"
         | "session_stdin" => value_suggestions(value, value_from, &bool_opts(), "bool"),
+        "case_mode" => {
+            let opts = ["sensitive", "insensitive", "smart", "smartcase"]
+                .into_iter()
+                .map(str::to_string)
+                .collect::<Vec<_>>();
+            value_suggestions(value, value_from, &opts, "case")
+        }
         "timestamp_format" => {
             let presets = [
                 "%H:%M:%S".to_string(),

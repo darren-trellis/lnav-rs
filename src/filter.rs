@@ -2,6 +2,7 @@ use std::collections::HashSet;
 
 use regex::{Regex, RegexBuilder};
 
+use crate::config::CaseMode;
 use crate::model::LogEntry;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -21,17 +22,19 @@ pub struct Filter {
 }
 
 impl Filter {
-    pub fn new(kind: FilterKind, pattern: &str) -> Result<Self, regex::Error> {
-        // Match `/` search: case-insensitive regex.
-        let regex = RegexBuilder::new(pattern)
-            .case_insensitive(true)
-            .build()?;
+    pub fn new(kind: FilterKind, pattern: &str, case_mode: CaseMode) -> Result<Self, regex::Error> {
+        let regex = compile_regex(pattern, case_mode)?;
         Ok(Self {
             kind,
             pattern: pattern.to_string(),
             regex,
             enabled: true,
         })
+    }
+
+    pub fn recompile(&mut self, case_mode: CaseMode) -> Result<(), regex::Error> {
+        self.regex = compile_regex(&self.pattern, case_mode)?;
+        Ok(())
     }
 
     pub fn matches(&self, entry: &LogEntry) -> bool {
@@ -44,6 +47,12 @@ impl Filter {
             FilterKind::Exclude => "out",
         }
     }
+}
+
+pub fn compile_regex(pattern: &str, case_mode: CaseMode) -> Result<Regex, regex::Error> {
+    RegexBuilder::new(pattern)
+        .case_insensitive(case_mode.ignore_case(pattern))
+        .build()
 }
 
 /// lnav semantics:
@@ -108,7 +117,7 @@ mod tests {
 
     #[test]
     fn filter_in_requires_match_when_present() {
-        let filters = vec![Filter::new(FilterKind::Include, "error").unwrap()];
+        let filters = vec![Filter::new(FilterKind::Include, "error", CaseMode::Insensitive).unwrap()];
         assert!(!entry_passes(&filters, true, &entry("info ok")));
         assert!(entry_passes(&filters, true, &entry("got error here")));
         assert!(entry_passes(&filters, true, &entry("got ERROR here")));
@@ -116,7 +125,7 @@ mod tests {
 
     #[test]
     fn filter_out_hides_matches() {
-        let filters = vec![Filter::new(FilterKind::Exclude, "spam").unwrap()];
+        let filters = vec![Filter::new(FilterKind::Exclude, "spam", CaseMode::Insensitive).unwrap()];
         assert!(!entry_passes(&filters, true, &entry("spam message")));
         assert!(entry_passes(&filters, true, &entry("real message")));
     }
@@ -124,11 +133,25 @@ mod tests {
     #[test]
     fn include_and_exclude_combine() {
         let filters = vec![
-            Filter::new(FilterKind::Include, "http").unwrap(),
-            Filter::new(FilterKind::Exclude, "health").unwrap(),
+            Filter::new(FilterKind::Include, "http", CaseMode::Insensitive).unwrap(),
+            Filter::new(FilterKind::Exclude, "health", CaseMode::Insensitive).unwrap(),
         ];
         assert!(entry_passes(&filters, true, &entry("http request /api")));
         assert!(!entry_passes(&filters, true, &entry("http health")));
         assert!(!entry_passes(&filters, true, &entry("db query")));
+    }
+
+    #[test]
+    fn smartcase_sensitive_when_uppercase() {
+        let f = Filter::new(FilterKind::Include, "ERROR", CaseMode::Smart).unwrap();
+        assert!(f.matches(&entry("got ERROR here")));
+        assert!(!f.matches(&entry("got error here")));
+    }
+
+    #[test]
+    fn smartcase_insensitive_when_lowercase() {
+        let f = Filter::new(FilterKind::Include, "error", CaseMode::Smart).unwrap();
+        assert!(f.matches(&entry("got ERROR here")));
+        assert!(f.matches(&entry("got error here")));
     }
 }

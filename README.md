@@ -98,6 +98,7 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 | `:set relative_line_numbers on\|off` | Show relative line numbers (vim-style) |
 | `:set scroll_lines N` | Mouse wheel step (default 1) |
 | `:set timestamp_format …` | strftime for timestamp columns (`raw` = original) |
+| `:set case_mode …` | `sensitive` / `insensitive` / `smart` (search + filters) |
 | `:set session_filters on\|off` | Persist filters per log file (default on) |
 | `:set session_stdin on\|off` | Persist filters for stdin (default on) |
 | `:w` / `:write` | Write current settings to config |
@@ -130,6 +131,7 @@ line_numbers = false
 relative_line_numbers = false
 scroll_lines = 1
 timestamp_format = "%H:%M:%S"
+case_mode = "insensitive"   # or "sensitive" | "smart"
 session_filters = true
 session_stdin = true
 
@@ -159,6 +161,8 @@ D = "delete"
 `[[columns]]` define the list layout. `source` is a builtin (`level`, `timestamp`, `message`, `raw`, `line`, `format`) or a field path (`annotations.url`, `items.0.id`). Columns without `width` auto-size to the widest value in the current viewport so fields share an X position. Set `width` to fix/truncate; `align` is `"left"` (default), `"center"`, or `"right"`. `padding` is spaces around the cell (`1` for both sides, or `{ left = 1, right = 2 }`).
 
 `timestamp_format` uses [chrono strftime](https://docs.rs/chrono/latest/chrono/format/strftime/index.html) (default `%H:%M:%S`). Set to `raw` to keep the original log string.
+
+`case_mode` controls `/` search and `:filter` matching: `insensitive` (default), `sensitive`, or `smart` / `smartcase` (insensitive unless the pattern has an uppercase letter).
 
 Filters persist under `~/.local/share/lnav-rs/sessions/` (one file per log path hash; stdin uses `stdin.toml`). `session_filters` / `session_stdin` control that (both default on). Turn `session_stdin` off if you don’t want every pipe to share one filter set.
 

@@ -351,7 +351,7 @@ fn add_filter(app: &mut App, kind: FilterKind, pattern: &str) {
     } else {
         pattern.to_string()
     };
-    match Filter::new(kind, &pattern) {
+    match Filter::new(kind, &pattern, app.config.case_mode) {
         Ok(filter) => {
             let label = filter.label();
             app.filters.push(filter);
@@ -479,7 +479,7 @@ fn set_option(app: &mut App, rest: &str) {
     let (key, value) = split_cmd(rest);
     if key.is_empty() {
         app.status_message = Some(
-            "usage: :set theme|follow|wrap_details|line_numbers|relative_line_numbers|scroll_lines|timestamp_format|session_filters|session_stdin VALUE"
+            "usage: :set theme|follow|wrap_details|line_numbers|relative_line_numbers|scroll_lines|timestamp_format|case_mode|session_filters|session_stdin VALUE"
                 .into(),
         );
         return;
@@ -514,6 +514,26 @@ fn set_option(app: &mut App, rest: &str) {
         "session_stdin" => set_bool_option(app, "session_stdin", value, |app, v| {
             app.config.session_stdin = v;
         }),
+        "case_mode" => {
+            if value.is_empty() {
+                app.status_message =
+                    Some(format!("case_mode={}", app.config.case_mode.as_str()));
+                return;
+            }
+            match crate::config::CaseMode::parse(value) {
+                Some(mode) => {
+                    app.config.case_mode = mode;
+                    app.status_message = app
+                        .apply_case_mode()
+                        .or_else(|| Some(format!("case_mode={}", mode.as_str())));
+                }
+                None => {
+                    app.status_message = Some(
+                        "usage: :set case_mode sensitive|insensitive|smart".into(),
+                    );
+                }
+            }
+        }
         "scroll_lines" => {
             if value.is_empty() {
                 app.status_message =

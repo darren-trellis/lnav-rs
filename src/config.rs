@@ -155,6 +155,48 @@ impl ThemeConfig {
     }
 }
 
+/// Case matching for `/` search and `:filter` regexes.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum CaseMode {
+    /// Always case-sensitive.
+    Sensitive,
+    /// Always case-insensitive.
+    #[default]
+    Insensitive,
+    /// Case-insensitive unless the pattern contains an uppercase letter (vim smartcase).
+    #[serde(alias = "smartcase")]
+    Smart,
+}
+
+impl CaseMode {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Sensitive => "sensitive",
+            Self::Insensitive => "insensitive",
+            Self::Smart => "smart",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        match s.to_ascii_lowercase().as_str() {
+            "sensitive" => Some(Self::Sensitive),
+            "insensitive" | "ignore" => Some(Self::Insensitive),
+            "smart" | "smartcase" => Some(Self::Smart),
+            _ => None,
+        }
+    }
+
+    /// Whether the compiled regex should ignore case for this pattern.
+    pub fn ignore_case(self, pattern: &str) -> bool {
+        match self {
+            Self::Sensitive => false,
+            Self::Insensitive => true,
+            Self::Smart => !pattern.chars().any(|c| c.is_uppercase()),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
@@ -184,6 +226,10 @@ pub struct Config {
     /// strftime format for timestamp columns (chrono syntax), or `"raw"`.
     #[serde(default = "default_timestamp_format")]
     pub timestamp_format: String,
+
+    /// Case matching for search and filters: `sensitive`, `insensitive`, or `smart`.
+    #[serde(default)]
+    pub case_mode: CaseMode,
 
     /// List-view columns. Empty / missing → default level / timestamp / message.
     #[serde(default)]
@@ -251,6 +297,7 @@ impl Default for Config {
             relative_line_numbers: false,
             scroll_lines: default_scroll_lines(),
             timestamp_format: default_timestamp_format(),
+            case_mode: CaseMode::default(),
             columns: default_columns(),
             keys: keys::defaults(),
             session_filters: true,
@@ -380,6 +427,9 @@ impl Config {
         }
         if self.timestamp_format != defaults.timestamp_format {
             body.push_str(&format!("timestamp_format = {:?}\n", self.timestamp_format));
+        }
+        if self.case_mode != defaults.case_mode {
+            body.push_str(&format!("case_mode = {:?}\n", self.case_mode.as_str()));
         }
         if self.session_filters != defaults.session_filters {
             body.push_str(&format!("session_filters = {}\n", self.session_filters));
@@ -641,9 +691,21 @@ mod tests {
         assert!(!raw.contains("line_numbers = "));
         assert!(!raw.contains("session_filters = "));
         assert!(!raw.contains("session_stdin = "));
+        assert!(!raw.contains("case_mode = "));
         assert!(!raw.contains("[[columns]]"));
         assert!(raw.contains("[theme]"));
         let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn case_mode_smartcase_and_aliases() {
+        assert!(!CaseMode::Sensitive.ignore_case("error"));
+        assert!(CaseMode::Insensitive.ignore_case("ERROR"));
+        assert!(CaseMode::Smart.ignore_case("error"));
+        assert!(!CaseMode::Smart.ignore_case("Error"));
+        assert_eq!(CaseMode::parse("smartcase"), Some(CaseMode::Smart));
+        let cfg: Config = toml::from_str("case_mode = \"smartcase\"\n").unwrap();
+        assert_eq!(cfg.case_mode, CaseMode::Smart);
     }
 
     #[test]

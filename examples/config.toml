@@ -1,4 +1,5 @@
 line_numbers = true
+# case_mode = "smart"
 # session_filters = true
 # session_stdin = true
 

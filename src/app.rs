@@ -9,7 +9,7 @@ use crossterm::event::{
 };
 use crossterm::execute;
 use ratatui::layout::Rect;
-use regex::{Regex, RegexBuilder};
+use regex::Regex;
 
 use crate::command;
 use crate::completion::{self, CompletionState};
@@ -117,7 +117,7 @@ impl App {
 
         let mut status_message = None;
         let (filters, filtering_enabled) = match session::load(&source, &config) {
-            Ok(Some(s)) => match s.into_filters() {
+            Ok(Some(s)) => match s.into_filters(config.case_mode) {
                 Ok(pair) => pair,
                 Err(err) => {
                     status_message = Some(format!("session: {err:#}"));
@@ -867,6 +867,21 @@ impl App {
         self.search_cursor = None;
     }
 
+    /// Recompile filters/search after `case_mode` changes. Returns an error message if a filter fails.
+    pub fn apply_case_mode(&mut self) -> Option<String> {
+        let mode = self.config.case_mode;
+        for f in &mut self.filters {
+            if let Err(err) = f.recompile(mode) {
+                return Some(format!("filter /{}/: {err}", f.pattern));
+            }
+        }
+        self.rebuild_visible(None);
+        if !self.search_query.is_empty() {
+            self.run_search();
+        }
+        None
+    }
+
     pub fn run_search(&mut self) {
         if self.search_query.is_empty() {
             self.search_regex = None;
@@ -875,10 +890,7 @@ impl App {
             self.search_cursor = None;
             return;
         }
-        let regex = match RegexBuilder::new(&self.search_query)
-            .case_insensitive(true)
-            .build()
-        {
+        let regex = match filter::compile_regex(&self.search_query, self.config.case_mode) {
             Ok(re) => re,
             Err(err) => {
                 self.search_regex = None;
