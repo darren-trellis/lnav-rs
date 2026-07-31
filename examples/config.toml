@@ -1,0 +1,54 @@
+# Example lnav-rs config
+# Copy to: ~/.config/lnav-rs/config.toml
+# User themes go in: ~/.config/lnav-rs/themes/<name>.toml
+
+[theme]
+name = "catppuccin"
+# [theme.colors]
+# background = "#11111b"
+# selection_bg = "#313244"
+# dim = { fg = "#6c7086", bg = "#313244" }
+# [theme.levels]
+# error = { fg = "#1e1e2e", bg = "#f38ba8" }
+# warn = "#f9e2af"
+# [theme.ui]
+# timestamp = { fg = "#89b4fa", bg = "#11111b" }
+# bool = "#cba6f7"
+
+follow = true
+wrap_details = true
+line_numbers = false
+relative_line_numbers = false
+scroll_lines = 1
+
+# chrono/strftime for timestamp columns, or "raw" for the original string
+timestamp_format = "%H:%M:%S"
+
+# List-view columns. Builtins: level timestamp message raw line format
+# Or a field path: annotations.url, items.0.id
+# Omit width to auto-align with other rows in the viewport.
+[[columns]]
+source = "level"
+width = 5
+
+[[columns]]
+source = "timestamp"
+
+[[columns]]
+source = "message"
+
+[[columns]]
+source = "annotations.url"
+
+# Keybindings map keys → commands. Omitted keys keep defaults.
+# Empty string unbinds. Special keys: enter esc up down home end pagedown pageup space
+# Modifiers: C-c
+[keys]
+q = "quit"
+d = "hide"
+D = "delete"
+j = "down"
+k = "up"
+enter = "details"
+"/" = "search"
+":" = "command-mode"
