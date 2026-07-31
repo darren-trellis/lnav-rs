@@ -62,6 +62,10 @@ pub fn catalog() -> &'static [CommandInfo] {
             help: "on|off|toggle details tree item",
         },
         CommandInfo {
+            name: "copy",
+            help: "copy focused details value to clipboard",
+        },
+        CommandInfo {
             name: "close",
             help: "close details overlay",
         },
@@ -245,6 +249,10 @@ fn execute_inner(app: &mut App, raw: &str, invoke: Invoke) {
         "fold" => {
             app.cancel_pending_op();
             fold_command(app, rest);
+        }
+        "copy" => {
+            app.cancel_pending_op();
+            app.copy_overlay_value();
         }
         "close" => {
             if app.pending_op.is_some() || app.count.is_some() {

@@ -848,6 +848,39 @@ impl App {
         self.move_overlay_cursor(delta);
     }
 
+    pub fn copy_overlay_value(&mut self) {
+        if !self.show_overlay || !self.overlay_focused {
+            self.status_message = Some("focus details first (Enter)".into());
+            return;
+        }
+        let cursor = self.overlay_cursor;
+        let value = {
+            let Some(entry) = self.selected_entry() else {
+                return;
+            };
+            let lines =
+                details::build_lines(entry, &self.theme, &self.config, &self.overlay_folded);
+            lines.get(cursor).and_then(|l| l.copy_value.clone())
+        };
+        let Some(value) = value else {
+            self.status_message = Some("nothing to copy".into());
+            return;
+        };
+        match copy_to_clipboard(&value) {
+            Ok(()) => {
+                let preview = if value.len() > 60 {
+                    format!("{}…", &value[..57])
+                } else {
+                    value
+                };
+                self.status_message = Some(format!("copied {preview}"));
+            }
+            Err(err) => {
+                self.status_message = Some(format!("copy failed: {err:#}"));
+            }
+        }
+    }
+
     pub fn set_overlay_fold(&mut self, action: FoldAction) {
         if !self.show_overlay || !self.overlay_focused {
             self.status_message = Some("focus details first (Enter)".into());
@@ -1207,4 +1240,10 @@ fn contains(area: Rect, col: u16, row: u16) -> bool {
         && col < area.x.saturating_add(area.width)
         && row >= area.y
         && row < area.y.saturating_add(area.height)
+}
+
+fn copy_to_clipboard(text: &str) -> anyhow::Result<()> {
+    let mut clipboard = arboard::Clipboard::new()?;
+    clipboard.set_text(text)?;
+    Ok(())
 }

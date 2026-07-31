@@ -23,12 +23,16 @@ pub struct DetailLine {
     pub path: FoldPath,
     /// True when this row can be folded (object/array with children).
     pub foldable: bool,
+    /// Value copied by `c` / `:copy` (without tree chrome).
+    pub copy_value: Option<String>,
 }
 
 impl DetailLine {
     fn plain(text: impl Into<String>, style: Style) -> Self {
+        let text = text.into();
         Self {
-            spans: vec![Span::styled(text.into(), style)],
+            copy_value: Some(text.clone()),
+            spans: vec![Span::styled(text, style)],
             path: Vec::new(),
             foldable: false,
         }
@@ -39,6 +43,26 @@ impl DetailLine {
             .iter()
             .map(|s| s.content.as_ref())
             .collect()
+    }
+}
+
+fn field_copy_value(value: &FieldValue) -> String {
+    match value {
+        FieldValue::String(s) => s.clone(),
+        FieldValue::Nested(s) => s.clone(),
+        other => other.display(),
+    }
+}
+
+fn json_copy_value(value: &Value) -> String {
+    match value {
+        Value::String(s) => s.clone(),
+        Value::Null => "null".into(),
+        Value::Bool(b) => b.to_string(),
+        Value::Number(n) => n.to_string(),
+        Value::Array(_) | Value::Object(_) => {
+            serde_json::to_string_pretty(value).unwrap_or_else(|_| value.to_string())
+        }
     }
 }
 
@@ -69,6 +93,7 @@ pub fn build_lines(
         ],
         path: Vec::new(),
         foldable: false,
+        copy_value: Some(entry.raw.clone()),
     });
 
     if entry.fields.is_empty() {
@@ -184,6 +209,7 @@ fn push_field(
                         spans,
                         path: path.clone(),
                         foldable: true,
+                        copy_value: Some(json_copy_value(&v)),
                     });
                     if !is_folded {
                         let child_prefix = if prefix.is_empty() {
@@ -200,6 +226,7 @@ fn push_field(
     }
 
     let value_style = theme.field_value_style(value, surface);
+    let copy_value = field_copy_value(value);
     let rendered = match value {
         FieldValue::String(s) => format!("\"{s}\""),
         FieldValue::Nested(s) => s.clone(),
@@ -221,16 +248,23 @@ fn push_field(
                     spans,
                     path: path.clone(),
                     foldable: false,
+                    copy_value: Some(copy_value),
                 });
             }
             for part in parts {
-                lines.push(DetailLine::plain(part.to_string(), style));
+                lines.push(DetailLine {
+                    spans: vec![Span::styled(part.to_string(), style)],
+                    path: Vec::new(),
+                    foldable: false,
+                    copy_value: None,
+                });
             }
         } else {
             lines.push(DetailLine {
                 spans,
                 path,
                 foldable: false,
+                copy_value: Some(copy_value),
             });
         }
     } else {
@@ -245,6 +279,7 @@ fn push_field(
             ],
             path,
             foldable: false,
+            copy_value: Some(copy_value),
         });
     }
 }
@@ -295,13 +330,16 @@ fn push_json_value(
         other => {
             let fv = json_value_to_field(other);
             let style = theme.field_value_style(&fv, theme.overlay_bg);
-            lines.push(DetailLine::plain(
-                match &fv {
-                    FieldValue::String(s) => format!("\"{s}\""),
-                    _ => fv.display(),
-                },
-                style,
-            ));
+            let text = match &fv {
+                FieldValue::String(s) => format!("\"{s}\""),
+                _ => fv.display(),
+            };
+            lines.push(DetailLine {
+                spans: vec![Span::styled(text, style)],
+                path: parent.to_vec(),
+                foldable: false,
+                copy_value: Some(json_copy_value(other)),
+            });
         }
     }
 }
@@ -351,6 +389,7 @@ fn push_json_entry(
                 spans,
                 path: path.clone(),
                 foldable: true,
+                copy_value: Some(json_copy_value(value)),
             });
             if !is_folded {
                 let keys: Vec<&String> = map.keys().collect();
@@ -397,6 +436,7 @@ fn push_json_entry(
                 spans,
                 path: path.clone(),
                 foldable: true,
+                copy_value: Some(json_copy_value(value)),
             });
             if !is_folded {
                 for (i, item) in arr.iter().enumerate() {
@@ -432,6 +472,7 @@ fn push_json_entry(
                 ],
                 path,
                 foldable: false,
+                copy_value: Some(json_copy_value(other)),
             });
         }
     }
@@ -533,6 +574,26 @@ mod tests {
         assert_eq!(desired_height(100, 50, 10), 10);
         assert_eq!(desired_height(2, 50, 24), 4);
         assert!(desired_height(20, 10, 24) <= 7);
+    }
+
+    #[test]
+    fn copy_value_is_raw_field_value() {
+        let mut cfg = Config::default();
+        cfg.details_json_tree = true;
+        let lines = build_lines(&sample_entry(), &theme(), &cfg, &HashSet::new());
+        let url = lines
+            .iter()
+            .find(|l| l.path.last().map(|s| s.as_str()) == Some("url"))
+            .unwrap();
+        assert_eq!(url.copy_value.as_deref(), Some("http://x"));
+        let annotations = lines
+            .iter()
+            .find(|l| l.path == ["annotations".to_string()])
+            .unwrap();
+        assert!(annotations
+            .copy_value
+            .as_ref()
+            .is_some_and(|v| v.contains("url") && v.contains("tags")));
     }
 
     #[test]

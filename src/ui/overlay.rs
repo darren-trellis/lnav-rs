@@ -66,7 +66,7 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
         }
     };
     let hint = if focused {
-        " j/k move · Tab fold · / search · Esc close "
+        " j/k move · Tab fold · c copy · / search · Esc close "
     } else {
         " Enter focus · Esc close "
     };

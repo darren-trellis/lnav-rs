@@ -52,6 +52,7 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 | `G` / `End` | `bottom` |
 | `Enter` | `details` (open/focus details; again to close when focused) |
 | `Tab` | `fold toggle` (fold/unfold JSON tree item in details) |
+| `c` | `copy` (copy focused details value to clipboard) |
 | `Esc` | `close` |
 | `/` | `search` (case-insensitive regex; highlights matched text) |
 | `:` | `command-mode` |
@@ -86,6 +87,7 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 | `:filter out [PATTERN]` | Hide lines matching regex (omit PATTERN to use list `/` search, not details search) |
 | `:filter on\|off\|toggle` | Enable/disable/toggle filtering |
 | `:fold on\|off\|toggle` | Fold/unfold details tree item under cursor |
+| `:copy` | Copy focused details value to the clipboard |
 | `:delete-filter N` | Remove filter by index |
 | `:clear-filters` | Remove all filters |
 | `:clear-hidden` | Restore lines hidden with `d` |
@@ -172,7 +174,7 @@ D = "delete"
 
 `case_mode` controls `/` search and `:filter` matching: `smart` / `smartcase` (default; insensitive unless the pattern has an uppercase letter), `insensitive`, or `sensitive`.
 
-Details: `Enter` opens and focuses the overlay — the selection highlight moves into details (`j`/`k` move the cursor; Esc closes). `Tab` runs `fold toggle` on the tree item under the cursor (`:fold on|off|toggle`; rebind with `tab = "fold toggle"`). With details focused, `/` searches inside the overlay (`n`/`N` cycle matches). Nested JSON fields render as a tree when `details_json_tree` is on (`details_tab_width` sets indent per level). Overlay height grows with content up to `details_max_height` (and screen space).
+Details: `Enter` opens and focuses the overlay — the selection highlight moves into details (`j`/`k` move the cursor; Esc closes). `Tab` runs `fold toggle` on the tree item under the cursor (`:fold on|off|toggle`; rebind with `tab = "fold toggle"`). `c` / `:copy` copies the focused item’s value (strings without quotes; objects/arrays as pretty JSON). With details focused, `/` searches inside the overlay (`n`/`N` cycle matches). Nested JSON fields render as a tree when `details_json_tree` is on (`details_tab_width` sets indent per level). Overlay height grows with content up to `details_max_height` (and screen space).
 
 Filters persist under `~/.local/share/lnav-rs/sessions/` (one file per log path hash; stdin uses `stdin.toml`). `session_filters` / `session_stdin` control that (both default on). Turn `session_stdin` off if you don’t want every pipe to share one filter set.
 
