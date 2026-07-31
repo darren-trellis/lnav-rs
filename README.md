@@ -101,7 +101,6 @@ In `/` mode, **Up/Down** recall search history (shared for list and details sear
 | `:follow on\|off\|toggle` | Enable/disable/toggle live follow |
 | `:view details [on\|off\|toggle]` | Open/close/toggle details overlay |
 | `:view sidebar [on\|off\|toggle]` | Show/hide/toggle filters sidebar |
-| `:focus on\|off\|toggle` | Focus details / list / switch between them |
 | `:copy` | Copy focused details value to the clipboard |
 | `:hide clear` | Restore lines hidden with `d` |
 | `:theme` | Show current theme |
@@ -215,7 +214,7 @@ Filters persist under `~/.local/share/lnav-rs/sessions/` (one file per log path 
 
 `[theme]` selects the theme (`name`) and optional `[theme.colors]` / `[theme.levels]` / `[theme.ui]` patches (same keys as `themes/*.toml`). Text colors (`foreground`, `border`, `window_focus_border`, `search_match`, `dim`, levels, and `[ui]` color keys) accept a hex string (fg only) or `{ fg = "...", bg = "..." }`. Surface keys (`background`, `overlay_bg`, `selection_*`, `status_*`) stay plain color strings. Focused chrome: `window_focus_border` is the border of the focused pane (list or details); unfocused panes use `border`. List column separators: `ui.column_border` (color), `ui.column_border_width` (`0` = space between columns; `N` draws `N`× `│`), and `ui.column_border_padding` (`1` or `{ left, right }`, like column `padding`). Unknown keys, invalid colors, unknown theme names, and unknown keybinding commands are rejected.
 
-`[keys]` overrides defaults (merged). Use `key = ""` to unbind. Special key names: `enter`, `esc`, `up`, `down`, `home`, `end`, `pagedown`, `pageup`, `space`, `C-c`. `[details_keys]` overrides `[keys]` while the details overlay is focused (default: `space = "fold toggle"`). `[sidebar_keys]` overrides `[keys]` while the filters sidebar is focused (default: `d = "filter delete"`). An empty binding in either contextual section blocks fallback to the same key in `[keys]`. Navigation helpers (`nav`, `page`, `match`) are for keybindings only and are omitted from `:` completions.
+`[keys]` overrides defaults (merged). Use `key = ""` to unbind. Special key names: `enter`, `esc`, `up`, `down`, `home`, `end`, `pagedown`, `pageup`, `space`, `C-c`. `[details_keys]` overrides `[keys]` while the details overlay is focused (default: `space = "fold toggle"`). `[sidebar_keys]` overrides `[keys]` while the filters sidebar is focused (default: `d = "filter delete"`). An empty binding in either contextual section blocks fallback to the same key in `[keys]`. Keybinding-only commands omitted from `:` completions: `nav`, `page`, `match`, `focus`, `search`, `command-mode`.
 
 Create one with:
 

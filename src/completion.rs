@@ -516,8 +516,7 @@ mod tests {
         assert!(texts.contains(&"config"));
         let copy = texts.iter().position(|t| *t == "copy").unwrap();
         let config = texts.iter().position(|t| *t == "config").unwrap();
-        let command_mode = texts.iter().position(|t| *t == "command-mode").unwrap();
-        assert!(command_mode < config && config < copy);
+        assert!(config < copy);
     }
 
     #[test]
@@ -539,7 +538,18 @@ mod tests {
         assert!(items.iter().any(|s| s.text == "delete"));
         assert!(items.iter().any(|s| s.text == "config"));
         assert!(items.iter().all(|s| {
-            !matches!(s.text.as_str(), "nav" | "page" | "match" | "q" | "d" | "D")
+            !matches!(
+                s.text.as_str(),
+                "nav"
+                    | "page"
+                    | "match"
+                    | "focus"
+                    | "search"
+                    | "command-mode"
+                    | "q"
+                    | "d"
+                    | "D"
+            )
         }));
     }
 
