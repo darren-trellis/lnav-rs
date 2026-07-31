@@ -131,7 +131,7 @@ line_numbers = false
 relative_line_numbers = false
 scroll_lines = 1
 timestamp_format = "%H:%M:%S"
-case_mode = "insensitive"   # or "sensitive" | "smart"
+case_mode = "smart"   # or "sensitive" | "insensitive"
 session_filters = true
 session_stdin = true
 
@@ -162,7 +162,7 @@ D = "delete"
 
 `timestamp_format` uses [chrono strftime](https://docs.rs/chrono/latest/chrono/format/strftime/index.html) (default `%H:%M:%S`). Set to `raw` to keep the original log string.
 
-`case_mode` controls `/` search and `:filter` matching: `insensitive` (default), `sensitive`, or `smart` / `smartcase` (insensitive unless the pattern has an uppercase letter).
+`case_mode` controls `/` search and `:filter` matching: `smart` / `smartcase` (default; insensitive unless the pattern has an uppercase letter), `insensitive`, or `sensitive`.
 
 Filters persist under `~/.local/share/lnav-rs/sessions/` (one file per log path hash; stdin uses `stdin.toml`). `session_filters` / `session_stdin` control that (both default on). Turn `session_stdin` off if you don’t want every pipe to share one filter set.
 

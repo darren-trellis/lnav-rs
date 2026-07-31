@@ -162,9 +162,9 @@ pub enum CaseMode {
     /// Always case-sensitive.
     Sensitive,
     /// Always case-insensitive.
-    #[default]
     Insensitive,
     /// Case-insensitive unless the pattern contains an uppercase letter (vim smartcase).
+    #[default]
     #[serde(alias = "smartcase")]
     Smart,
 }
