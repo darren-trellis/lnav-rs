@@ -272,22 +272,7 @@ impl Config {
         }
         let _ = fs::create_dir_all(Self::themes_dir());
 
-        let mut body = format!(
-            "# lnav-rs config\n\
-             # Path: {}\n\
-             # User themes: {}/<name>.toml\n\
-             #\n\
-             # columns: list-view layout\n\
-             #   source = builtin (level|timestamp|message|raw|line|format)\n\
-             #            or field path (annotations.url, items.0.id)\n\
-             #   width  = optional fixed width; omit to auto-align with other rows\n\
-             #   align  = \"left\" | \"center\" | \"right\"\n\
-             #\n\
-             # timestamp_format: chrono/strftime, or \"raw\"\n\n",
-            path.display(),
-            Self::themes_dir().display(),
-        );
-
+        let mut body = String::new();
         write_theme_config(&mut body, &self.theme);
 
         body.push_str(&format!(
@@ -319,15 +304,27 @@ impl Config {
             body.push('\n');
         }
 
-        body.push_str(
-            "# Keybindings: key = \"command\"  (empty string unbinds)\n\
-             # Special keys: enter esc up down home end pagedown pageup space tab\n\
-             # Modifiers: C-c  A-x\n\
-             [keys]\n",
-        );
+        let defaults = keys::defaults();
+        let key_overrides: Vec<(&String, &String)> = self
+            .keys
+            .iter()
+            .filter(|(key, cmd)| defaults.get(*key) != Some(*cmd))
+            .collect();
+        // Also emit explicit unbinds: default keys missing from merged map.
+        let unbinds: Vec<&String> = defaults
+            .keys()
+            .filter(|key| !self.keys.contains_key(*key))
+            .collect();
 
-        for (key, cmd) in &self.keys {
-            body.push_str(&format!("{} = {:?}\n", toml_key(key), cmd));
+        if !key_overrides.is_empty() || !unbinds.is_empty() {
+            body.push_str("[keys]\n");
+            for (key, cmd) in key_overrides {
+                body.push_str(&format!("{} = {:?}\n", toml_key(key), cmd));
+            }
+            for key in unbinds {
+                body.push_str(&format!("{} = \"\"\n", toml_key(key)));
+            }
+            body.push('\n');
         }
 
         fs::write(path, body).with_context(|| format!("failed to write {}", path.display()))?;
@@ -368,22 +365,10 @@ fn write_color_spec_opt(body: &mut String, key: &str, val: &Option<crate::theme:
 
 fn write_theme_config(body: &mut String, theme: &ThemeConfig) {
     body.push_str("[theme]\n");
-    body.push_str(&format!("name = {:?}\n", theme.name()));
+    body.push_str(&format!("name = {:?}\n\n", theme.name()));
     if !theme.has_overrides() {
-        body.push_str(
-            "# Optional color patches (same keys as themes/*.toml).\n\
-             # Text colors accept \"#hex\" or { fg = \"...\", bg = \"...\" }:\n\
-             # [theme.colors]\n\
-             # background = \"#11111b\"\n\
-             # dim = { fg = \"#6c7086\", bg = \"#313244\" }\n\
-             # [theme.levels]\n\
-             # error = { fg = \"#1e1e2e\", bg = \"#f38ba8\" }\n\
-             # [theme.ui]\n\
-             # timestamp = { fg = \"#89b4fa\", bg = \"#11111b\" }\n\n",
-        );
         return;
     }
-    body.push('\n');
     let o = theme.overrides();
     if !o.colors.is_empty() {
         body.push_str("[theme.colors]\n");
@@ -525,6 +510,17 @@ mod tests {
         assert!(raw.contains("[theme]\n"));
         assert!(raw.contains("name = \"nord\"\n"));
         assert!(!raw.contains("theme = \""));
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn write_omits_default_keys() {
+        let dir = std::env::temp_dir().join(format!("lnav-rs-write-keys-{}", std::process::id()));
+        let _ = fs::create_dir_all(&dir);
+        let path = dir.join("config.toml");
+        Config::default().write_to(&path).unwrap();
+        let raw = fs::read_to_string(&path).unwrap();
+        assert!(!raw.contains("[keys]"));
         let _ = fs::remove_dir_all(&dir);
     }
 
