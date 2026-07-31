@@ -58,6 +58,10 @@ pub fn catalog() -> &'static [CommandInfo] {
             help: "open/focus/close details overlay",
         },
         CommandInfo {
+            name: "toggle-fold",
+            help: "fold/unfold details tree item",
+        },
+        CommandInfo {
             name: "close",
             help: "close details overlay",
         },
@@ -163,46 +167,85 @@ fn execute_inner(app: &mut App, raw: &str, invoke: Invoke) {
         }
         "down" => {
             let n = app.take_count() as isize;
-            app.with_motion(|a| a.move_selection(n));
+            if app.overlay_focused && app.show_overlay {
+                app.move_overlay_cursor(n);
+            } else {
+                app.with_motion(|a| a.move_selection(n));
+            }
         }
         "up" => {
             let n = app.take_count() as isize;
-            app.with_motion(|a| a.move_selection(-n));
+            if app.overlay_focused && app.show_overlay {
+                app.move_overlay_cursor(-n);
+            } else {
+                app.with_motion(|a| a.move_selection(-n));
+            }
         }
         "page-down" => {
             let n = app.take_count() as isize;
-            app.with_motion(|a| a.move_selection(20 * n));
+            if app.overlay_focused && app.show_overlay {
+                let page = app.overlay_inner_height.max(1) as isize;
+                app.move_overlay_cursor(page * n);
+            } else {
+                app.with_motion(|a| a.move_selection(20 * n));
+            }
         }
         "page-up" => {
             let n = app.take_count() as isize;
-            app.with_motion(|a| a.move_selection(-20 * n));
+            if app.overlay_focused && app.show_overlay {
+                let page = app.overlay_inner_height.max(1) as isize;
+                app.move_overlay_cursor(-page * n);
+            } else {
+                app.with_motion(|a| a.move_selection(-20 * n));
+            }
         }
         "top" => {
             let line = app.take_count_opt();
-            app.with_motion(|a| {
-                a.follow = false;
+            if app.overlay_focused && app.show_overlay {
                 if let Some(n) = line {
-                    a.jump_to_public(n.saturating_sub(1));
+                    app.jump_overlay_cursor(n.saturating_sub(1));
                 } else {
-                    a.jump_to_public(0);
+                    app.jump_overlay_cursor(0);
                 }
-            });
+            } else {
+                app.with_motion(|a| {
+                    a.follow = false;
+                    if let Some(n) = line {
+                        a.jump_to_public(n.saturating_sub(1));
+                    } else {
+                        a.jump_to_public(0);
+                    }
+                });
+            }
         }
         "bottom" => {
             let line = app.take_count_opt();
-            app.with_motion(|a| {
+            if app.overlay_focused && app.show_overlay {
                 if let Some(n) = line {
-                    a.follow = false;
-                    a.jump_to_public(n.saturating_sub(1));
+                    app.jump_overlay_cursor(n.saturating_sub(1));
                 } else {
-                    a.follow = true;
-                    if !a.visible.is_empty() {
-                        a.jump_to_public(a.visible.len() - 1);
-                    }
+                    let last = app.overlay_content_len.saturating_sub(1);
+                    app.jump_overlay_cursor(last);
                 }
-            });
+            } else {
+                app.with_motion(|a| {
+                    if let Some(n) = line {
+                        a.follow = false;
+                        a.jump_to_public(n.saturating_sub(1));
+                    } else {
+                        a.follow = true;
+                        if !a.visible.is_empty() {
+                            a.jump_to_public(a.visible.len() - 1);
+                        }
+                    }
+                });
+            }
         }
         "details" => app.toggle_details(),
+        "toggle-fold" => {
+            app.cancel_pending_op();
+            app.toggle_overlay_fold();
+        }
         "close" => {
             if app.pending_op.is_some() || app.count.is_some() {
                 app.cancel_pending_op();

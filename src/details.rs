@@ -1,26 +1,37 @@
+use std::collections::HashSet;
+
 use ratatui::style::{Modifier, Style};
-use ratatui::text::{Line, Span};
+use ratatui::text::Span;
 use serde_json::Value;
 
 use crate::config::Config;
 use crate::model::{FieldValue, LogEntry};
 use crate::theme::Theme;
 
+/// Stable path identifying a foldable tree node (e.g. `["annotations","tags"]`).
+pub type FoldPath = Vec<String>;
+
+pub fn path_key(path: &[String]) -> String {
+    path.join("\0")
+}
+
 /// One display row in the details overlay.
 #[derive(Debug, Clone)]
 pub struct DetailLine {
     pub spans: Vec<Span<'static>>,
+    /// Path of this node (empty for the header / non-tree rows).
+    pub path: FoldPath,
+    /// True when this row can be folded (object/array with children).
+    pub foldable: bool,
 }
 
 impl DetailLine {
     fn plain(text: impl Into<String>, style: Style) -> Self {
         Self {
             spans: vec![Span::styled(text.into(), style)],
+            path: Vec::new(),
+            foldable: false,
         }
-    }
-
-    pub fn to_line(&self) -> Line<'static> {
-        Line::from(self.spans.clone())
     }
 
     pub fn plain_text(&self) -> String {
@@ -32,7 +43,12 @@ impl DetailLine {
 }
 
 /// Build the full details content for an entry (header + fields).
-pub fn build_lines(entry: &LogEntry, theme: &Theme, config: &Config) -> Vec<DetailLine> {
+pub fn build_lines(
+    entry: &LogEntry,
+    theme: &Theme,
+    config: &Config,
+    folded: &HashSet<String>,
+) -> Vec<DetailLine> {
     let surface = theme.overlay_bg;
     let mut lines = Vec::new();
 
@@ -51,6 +67,8 @@ pub fn build_lines(entry: &LogEntry, theme: &Theme, config: &Config) -> Vec<Deta
                 theme.level_style(entry.level).add_modifier(Modifier::BOLD),
             ),
         ],
+        path: Vec::new(),
+        foldable: false,
     });
 
     if entry.fields.is_empty() {
@@ -61,28 +79,37 @@ pub fn build_lines(entry: &LogEntry, theme: &Theme, config: &Config) -> Vec<Deta
         return lines;
     }
 
-    for field in &entry.fields {
+    let n = entry.fields.len();
+    for (i, field) in entry.fields.iter().enumerate() {
         push_field(
             &mut lines,
             &field.key,
             &field.value,
+            &[],
             "",
-            true,
+            i + 1 == n,
             theme,
             config.details_json_tree,
+            folded,
         );
     }
     lines
+}
+
+fn fold_marker(folded: bool) -> &'static str {
+    if folded { "▸ " } else { "▾ " }
 }
 
 fn push_field(
     lines: &mut Vec<DetailLine>,
     key: &str,
     value: &FieldValue,
+    parent: &[String],
     prefix: &str,
     is_last: bool,
     theme: &Theme,
     json_tree: bool,
+    folded: &HashSet<String>,
 ) {
     let surface = theme.overlay_bg;
     let branch = if prefix.is_empty() {
@@ -95,33 +122,53 @@ fn push_field(
     let key_style = theme
         .tone_style(theme.key, surface)
         .add_modifier(Modifier::BOLD);
+    let mut path = parent.to_vec();
+    path.push(key.to_string());
 
     if json_tree {
         if let FieldValue::Nested(raw) = value {
             if let Ok(v) = serde_json::from_str::<Value>(raw) {
                 if v.is_object() || v.is_array() {
+                    let key_str = path_key(&path);
+                    let is_folded = folded.contains(&key_str);
+                    let mut spans = vec![
+                        Span::styled(
+                            format!("{prefix}{branch}"),
+                            theme.tone_style(theme.dim, surface),
+                        ),
+                        Span::styled(
+                            fold_marker(is_folded).to_string(),
+                            theme.tone_style(theme.dim, surface),
+                        ),
+                        Span::styled(key.to_string(), key_style),
+                    ];
+                    if v.is_array() {
+                        spans.push(Span::styled(
+                            format!(" [{}]", v.as_array().map(|a| a.len()).unwrap_or(0)),
+                            theme.tone_style(theme.dim, surface),
+                        ));
+                    }
+                    if is_folded {
+                        spans.push(Span::styled(
+                            " …".to_string(),
+                            theme.tone_style(theme.dim, surface),
+                        ));
+                    }
                     lines.push(DetailLine {
-                        spans: vec![
-                            Span::styled(format!("{prefix}{branch}"), theme.tone_style(theme.dim, surface)),
-                            Span::styled(key.to_string(), key_style),
-                            Span::styled(
-                                if v.is_array() {
-                                    format!(" [{}]", v.as_array().map(|a| a.len()).unwrap_or(0))
-                                } else {
-                                    String::new()
-                                },
-                                theme.tone_style(theme.dim, surface),
-                            ),
-                        ],
+                        spans,
+                        path: path.clone(),
+                        foldable: true,
                     });
-                    let child_prefix = if prefix.is_empty() {
-                        String::new()
-                    } else if is_last {
-                        format!("{prefix}    ")
-                    } else {
-                        format!("{prefix}│   ")
-                    };
-                    push_json_value(lines, &v, &child_prefix, theme);
+                    if !is_folded {
+                        let child_prefix = if prefix.is_empty() {
+                            String::new()
+                        } else if is_last {
+                            format!("{prefix}    ")
+                        } else {
+                            format!("{prefix}│   ")
+                        };
+                        push_json_value(lines, &v, &path, &child_prefix, theme, folded);
+                    }
                     return;
                 }
             }
@@ -136,50 +183,77 @@ fn push_field(
     };
 
     if prefix.is_empty() {
-        // Top-level flat row (legacy layout when not expanding).
         let mut spans = vec![
             Span::styled(format!("{key:<16}"), key_style),
             Span::styled(rendered, value_style),
         ];
-        // Nested pretty-print may contain newlines — split into rows.
         if spans[1].content.contains('\n') {
             let text = spans[1].content.to_string();
             let style = spans[1].style;
             let mut parts = text.split('\n');
             if let Some(first) = parts.next() {
                 spans[1] = Span::styled(first.to_string(), style);
-                lines.push(DetailLine { spans });
+                lines.push(DetailLine {
+                    spans,
+                    path: path.clone(),
+                    foldable: false,
+                });
             }
             for part in parts {
                 lines.push(DetailLine::plain(part.to_string(), style));
             }
         } else {
-            lines.push(DetailLine { spans });
+            lines.push(DetailLine {
+                spans,
+                path,
+                foldable: false,
+            });
         }
     } else {
         lines.push(DetailLine {
             spans: vec![
-                Span::styled(format!("{prefix}{branch}"), theme.tone_style(theme.dim, surface)),
+                Span::styled(
+                    format!("{prefix}{branch}"),
+                    theme.tone_style(theme.dim, surface),
+                ),
                 Span::styled(format!("{key}: "), key_style),
                 Span::styled(rendered, value_style),
             ],
+            path,
+            foldable: false,
         });
     }
 }
 
-fn push_json_value(lines: &mut Vec<DetailLine>, value: &Value, prefix: &str, theme: &Theme) {
+fn push_json_value(
+    lines: &mut Vec<DetailLine>,
+    value: &Value,
+    parent: &[String],
+    prefix: &str,
+    theme: &Theme,
+    folded: &HashSet<String>,
+) {
     match value {
         Value::Object(map) => {
             let keys: Vec<&String> = map.keys().collect();
             for (i, key) in keys.iter().enumerate() {
                 let is_last = i + 1 == keys.len();
-                push_json_entry(lines, key, &map[*key], prefix, is_last, theme);
+                push_json_entry(lines, key, &map[*key], parent, prefix, is_last, theme, folded);
             }
         }
         Value::Array(arr) => {
             for (i, item) in arr.iter().enumerate() {
                 let is_last = i + 1 == arr.len();
-                push_json_entry(lines, &i.to_string(), item, prefix, is_last, theme);
+                push_json_entry(
+                    lines,
+                    &i.to_string(),
+                    item,
+                    parent,
+                    prefix,
+                    is_last,
+                    theme,
+                    folded,
+                );
             }
         }
         other => {
@@ -200,9 +274,11 @@ fn push_json_entry(
     lines: &mut Vec<DetailLine>,
     key: &str,
     value: &Value,
+    parent: &[String],
     prefix: &str,
     is_last: bool,
     theme: &Theme,
+    folded: &HashSet<String>,
 ) {
     let surface = theme.overlay_bg;
     let branch = if is_last { "└── " } else { "├── " };
@@ -214,40 +290,93 @@ fn push_json_entry(
     } else {
         format!("{prefix}│   ")
     };
+    let mut path = parent.to_vec();
+    path.push(key.to_string());
 
     match value {
         Value::Object(map) => {
+            let key_str = path_key(&path);
+            let is_folded = folded.contains(&key_str);
+            let mut spans = vec![
+                Span::styled(
+                    format!("{prefix}{branch}"),
+                    theme.tone_style(theme.dim, surface),
+                ),
+                Span::styled(
+                    fold_marker(is_folded).to_string(),
+                    theme.tone_style(theme.dim, surface),
+                ),
+                Span::styled(key.to_string(), key_style),
+            ];
+            if is_folded {
+                spans.push(Span::styled(
+                    " …".to_string(),
+                    theme.tone_style(theme.dim, surface),
+                ));
+            }
             lines.push(DetailLine {
-                spans: vec![
-                    Span::styled(format!("{prefix}{branch}"), theme.tone_style(theme.dim, surface)),
-                    Span::styled(key.to_string(), key_style),
-                ],
+                spans,
+                path: path.clone(),
+                foldable: true,
             });
-            let keys: Vec<&String> = map.keys().collect();
-            for (i, k) in keys.iter().enumerate() {
-                push_json_entry(lines, k, &map[*k], &child_prefix, i + 1 == keys.len(), theme);
+            if !is_folded {
+                let keys: Vec<&String> = map.keys().collect();
+                for (i, k) in keys.iter().enumerate() {
+                    push_json_entry(
+                        lines,
+                        k,
+                        &map[*k],
+                        &path,
+                        &child_prefix,
+                        i + 1 == keys.len(),
+                        theme,
+                        folded,
+                    );
+                }
             }
         }
         Value::Array(arr) => {
+            let key_str = path_key(&path);
+            let is_folded = folded.contains(&key_str);
+            let mut spans = vec![
+                Span::styled(
+                    format!("{prefix}{branch}"),
+                    theme.tone_style(theme.dim, surface),
+                ),
+                Span::styled(
+                    fold_marker(is_folded).to_string(),
+                    theme.tone_style(theme.dim, surface),
+                ),
+                Span::styled(key.to_string(), key_style),
+                Span::styled(
+                    format!(" [{}]", arr.len()),
+                    theme.tone_style(theme.dim, surface),
+                ),
+            ];
+            if is_folded {
+                spans.push(Span::styled(
+                    " …".to_string(),
+                    theme.tone_style(theme.dim, surface),
+                ));
+            }
             lines.push(DetailLine {
-                spans: vec![
-                    Span::styled(format!("{prefix}{branch}"), theme.tone_style(theme.dim, surface)),
-                    Span::styled(key.to_string(), key_style),
-                    Span::styled(
-                        format!(" [{}]", arr.len()),
-                        theme.tone_style(theme.dim, surface),
-                    ),
-                ],
+                spans,
+                path: path.clone(),
+                foldable: true,
             });
-            for (i, item) in arr.iter().enumerate() {
-                push_json_entry(
-                    lines,
-                    &i.to_string(),
-                    item,
-                    &child_prefix,
-                    i + 1 == arr.len(),
-                    theme,
-                );
+            if !is_folded {
+                for (i, item) in arr.iter().enumerate() {
+                    push_json_entry(
+                        lines,
+                        &i.to_string(),
+                        item,
+                        &path,
+                        &child_prefix,
+                        i + 1 == arr.len(),
+                        theme,
+                        folded,
+                    );
+                }
             }
         }
         other => {
@@ -259,10 +388,15 @@ fn push_json_entry(
             };
             lines.push(DetailLine {
                 spans: vec![
-                    Span::styled(format!("{prefix}{branch}"), theme.tone_style(theme.dim, surface)),
+                    Span::styled(
+                        format!("{prefix}{branch}"),
+                        theme.tone_style(theme.dim, surface),
+                    ),
                     Span::styled(format!("{key}: "), key_style),
                     Span::styled(rendered, value_style),
                 ],
+                path,
+                foldable: false,
             });
         }
     }
@@ -282,7 +416,6 @@ fn json_value_to_field(value: &Value) -> FieldValue {
 
 /// Overlay height in rows (including border), capped by config and available space.
 pub fn desired_height(content_lines: usize, available: u16, max_height: usize) -> u16 {
-    // +2 for the border.
     let needed = content_lines.saturating_add(2).max(4);
     let cap_cfg = max_height.max(4);
     let cap_screen = (available as usize).saturating_sub(3).max(4);
@@ -298,9 +431,8 @@ mod tests {
         Theme::resolve("catppuccin").unwrap()
     }
 
-    #[test]
-    fn tree_expands_nested_object() {
-        let entry = LogEntry {
+    fn sample_entry() -> LogEntry {
+        LogEntry {
             line_no: 1,
             raw: "{}".into(),
             format: LineFormat::Json,
@@ -310,20 +442,34 @@ mod tests {
             message: None,
             fields: vec![Field {
                 key: "annotations".into(),
-                value: FieldValue::Nested(r#"{"url":"http://x","n":1}"#.into()),
+                value: FieldValue::Nested(r#"{"url":"http://x","tags":["a","b"]}"#.into()),
             }],
-        };
+        }
+    }
+
+    #[test]
+    fn tree_expands_nested_object() {
         let mut cfg = Config::default();
         cfg.details_json_tree = true;
-        let lines = build_lines(&entry, &theme(), &cfg);
-        let text: Vec<String> = lines
-            .iter()
-            .map(|l| l.spans.iter().map(|s| s.content.as_ref()).collect::<String>())
-            .collect();
+        let lines = build_lines(&sample_entry(), &theme(), &cfg, &HashSet::new());
+        let text: Vec<String> = lines.iter().map(|l| l.plain_text()).collect();
         assert!(text.iter().any(|t| t.contains("annotations")));
         assert!(text.iter().any(|t| t.contains("url")));
         assert!(text.iter().any(|t| t.contains("http://x")));
-        assert!(text.len() >= 3);
+        assert!(lines.iter().any(|l| l.foldable));
+    }
+
+    #[test]
+    fn folding_hides_children() {
+        let mut cfg = Config::default();
+        cfg.details_json_tree = true;
+        let mut folded = HashSet::new();
+        folded.insert(path_key(&["annotations".into()]));
+        let lines = build_lines(&sample_entry(), &theme(), &cfg, &folded);
+        let text: Vec<String> = lines.iter().map(|l| l.plain_text()).collect();
+        assert!(text.iter().any(|t| t.contains("annotations") && t.contains('…')));
+        assert!(!text.iter().any(|t| t.contains("url")));
+        assert!(!text.iter().any(|t| t.contains("tags")));
     }
 
     #[test]
@@ -343,7 +489,7 @@ mod tests {
         };
         let mut cfg = Config::default();
         cfg.details_json_tree = false;
-        let lines = build_lines(&entry, &theme(), &cfg);
+        let lines = build_lines(&entry, &theme(), &cfg, &HashSet::new());
         assert!(lines.len() >= 2);
     }
 

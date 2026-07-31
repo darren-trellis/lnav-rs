@@ -87,9 +87,13 @@ pub struct App {
     pub show_overlay: bool,
     /// When true, navigation keys scroll the details overlay instead of the list.
     pub overlay_focused: bool,
+    /// Selected row inside the details overlay (when focused).
+    pub overlay_cursor: usize,
     pub overlay_scroll: usize,
     pub overlay_content_len: usize,
     pub overlay_inner_height: usize,
+    /// Folded JSON tree paths (`details::path_key`).
+    pub overlay_folded: HashSet<String>,
     pub input_mode: InputMode,
     pub pending_op: Option<PendingOp>,
     /// Visible-row anchor when the pending operator was started.
@@ -153,9 +157,11 @@ impl App {
             scroll: 0,
             show_overlay: false,
             overlay_focused: false,
+            overlay_cursor: 0,
             overlay_scroll: 0,
             overlay_content_len: 0,
             overlay_inner_height: 0,
+            overlay_folded: HashSet::new(),
             input_mode: InputMode::Normal,
             pending_op: None,
             op_anchor: 0,
@@ -335,7 +341,17 @@ impl App {
 
         if contains(self.hit.overlay, col, row) {
             self.overlay_focused = true;
-            self.status_message = Some("details focused · j/k scroll · Esc close".into());
+            // Click a row inside the overlay to move the cursor there.
+            let inner_y = self.hit.overlay.y.saturating_add(1);
+            if row >= inner_y {
+                let row_off = (row - inner_y) as usize;
+                let idx = self.overlay_scroll + row_off;
+                if idx < self.overlay_content_len {
+                    self.jump_overlay_cursor(idx);
+                }
+            }
+            self.status_message =
+                Some("details focused · j/k move · Tab fold · Esc close".into());
             return;
         }
 
@@ -651,7 +667,8 @@ impl App {
         self.search_cursor = Some(cursor);
         self.follow = false;
         if self.search_in_overlay {
-            self.ensure_overlay_match_visible();
+            self.overlay_cursor = self.search_matches[cursor];
+            self.ensure_overlay_cursor_visible();
         } else {
             self.jump_to(self.search_matches[cursor]);
         }
@@ -739,45 +756,15 @@ impl App {
     }
 
     /// Handle keys while the details overlay is focused. Returns true if consumed.
+    /// Navigation is handled via normal keybindings (`down`/`up`/…) so only
+    /// Esc needs a hard intercept here; other keys fall through.
     fn handle_overlay_key(&mut self, key: KeyEvent) -> bool {
-        let page = self.overlay_inner_height.max(1) as isize;
         match key.code {
             KeyCode::Esc => {
                 self.close_details();
                 true
             }
-            KeyCode::Enter => {
-                self.toggle_details();
-                true
-            }
-            KeyCode::Down | KeyCode::Char('j') => {
-                self.scroll_overlay(1);
-                true
-            }
-            KeyCode::Up | KeyCode::Char('k') => {
-                self.scroll_overlay(-1);
-                true
-            }
-            KeyCode::PageDown | KeyCode::Char(' ') => {
-                self.scroll_overlay(page);
-                true
-            }
-            KeyCode::PageUp => {
-                self.scroll_overlay(-page);
-                true
-            }
-            KeyCode::Home | KeyCode::Char('g') => {
-                self.overlay_scroll = 0;
-                true
-            }
-            KeyCode::End | KeyCode::Char('G') => {
-                self.overlay_scroll = self
-                    .overlay_content_len
-                    .saturating_sub(self.overlay_inner_height.max(1));
-                true
-            }
-            // Search stays in the overlay; : and q leave focus first.
-            KeyCode::Char('/') => false,
+            // Leave focus so : / q use the list context, except / which searches details.
             KeyCode::Char(':') | KeyCode::Char('q') => {
                 self.overlay_focused = false;
                 false
@@ -794,11 +781,14 @@ impl App {
             }
             self.show_overlay = true;
             self.overlay_focused = true;
+            self.overlay_cursor = 0;
             self.overlay_scroll = 0;
-            self.status_message = Some("details focused · j/k scroll · Esc close".into());
+            self.status_message =
+                Some("details focused · j/k move · Tab fold · Esc close".into());
         } else if !self.overlay_focused {
             self.overlay_focused = true;
-            self.status_message = Some("details focused · j/k scroll · Esc close".into());
+            self.status_message =
+                Some("details focused · j/k move · Tab fold · Esc close".into());
         } else {
             self.close_details();
         }
@@ -807,6 +797,7 @@ impl App {
     pub fn close_details(&mut self) {
         self.show_overlay = false;
         self.overlay_focused = false;
+        self.overlay_cursor = 0;
         self.overlay_scroll = 0;
         if self.search_in_overlay {
             self.search_in_overlay = false;
@@ -816,30 +807,92 @@ impl App {
         }
     }
 
-    pub fn scroll_overlay(&mut self, delta: isize) {
-        if !self.show_overlay {
+    pub fn move_overlay_cursor(&mut self, delta: isize) {
+        if !self.show_overlay || self.overlay_content_len == 0 {
             return;
         }
-        let max = self
-            .overlay_content_len
-            .saturating_sub(self.overlay_inner_height.max(1));
-        let next = (self.overlay_scroll as isize + delta).clamp(0, max as isize);
-        self.overlay_scroll = next as usize;
+        let max = self.overlay_content_len - 1;
+        let next = (self.overlay_cursor as isize + delta).clamp(0, max as isize) as usize;
+        self.overlay_cursor = next;
+        self.ensure_overlay_cursor_visible();
     }
 
-    fn ensure_overlay_match_visible(&mut self) {
-        let Some(idx) = self
-            .search_cursor
-            .and_then(|c| self.search_matches.get(c).copied())
-        else {
+    pub fn jump_overlay_cursor(&mut self, idx: usize) {
+        if self.overlay_content_len == 0 {
+            self.overlay_cursor = 0;
             return;
-        };
+        }
+        self.overlay_cursor = idx.min(self.overlay_content_len - 1);
+        self.ensure_overlay_cursor_visible();
+    }
+
+    pub fn ensure_overlay_cursor_visible(&mut self) {
         let view = self.overlay_inner_height.max(1);
+        let idx = self.overlay_cursor;
         if idx < self.overlay_scroll {
             self.overlay_scroll = idx;
         } else if idx >= self.overlay_scroll + view {
             self.overlay_scroll = idx + 1 - view;
         }
+    }
+
+    pub fn scroll_overlay(&mut self, delta: isize) {
+        // Mouse wheel: move the details cursor (same as j/k).
+        self.move_overlay_cursor(delta);
+    }
+
+    pub fn toggle_overlay_fold(&mut self) {
+        if !self.show_overlay || !self.overlay_focused {
+            self.status_message = Some("focus details first (Enter)".into());
+            return;
+        }
+        let cursor = self.overlay_cursor;
+        let (foldable, path) = {
+            let Some(entry) = self.selected_entry() else {
+                return;
+            };
+            let lines =
+                details::build_lines(entry, &self.theme, &self.config, &self.overlay_folded);
+            let Some(line) = lines.get(cursor) else {
+                return;
+            };
+            (line.foldable, line.path.clone())
+        };
+        if !foldable || path.is_empty() {
+            self.status_message = Some("not a foldable tree item".into());
+            return;
+        }
+        let key = details::path_key(&path);
+        let label = path.join(".");
+        if self.overlay_folded.contains(&key) {
+            self.overlay_folded.remove(&key);
+            self.status_message = Some(format!("unfolded {label}"));
+        } else {
+            self.overlay_folded.insert(key);
+            self.status_message = Some(format!("folded {label}"));
+        }
+        let new_len = self
+            .selected_entry()
+            .map(|entry| {
+                details::build_lines(entry, &self.theme, &self.config, &self.overlay_folded).len()
+            })
+            .unwrap_or(0);
+        self.overlay_content_len = new_len;
+        if new_len == 0 {
+            self.overlay_cursor = 0;
+        } else {
+            self.overlay_cursor = self.overlay_cursor.min(new_len - 1);
+        }
+        self.ensure_overlay_cursor_visible();
+        if self.search_in_overlay && !self.search_query.is_empty() {
+            self.run_search();
+        }
+    }
+
+    fn reset_overlay_for_selection_change(&mut self) {
+        self.overlay_cursor = 0;
+        self.overlay_scroll = 0;
+        self.overlay_folded.clear();
     }
 
     /// Consume the typed count prefix, or `1` if none.
@@ -935,7 +988,7 @@ impl App {
                 if self.visible.is_empty() {
                     self.close_details();
                 } else {
-                    self.overlay_scroll = 0;
+                    self.reset_overlay_for_selection_change();
                 }
                 if !self.search_query.is_empty() {
                     self.run_search();
@@ -962,7 +1015,7 @@ impl App {
                         if self.visible.is_empty() {
                             self.close_details();
                         } else {
-                            self.overlay_scroll = 0;
+                            self.reset_overlay_for_selection_change();
                         }
                         if !self.search_query.is_empty() {
                             self.run_search();
@@ -1002,7 +1055,7 @@ impl App {
         let next = (self.selected as isize + delta)
             .clamp(0, self.visible.len() as isize - 1) as usize;
         if next != self.selected {
-            self.overlay_scroll = 0;
+            self.reset_overlay_for_selection_change();
         }
         self.selected = next;
     }
@@ -1013,7 +1066,7 @@ impl App {
         }
         let next = idx.min(self.visible.len() - 1);
         if next != self.selected {
-            self.overlay_scroll = 0;
+            self.reset_overlay_for_selection_change();
         }
         self.selected = next;
     }
@@ -1063,7 +1116,7 @@ impl App {
         self.search_error = None;
         if self.search_in_overlay {
             self.search_matches = if let Some(entry) = self.selected_entry() {
-                details::build_lines(entry, &self.theme, &self.config)
+                details::build_lines(entry, &self.theme, &self.config, &self.overlay_folded)
                     .into_iter()
                     .enumerate()
                     .filter(|(_, line)| regex.is_match(&line.plain_text()))
@@ -1101,7 +1154,7 @@ impl App {
         self.search_cursor = Some(next);
         self.follow = false;
         if self.search_in_overlay {
-            self.ensure_overlay_match_visible();
+            self.jump_overlay_cursor(self.search_matches[next]);
             self.status_message = Some(format!("{}/{} in details", next + 1, len));
         } else {
             self.jump_to(self.search_matches[next]);

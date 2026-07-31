@@ -25,6 +25,7 @@ pub fn defaults() -> BTreeMap<String, String> {
         ("G".into(), "bottom".into()),
         ("end".into(), "bottom".into()),
         ("enter".into(), "details".into()),
+        ("tab".into(), "toggle-fold".into()),
         ("esc".into(), "close".into()),
         ("/".into(), "search".into()),
         (":".into(), "command-mode".into()),

@@ -1,6 +1,6 @@
 use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};
-use ratatui::text::Line;
+use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph, Wrap};
 use ratatui::Frame;
 
@@ -15,7 +15,7 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
         return;
     };
     let format = entry.format;
-    let content = details::build_lines(entry, &app.theme, &app.config);
+    let content = details::build_lines(entry, &app.theme, &app.config, &app.overlay_folded);
     let content_len = content.len();
     let focused = app.overlay_focused;
     let wrap = app.config.wrap_details;
@@ -25,20 +25,22 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
     } else {
         None
     };
-    let current_match = if search_in_overlay {
-        app.search_cursor
-            .and_then(|c| app.search_matches.get(c).copied())
-    } else {
-        None
-    };
+    let cursor = app.overlay_cursor;
     let theme_border = app.theme.border.fg;
     let match_fg = app.theme.search_match.fg;
     let match_bg = app.theme.search_match.bg;
     let overlay_bg = app.theme.overlay_bg;
     let foreground = app.theme.foreground.fg;
+    let selection_bg = app.theme.selection_bg;
+    let selection_fg = app.theme.selection_fg;
     let fg_tone = app.theme.foreground;
 
     app.overlay_content_len = content_len;
+    if content_len == 0 {
+        app.overlay_cursor = 0;
+    } else if app.overlay_cursor >= content_len {
+        app.overlay_cursor = content_len - 1;
+    }
 
     let title = match format {
         LineFormat::Json => {
@@ -64,7 +66,7 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
         }
     };
     let hint = if focused {
-        " j/k scroll · / search · Esc close "
+        " j/k move · Tab fold · / search · Esc close "
     } else {
         " Enter focus · Esc close "
     };
@@ -92,15 +94,22 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
     if app.overlay_scroll > max_scroll {
         app.overlay_scroll = max_scroll;
     }
+    if focused {
+        app.ensure_overlay_cursor_visible();
+    }
     let scroll = app.overlay_scroll;
 
     let match_style = Style::default()
         .fg(match_fg)
         .bg(match_bg.unwrap_or(overlay_bg))
         .add_modifier(Modifier::BOLD);
-    let current_style = Style::default()
-        .fg(overlay_bg)
-        .bg(match_fg)
+    let cursor_style = Style::default()
+        .fg(selection_fg)
+        .bg(selection_bg)
+        .add_modifier(Modifier::BOLD);
+    let cursor_match_style = Style::default()
+        .fg(match_fg)
+        .bg(selection_bg)
         .add_modifier(Modifier::BOLD);
     let base_style = Style::default().fg(fg_tone.fg).bg(overlay_bg);
 
@@ -108,13 +117,16 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
         .into_iter()
         .enumerate()
         .map(|(i, line)| {
+            let is_cursor = focused && i == cursor;
             render_detail_line(
                 &line,
                 search_regex.as_ref(),
                 base_style,
                 match_style,
-                current_match == Some(i),
-                current_style,
+                is_cursor,
+                cursor_style,
+                cursor_match_style,
+                inner.width as usize,
             )
         })
         .collect();
@@ -132,19 +144,38 @@ fn render_detail_line(
     regex: Option<&regex::Regex>,
     base_style: Style,
     match_style: Style,
-    is_current: bool,
-    current_style: Style,
+    is_cursor: bool,
+    cursor_style: Style,
+    cursor_match_style: Style,
+    width: usize,
 ) -> Line<'static> {
     let text = line.plain_text();
-    let Some(re) = regex else {
-        return line.to_line();
+    let mut spans = if let Some(re) = regex.filter(|r| r.is_match(&text)) {
+        let base = if is_cursor { cursor_style } else { base_style };
+        let hi = if is_cursor {
+            cursor_match_style
+        } else {
+            match_style
+        };
+        let mut out = Vec::new();
+        highlight::push_highlighted(&mut out, text.clone(), base, hi, Some(re));
+        out
+    } else if is_cursor {
+        vec![Span::styled(text.clone(), cursor_style)]
+    } else {
+        line.spans.clone()
     };
-    if !re.is_match(&text) {
-        return line.to_line();
+
+    // Pad cursor row so the selection bar spans the full width.
+    if is_cursor && width > 0 {
+        let used: usize = spans
+            .iter()
+            .map(|s| unicode_width::UnicodeWidthStr::width(s.content.as_ref()))
+            .sum();
+        if used < width {
+            spans.push(Span::styled(" ".repeat(width - used), cursor_style));
+        }
     }
-    let base = if is_current { current_style } else { base_style };
-    let hi = if is_current { current_style } else { match_style };
-    let mut spans = Vec::new();
-    highlight::push_highlighted(&mut spans, text, base, hi, Some(re));
+
     Line::from(spans)
 }

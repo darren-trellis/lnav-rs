@@ -60,6 +60,7 @@ fn overlay_desired_height(app: &App, available: u16) -> u16 {
     let Some(entry) = app.selected_entry() else {
         return 0;
     };
-    let content_lines = details::build_lines(entry, &app.theme, &app.config).len();
+    let content_lines =
+        details::build_lines(entry, &app.theme, &app.config, &app.overlay_folded).len();
     details::desired_height(content_lines, available, app.config.details_max_height)
 }

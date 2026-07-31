@@ -51,6 +51,7 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 | `g` / `Home` | `top` |
 | `G` / `End` | `bottom` |
 | `Enter` | `details` (open/focus details; again to close when focused) |
+| `Tab` | `toggle-fold` (fold/unfold JSON tree item in details) |
 | `Esc` | `close` |
 | `/` | `search` (case-insensitive regex; highlights matched text) |
 | `:` | `command-mode` |
@@ -168,7 +169,7 @@ D = "delete"
 
 `case_mode` controls `/` search and `:filter` matching: `smart` / `smartcase` (default; insensitive unless the pattern has an uppercase letter), `insensitive`, or `sensitive`.
 
-Details: `Enter` opens and focuses the overlay (j/k/PgUp/PgDn scroll; Esc closes). With details focused, `/` searches inside the overlay (`n`/`N` cycle matches). Nested JSON fields render as a tree when `details_json_tree` is on. Overlay height grows with content up to `details_max_height` (and screen space).
+Details: `Enter` opens and focuses the overlay — the selection highlight moves into details (`j`/`k` move the cursor; Esc closes). `Tab` folds/unfolds the tree item under the cursor (`tab = "toggle-fold"` in `[keys]`). With details focused, `/` searches inside the overlay (`n`/`N` cycle matches). Nested JSON fields render as a tree when `details_json_tree` is on. Overlay height grows with content up to `details_max_height` (and screen space).
 
 Filters persist under `~/.local/share/lnav-rs/sessions/` (one file per log path hash; stdin uses `stdin.toml`). `session_filters` / `session_stdin` control that (both default on). Turn `session_stdin` off if you don’t want every pipe to share one filter set.
 
