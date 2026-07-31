@@ -107,7 +107,7 @@ pub fn render(
         .collect()
 }
 
-fn column_separator(border: ColumnBorderStyle) -> Segment {
+pub fn column_separator(border: ColumnBorderStyle) -> Segment {
     if border.width == 0 {
         Segment {
             kind: SegmentKind::Literal,

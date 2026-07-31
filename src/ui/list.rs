@@ -264,7 +264,7 @@ fn render_line<'a>(app: &'a App, entry: &'a LogEntry, options: LineRenderOptions
     let mut used = 1usize;
 
     if let Some(num_text) = gutter_num {
-        let num = format!("{num_text:>width$} ", width = line_no_width);
+        let num = format!("{num_text:>width$}", width = line_no_width);
         let num_style = if selected {
             theme.selection_style()
         } else {
@@ -272,6 +272,17 @@ fn render_line<'a>(app: &'a App, entry: &'a LogEntry, options: LineRenderOptions
         };
         used += UnicodeWidthStr::width(num.as_str());
         spans.push(Span::styled(num, num_style));
+
+        let border = columns::column_separator(columns::ColumnBorderStyle {
+            width: theme.column_border_width,
+            padding: theme.column_border_padding,
+        });
+        let border_w = UnicodeWidthStr::width(border.text.as_str());
+        if used + border_w <= width {
+            let border_style = segment_style(theme, entry, &border, selected);
+            spans.push(Span::styled(border.text, border_style));
+            used += border_w;
+        }
     }
 
     let search = app.search.regex.as_ref();
