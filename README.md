@@ -13,7 +13,7 @@ Early MVP. Supported today:
 - **Live tail** as the file / pipe grows
 - Level-aware **coloring** + built-in / user **themes**
 - **Enter** to open a field details overlay
-- Basic navigation + search
+- Basic navigation + **regex search** (`/`) with per-match highlighting
 - **Config file** (`~/.config/lnav-rs/config.toml`) including list `[[columns]]`
 - **Command mode** (`:`) with `:filter in` / `:filter out`
 
@@ -52,7 +52,7 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 | `G` / `End` | `bottom` |
 | `Enter` | `details` |
 | `Esc` | `close` |
-| `/` | `search` |
+| `/` | `search` (case-insensitive regex; highlights matched text) |
 | `:` | `command-mode` |
 | `n` / `N` | `next-match` / `prev-match` |
 | `f` | `toggle-follow` |

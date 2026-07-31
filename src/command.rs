@@ -218,9 +218,7 @@ fn execute_inner(app: &mut App, raw: &str, invoke: Invoke) {
         "search" => {
             app.cancel_pending_op();
             app.input_mode = InputMode::Search;
-            app.search_query.clear();
-            app.search_matches.clear();
-            app.search_cursor = None;
+            app.clear_search();
             app.status_message = None;
         }
         "command-mode" => {
@@ -296,9 +294,7 @@ fn execute_inner(app: &mut App, raw: &str, invoke: Invoke) {
         }
         "delete-filter" => delete_filter(app, rest),
         "noh" => {
-            app.search_matches.clear();
-            app.search_cursor = None;
-            app.search_query.clear();
+            app.clear_search();
             app.status_message = Some("cleared search".into());
         }
         "set" => set_option(app, rest),

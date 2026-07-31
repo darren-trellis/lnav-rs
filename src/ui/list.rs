@@ -3,6 +3,7 @@ use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph};
 use ratatui::Frame;
+use regex::Regex;
 use unicode_width::UnicodeWidthStr;
 
 use crate::app::App;
@@ -93,7 +94,6 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
         let src = app.visible[vis_idx];
         let entry = &app.source.entries()[src];
         let selected = vis_idx == app.selected;
-        let is_match = app.search_matches.binary_search(&vis_idx).is_ok();
         let gutter_num = line_number_label(app, vis_idx);
         lines.push(render_line(
             app,
@@ -103,7 +103,6 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
             gutter_num.as_deref(),
             line_no_width,
             selected,
-            is_match,
             inner.width as usize,
         ));
     }
@@ -141,7 +140,6 @@ fn render_line<'a>(
     gutter_num: Option<&str>,
     line_no_width: usize,
     selected: bool,
-    is_match: bool,
     width: usize,
 ) -> Line<'a> {
     let theme = &app.theme;
@@ -177,6 +175,7 @@ fn render_line<'a>(
         spans.push(Span::styled(num, num_style));
     }
 
+    let search = app.search_regex.as_ref();
     for segment in segments {
         if used >= width {
             break;
@@ -187,8 +186,9 @@ fn render_line<'a>(
         if text.is_empty() && !segment.text.is_empty() {
             break;
         }
-        let style = segment_style(theme, entry, &segment, selected, is_match);
-        spans.push(Span::styled(text, style));
+        let base = segment_style(theme, entry, &segment, selected);
+        let match_style = apply_tone(theme, theme.search_match, selected, row_bg(theme, selected), false);
+        push_highlighted(&mut spans, text, base, match_style, search);
         used += text_w;
     }
 
@@ -205,18 +205,21 @@ fn render_line<'a>(
     Line::from(spans)
 }
 
+fn row_bg(theme: &Theme, selected: bool) -> Color {
+    if selected {
+        theme.selection_bg
+    } else {
+        theme.background
+    }
+}
+
 fn segment_style(
     theme: &Theme,
     entry: &LogEntry,
     segment: &Segment,
     selected: bool,
-    is_match: bool,
 ) -> Style {
-    let row_bg = if selected {
-        theme.selection_bg
-    } else {
-        theme.background
-    };
+    let row_bg = row_bg(theme, selected);
 
     if segment.kind == SegmentKind::Level {
         return apply_tone(
@@ -226,10 +229,6 @@ fn segment_style(
             row_bg,
             true,
         );
-    }
-
-    if is_match && matches!(segment.kind, SegmentKind::Message | SegmentKind::Raw) {
-        return apply_tone(theme, theme.search_match, selected, row_bg, false);
     }
 
     let tone = match segment.kind {
@@ -268,6 +267,41 @@ fn apply_tone(
     style
 }
 
+/// Split `text` into spans, styling regex matches with `match_style`.
+fn push_highlighted(
+    spans: &mut Vec<Span<'_>>,
+    text: String,
+    base: Style,
+    match_style: Style,
+    regex: Option<&Regex>,
+) {
+    let Some(re) = regex else {
+        spans.push(Span::styled(text, base));
+        return;
+    };
+
+    let mut last = 0;
+    let mut found = false;
+    for m in re.find_iter(&text) {
+        if m.start() == m.end() {
+            continue;
+        }
+        found = true;
+        if m.start() > last {
+            spans.push(Span::styled(text[last..m.start()].to_string(), base));
+        }
+        spans.push(Span::styled(text[m.start()..m.end()].to_string(), match_style));
+        last = m.end();
+    }
+    if !found {
+        spans.push(Span::styled(text, base));
+        return;
+    }
+    if last < text.len() {
+        spans.push(Span::styled(text[last..].to_string(), base));
+    }
+}
+
 fn truncate(s: &str, max: usize) -> String {
     if max == 0 {
         return String::new();
@@ -287,4 +321,65 @@ fn truncate(s: &str, max: usize) -> String {
     }
     out.push('…');
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use regex::RegexBuilder;
+
+    fn styles_of(text: &str, pattern: &str) -> Vec<(String, bool)> {
+        let re = RegexBuilder::new(pattern)
+            .case_insensitive(true)
+            .build()
+            .unwrap();
+        let base = Style::default().fg(Color::White);
+        let matched = Style::default().fg(Color::Yellow);
+        let mut spans = Vec::new();
+        push_highlighted(&mut spans, text.to_string(), base, matched, Some(&re));
+        spans
+            .into_iter()
+            .map(|s| {
+                let is_match = s.style.fg == Some(Color::Yellow);
+                (s.content.to_string(), is_match)
+            })
+            .collect()
+    }
+
+    #[test]
+    fn highlights_only_matching_substring() {
+        let parts = styles_of("hello ERROR world", "error");
+        assert_eq!(
+            parts,
+            vec![
+                ("hello ".into(), false),
+                ("ERROR".into(), true),
+                (" world".into(), false),
+            ]
+        );
+    }
+
+    #[test]
+    fn highlights_regex_groups() {
+        let parts = styles_of("status=404 path=/x", r"\d{3}");
+        assert_eq!(
+            parts,
+            vec![
+                ("status=".into(), false),
+                ("404".into(), true),
+                (" path=/x".into(), false),
+            ]
+        );
+    }
+
+    #[test]
+    fn no_regex_leaves_text_plain() {
+        let base = Style::default().fg(Color::White);
+        let matched = Style::default().fg(Color::Yellow);
+        let mut spans = Vec::new();
+        push_highlighted(&mut spans, "abc".into(), base, matched, None);
+        assert_eq!(spans.len(), 1);
+        assert_eq!(spans[0].content.as_ref(), "abc");
+        assert_eq!(spans[0].style.fg, Some(Color::White));
+    }
 }

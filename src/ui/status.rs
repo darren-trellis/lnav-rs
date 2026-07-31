@@ -41,6 +41,8 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
         InputMode::Search => {
             let suffix = if app.search_query.is_empty() {
                 String::new()
+            } else if app.search_error.is_some() {
+                "  invalid regex".into()
             } else if app.search_matches.is_empty() {
                 "  no matches".into()
             } else {

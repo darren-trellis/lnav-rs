@@ -9,6 +9,7 @@ use crossterm::event::{
 };
 use crossterm::execute;
 use ratatui::layout::Rect;
+use regex::{Regex, RegexBuilder};
 
 use crate::command;
 use crate::completion::{self, CompletionState};
@@ -93,6 +94,9 @@ pub struct App {
     pub hit: HitAreas,
     last_click: Option<LastClick>,
     pub search_query: String,
+    /// Compiled from `search_query` (case-insensitive). `None` if empty/invalid.
+    pub search_regex: Option<Regex>,
+    pub search_error: Option<String>,
     pub command_buffer: String,
     pub completions: CompletionState,
     pub search_matches: Vec<usize>,
@@ -148,6 +152,8 @@ impl App {
             hit: HitAreas::default(),
             last_click: None,
             search_query: String::new(),
+            search_regex: None,
+            search_error: None,
             command_buffer: String::new(),
             completions: CompletionState::default(),
             search_matches: Vec::new(),
@@ -568,7 +574,9 @@ impl App {
             }
             KeyCode::Enter => {
                 self.input_mode = InputMode::Normal;
-                if self.search_matches.is_empty() {
+                if let Some(err) = self.search_error.clone() {
+                    self.status_message = Some(err);
+                } else if self.search_matches.is_empty() {
                     self.status_message = if self.search_query.is_empty() {
                         None
                     } else {
@@ -851,25 +859,44 @@ impl App {
         self.selected = idx.min(self.visible.len() - 1);
     }
 
+    pub fn clear_search(&mut self) {
+        self.search_query.clear();
+        self.search_regex = None;
+        self.search_error = None;
+        self.search_matches.clear();
+        self.search_cursor = None;
+    }
+
     pub fn run_search(&mut self) {
         if self.search_query.is_empty() {
+            self.search_regex = None;
+            self.search_error = None;
             self.search_matches.clear();
             self.search_cursor = None;
             return;
         }
-        let q = self.search_query.to_ascii_lowercase();
+        let regex = match RegexBuilder::new(&self.search_query)
+            .case_insensitive(true)
+            .build()
+        {
+            Ok(re) => re,
+            Err(err) => {
+                self.search_regex = None;
+                self.search_error = Some(format!("invalid regex: {err}"));
+                self.search_matches.clear();
+                self.search_cursor = None;
+                return;
+            }
+        };
+        self.search_error = None;
         self.search_matches = self
             .visible
             .iter()
             .enumerate()
-            .filter(|&(_, src)| {
-                self.source.entries()[*src]
-                    .raw
-                    .to_ascii_lowercase()
-                    .contains(&q)
-            })
+            .filter(|&(_, src)| regex.is_match(&self.source.entries()[*src].raw))
             .map(|(vis, _)| vis)
             .collect();
+        self.search_regex = Some(regex);
     }
 
     pub(crate) fn next_match(&mut self, dir: isize) {
