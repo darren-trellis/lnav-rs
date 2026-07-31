@@ -1,18 +1,34 @@
 mod list;
 mod overlay;
 mod status;
+mod suggest;
+mod theme_picker;
 
 use ratatui::layout::{Constraint, Layout};
 use ratatui::Frame;
 
-use crate::app::App;
+use crate::app::{App, InputMode};
 
 pub fn draw(frame: &mut Frame, app: &mut App) {
     let area = frame.area();
-    let chunks = Layout::vertical([Constraint::Min(1), Constraint::Length(1)]).split(area);
+    app.hit = crate::app::HitAreas::default();
 
-    let overlay_height = if app.show_overlay {
-        overlay_desired_height(app, chunks[0].height)
+    let suggest_h = if app.input_mode == InputMode::Command && app.theme_picker.is_none() {
+        suggest::desired_height(app, area.height.saturating_sub(4))
+    } else {
+        0
+    };
+
+    let chunks = Layout::vertical([
+        Constraint::Min(1),
+        Constraint::Length(suggest_h),
+        Constraint::Length(1),
+    ])
+    .split(area);
+
+    let body = chunks[0];
+    let overlay_height = if app.show_overlay && app.theme_picker.is_none() {
+        overlay_desired_height(app, body.height)
     } else {
         0
     };
@@ -22,14 +38,21 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
             Constraint::Min(3),
             Constraint::Length(overlay_height),
         ])
-        .split(chunks[0]);
+        .split(body);
         list::draw(frame, app, split[0]);
         overlay::draw(frame, app, split[1]);
     } else {
-        list::draw(frame, app, chunks[0]);
+        list::draw(frame, app, body);
     }
 
-    status::draw(frame, app, chunks[1]);
+    if suggest_h > 0 {
+        suggest::draw(frame, app, chunks[1]);
+    }
+    status::draw(frame, app, chunks[2]);
+
+    if app.theme_picker.is_some() {
+        theme_picker::draw(frame, app, body);
+    }
 }
 
 fn overlay_desired_height(app: &App, available: u16) -> u16 {
