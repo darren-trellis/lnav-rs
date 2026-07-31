@@ -48,7 +48,7 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
     app.pointer.hit.sidebar_inner = inner;
 
     let viewport = inner.height as usize;
-    app.ensure_sidebar_visible(viewport);
+    app.ensure_sidebar_visible(viewport, app.config.scroll_moves_selection);
 
     if app.filters.is_empty() {
         let empty = Paragraph::new(Line::from(Span::styled(

@@ -592,7 +592,7 @@ impl App {
         } else {
             self.details.cursor = self.details.cursor.min(new_len - 1);
         }
-        self.ensure_overlay_cursor_visible();
+        self.ensure_overlay_cursor_visible(true);
         if self.search.in_details && !self.search.query.is_empty() {
             self.run_search();
         }

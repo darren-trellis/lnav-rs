@@ -249,8 +249,8 @@ pub struct Config {
     #[serde(default = "default_scroll_lines")]
     pub scroll_lines: usize,
 
-    /// When true, mouse-wheel scrolling moves the selected log line.
-    /// When false, the wheel scrolls the viewport only.
+    /// When true, mouse-wheel scrolling moves the selection/cursor.
+    /// When false, the wheel scrolls the viewport only (list, details, sidebar).
     #[serde(default = "default_true")]
     pub scroll_moves_selection: bool,
 

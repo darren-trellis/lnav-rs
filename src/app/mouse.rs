@@ -16,54 +16,66 @@ impl App {
         match mouse.kind {
             MouseEventKind::ScrollUp => {
                 self.cancel_pending_op();
+                let n = self.config.scroll_lines.max(1) as isize;
                 if self.config.sidebar
                     && (self.is_sidebar_focused()
                         || contains(self.pointer.hit.sidebar_inner, mouse.column, mouse.row))
                 {
-                    self.move_sidebar_cursor(-(self.config.scroll_lines.max(1) as isize));
+                    if self.config.scroll_moves_selection {
+                        self.move_sidebar_cursor(-n);
+                    } else {
+                        self.scroll_sidebar(-n);
+                    }
                 } else if self.details.visible
                     && (self.is_details_focused()
                         || contains(self.pointer.hit.overlay, mouse.column, mouse.row))
                 {
-                    self.move_overlay_cursor(-(self.config.scroll_lines.max(1) as isize));
+                    if self.config.scroll_moves_selection {
+                        self.move_overlay_cursor(-n);
+                    } else {
+                        self.scroll_overlay(-n);
+                    }
                 } else if self.input_mode == InputMode::Command
                     && !self.command_line.completions.items.is_empty()
                 {
                     self.command_line.completions.select_prev();
                     self.command_line.completions.browsed = true;
+                } else if self.config.scroll_moves_selection {
+                    self.with_motion(|a| a.move_selection(-n));
                 } else {
-                    let n = self.config.scroll_lines.max(1) as isize;
-                    if self.config.scroll_moves_selection {
-                        self.with_motion(|a| a.move_selection(-n));
-                    } else {
-                        self.scroll_list(-n);
-                    }
+                    self.scroll_list(-n);
                 }
             }
             MouseEventKind::ScrollDown => {
                 self.cancel_pending_op();
+                let n = self.config.scroll_lines.max(1) as isize;
                 if self.config.sidebar
                     && (self.is_sidebar_focused()
                         || contains(self.pointer.hit.sidebar_inner, mouse.column, mouse.row))
                 {
-                    self.move_sidebar_cursor(self.config.scroll_lines.max(1) as isize);
+                    if self.config.scroll_moves_selection {
+                        self.move_sidebar_cursor(n);
+                    } else {
+                        self.scroll_sidebar(n);
+                    }
                 } else if self.details.visible
                     && (self.is_details_focused()
                         || contains(self.pointer.hit.overlay, mouse.column, mouse.row))
                 {
-                    self.move_overlay_cursor(self.config.scroll_lines.max(1) as isize);
+                    if self.config.scroll_moves_selection {
+                        self.move_overlay_cursor(n);
+                    } else {
+                        self.scroll_overlay(n);
+                    }
                 } else if self.input_mode == InputMode::Command
                     && !self.command_line.completions.items.is_empty()
                 {
                     self.command_line.completions.select_next();
                     self.command_line.completions.browsed = true;
+                } else if self.config.scroll_moves_selection {
+                    self.with_motion(|a| a.move_selection(n));
                 } else {
-                    let n = self.config.scroll_lines.max(1) as isize;
-                    if self.config.scroll_moves_selection {
-                        self.with_motion(|a| a.move_selection(n));
-                    } else {
-                        self.scroll_list(n);
-                    }
+                    self.scroll_list(n);
                 }
             }
             MouseEventKind::Down(MouseButton::Left) => {
@@ -168,10 +180,12 @@ impl App {
         let max_scroll = self.details.content_len.saturating_sub(viewport);
         self.details.scroll = new_scroll.min(max_scroll);
         self.focus_details();
-        if self.details.cursor < self.details.scroll {
-            self.details.cursor = self.details.scroll;
-        } else if self.details.cursor >= self.details.scroll + viewport {
-            self.details.cursor = self.details.scroll + viewport - 1;
+        if self.config.scroll_moves_selection {
+            if self.details.cursor < self.details.scroll {
+                self.details.cursor = self.details.scroll;
+            } else if self.details.cursor >= self.details.scroll + viewport {
+                self.details.cursor = self.details.scroll + viewport - 1;
+            }
         }
     }
 

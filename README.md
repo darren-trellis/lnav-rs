@@ -122,7 +122,7 @@ In `/` mode, **Up/Down** recall search history (shared for list and details sear
 | `:config set autosave on\|off\|toggle` | Auto-save after `:config set` (default on) |
 | `:config set sidebar on\|off\|toggle` | Show filters sidebar (default off; same as `:view sidebar`) |
 | `:config set scroll_lines N` | Mouse wheel step (default 1) |
-| `:config set scroll_moves_selection on\|off\|toggle` | Mouse wheel moves selection (default on; off scrolls the viewport only) |
+| `:config set scroll_moves_selection on\|off\|toggle` | Mouse wheel moves selection in list/details/sidebar (default on; off scrolls the viewport only) |
 | `:config set timestamp_format …` | strftime for timestamp columns (`raw` = original) |
 | `:config set case_mode …` | `sensitive` / `insensitive` / `smart` (search + filters) |
 | `:config set session_filters on\|off\|toggle` | Persist filters per log file (default on) |

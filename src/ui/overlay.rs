@@ -80,12 +80,10 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect, content: &[DetailLine]
     app.pointer.hit.overlay_scrollbar = bar_area.unwrap_or_default();
     app.details.viewport_height = content_area.height as usize;
 
-    let max_scroll = content_len.saturating_sub(content_area.height as usize);
-    if app.details.scroll > max_scroll {
-        app.details.scroll = max_scroll;
-    }
     if focused {
-        app.ensure_overlay_cursor_visible();
+        app.ensure_overlay_cursor_visible(app.config.scroll_moves_selection);
+    } else {
+        app.ensure_overlay_cursor_visible(false);
     }
     let scroll = app.details.scroll;
     let viewport = content_area.height as usize;

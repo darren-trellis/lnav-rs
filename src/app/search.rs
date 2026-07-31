@@ -87,7 +87,7 @@ impl App {
         self.view.follow = false;
         if self.search.in_details {
             self.details.cursor = self.search.matches[cursor];
-            self.ensure_overlay_cursor_visible();
+            self.ensure_overlay_cursor_visible(true);
         } else {
             self.jump_to(self.search.matches[cursor]);
         }
@@ -102,6 +102,7 @@ impl App {
         let next = (self.sidebar_selected as isize + delta)
             .clamp(0, self.filters.len() as isize - 1) as usize;
         self.sidebar_selected = next;
+        self.ensure_sidebar_selection_visible();
     }
 
     pub fn jump_sidebar_cursor(&mut self, idx: usize) {
@@ -111,9 +112,27 @@ impl App {
         }
         self.cancel_pending_op();
         self.sidebar_selected = idx.min(self.filters.len() - 1);
+        self.ensure_sidebar_selection_visible();
     }
 
-    pub fn ensure_sidebar_visible(&mut self, viewport_height: usize) {
+    pub(crate) fn scroll_sidebar(&mut self, delta: isize) {
+        if self.filters.is_empty() {
+            return;
+        }
+        let viewport = self.pointer.hit.sidebar_inner.height.max(1) as usize;
+        let max_scroll = self.filters.len().saturating_sub(viewport);
+        let next = (self.sidebar_scroll as isize + delta).clamp(0, max_scroll as isize) as usize;
+        self.sidebar_scroll = next;
+    }
+
+    fn ensure_sidebar_selection_visible(&mut self) {
+        let viewport = self.pointer.hit.sidebar_inner.height as usize;
+        if viewport > 0 {
+            self.ensure_sidebar_visible(viewport, true);
+        }
+    }
+
+    pub fn ensure_sidebar_visible(&mut self, viewport_height: usize, follow_selection: bool) {
         if viewport_height == 0 || self.filters.is_empty() {
             self.sidebar_scroll = 0;
             return;
@@ -121,10 +140,12 @@ impl App {
         if self.sidebar_selected >= self.filters.len() {
             self.sidebar_selected = self.filters.len() - 1;
         }
-        if self.sidebar_selected < self.sidebar_scroll {
-            self.sidebar_scroll = self.sidebar_selected;
-        } else if self.sidebar_selected >= self.sidebar_scroll + viewport_height {
-            self.sidebar_scroll = self.sidebar_selected + 1 - viewport_height;
+        if follow_selection {
+            if self.sidebar_selected < self.sidebar_scroll {
+                self.sidebar_scroll = self.sidebar_selected;
+            } else if self.sidebar_selected >= self.sidebar_scroll + viewport_height {
+                self.sidebar_scroll = self.sidebar_selected + 1 - viewport_height;
+            }
         }
         let max_scroll = self.filters.len().saturating_sub(viewport_height);
         if self.sidebar_scroll > max_scroll {
@@ -152,7 +173,7 @@ impl App {
         let max = self.details.content_len - 1;
         let next = (self.details.cursor as isize + delta).clamp(0, max as isize) as usize;
         self.details.cursor = next;
-        self.ensure_overlay_cursor_visible();
+        self.ensure_overlay_cursor_visible(true);
     }
 
     pub fn jump_overlay_cursor(&mut self, idx: usize) {
@@ -161,16 +182,32 @@ impl App {
             return;
         }
         self.details.cursor = idx.min(self.details.content_len - 1);
-        self.ensure_overlay_cursor_visible();
+        self.ensure_overlay_cursor_visible(true);
     }
 
-    pub fn ensure_overlay_cursor_visible(&mut self) {
+    pub(crate) fn scroll_overlay(&mut self, delta: isize) {
+        if !self.details.visible || self.details.content_len == 0 {
+            return;
+        }
+        let viewport = self.details.viewport_height.max(1);
+        let max_scroll = self.details.content_len.saturating_sub(viewport);
+        let next = (self.details.scroll as isize + delta).clamp(0, max_scroll as isize) as usize;
+        self.details.scroll = next;
+    }
+
+    pub fn ensure_overlay_cursor_visible(&mut self, follow_selection: bool) {
         let view = self.details.viewport_height.max(1);
-        let idx = self.details.cursor;
-        if idx < self.details.scroll {
-            self.details.scroll = idx;
-        } else if idx >= self.details.scroll + view {
-            self.details.scroll = idx + 1 - view;
+        if follow_selection {
+            let idx = self.details.cursor;
+            if idx < self.details.scroll {
+                self.details.scroll = idx;
+            } else if idx >= self.details.scroll + view {
+                self.details.scroll = idx + 1 - view;
+            }
+        }
+        let max_scroll = self.details.content_len.saturating_sub(view);
+        if self.details.scroll > max_scroll {
+            self.details.scroll = max_scroll;
         }
     }
 
