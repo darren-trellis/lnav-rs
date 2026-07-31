@@ -65,10 +65,8 @@ pub struct Theme {
     pub status_bg: Color,
     pub status_fg: Color,
     pub border: Tone,
-    /// Main list border when the list (not details) has focus.
+    /// Border for the focused pane (list or details).
     pub window_focus_border: Tone,
-    /// Details overlay border when the overlay has focus.
-    pub overlay_focus_border: Tone,
     pub search_match: Tone,
     pub dim: Tone,
     pub timestamp: Tone,
@@ -155,7 +153,6 @@ struct ThemeColors {
     status_fg: String,
     border: ColorSpec,
     window_focus_border: ColorSpec,
-    overlay_focus_border: ColorSpec,
     search_match: ColorSpec,
     dim: ColorSpec,
 }
@@ -197,7 +194,13 @@ impl Theme {
     pub fn builtin(name: &str) -> Result<Self> {
         let raw = match name {
             "default" | "catppuccin" => include_str!("../themes/catppuccin.toml"),
+            "dracula" => include_str!("../themes/dracula.toml"),
+            "github-dark" => include_str!("../themes/github-dark.toml"),
+            "github-light" => include_str!("../themes/github-light.toml"),
+            "gotham" => include_str!("../themes/gotham.toml"),
             "nord" => include_str!("../themes/nord.toml"),
+            "solarized-dark" => include_str!("../themes/solarized-dark.toml"),
+            "solarized-light" => include_str!("../themes/solarized-light.toml"),
             "tokyo-night" => include_str!("../themes/tokyo-night.toml"),
             other => bail!("unknown built-in theme '{other}'"),
         };
@@ -260,9 +263,6 @@ impl Theme {
         }
         if let Some(v) = &c.window_focus_border {
             self.window_focus_border = v.parse()?;
-        }
-        if let Some(v) = &c.overlay_focus_border {
-            self.overlay_focus_border = v.parse()?;
         }
         if let Some(v) = &c.search_match {
             self.search_match = v.parse()?;
@@ -353,7 +353,6 @@ impl Theme {
             status_fg: parse_color(&file.colors.status_fg)?,
             border: file.colors.border.parse()?,
             window_focus_border: file.colors.window_focus_border.parse()?,
-            overlay_focus_border: file.colors.overlay_focus_border.parse()?,
             search_match: file.colors.search_match.parse()?,
             dim,
             timestamp: file.ui.timestamp.parse()?,
@@ -370,7 +369,17 @@ impl Theme {
     }
 
     pub fn available() -> &'static [&'static str] {
-        &["catppuccin", "nord", "tokyo-night"]
+        &[
+            "catppuccin",
+            "dracula",
+            "github-dark",
+            "github-light",
+            "gotham",
+            "nord",
+            "solarized-dark",
+            "solarized-light",
+            "tokyo-night",
+        ]
     }
 
     pub fn list_names() -> Vec<String> {
@@ -429,7 +438,6 @@ pub struct ColorOverrides {
     pub status_fg: Option<String>,
     pub border: Option<ColorSpec>,
     pub window_focus_border: Option<ColorSpec>,
-    pub overlay_focus_border: Option<ColorSpec>,
     pub search_match: Option<ColorSpec>,
     pub dim: Option<ColorSpec>,
 }
@@ -445,7 +453,6 @@ impl ColorOverrides {
             && self.status_fg.is_none()
             && self.border.is_none()
             && self.window_focus_border.is_none()
-            && self.overlay_focus_border.is_none()
             && self.search_match.is_none()
             && self.dim.is_none()
     }
@@ -460,7 +467,6 @@ impl ColorOverrides {
         validate_color_str("colors.status_fg", self.status_fg.as_deref())?;
         validate_spec("colors.border", self.border.as_ref())?;
         validate_spec("colors.window_focus_border", self.window_focus_border.as_ref())?;
-        validate_spec("colors.overlay_focus_border", self.overlay_focus_border.as_ref())?;
         validate_spec("colors.search_match", self.search_match.as_ref())?;
         validate_spec("colors.dim", self.dim.as_ref())?;
         Ok(())
@@ -574,6 +580,14 @@ mod tests {
     use super::*;
 
     #[test]
+    fn all_builtin_themes_parse() {
+        for name in Theme::available() {
+            let theme = Theme::builtin(name).unwrap();
+            assert_eq!(theme.name, *name);
+        }
+    }
+
+    #[test]
     fn overrides_patch_selected_colors() {
         let mut theme = Theme::builtin("catppuccin").unwrap();
         let overrides = ThemeOverrides {
@@ -671,8 +685,7 @@ overlay_bg = "#111111"
 status_bg = "#222222"
 status_fg = "#aaaaaa"
 border = "#444444"
-window_focus_border = "#0088ff"
-overlay_focus_border = "#ffff00"
+window_focus_border = "#ffff00"
 search_match = "#ffff00"
 dim = { fg = "#666666", bg = "#222222" }
 [levels]

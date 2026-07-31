@@ -4,11 +4,44 @@ mod status;
 mod suggest;
 mod theme_picker;
 
-use ratatui::layout::{Constraint, Layout};
+use ratatui::layout::{Constraint, Layout, Rect};
+use ratatui::style::Style;
+use ratatui::widgets::{Scrollbar, ScrollbarOrientation, ScrollbarState};
 use ratatui::Frame;
 
 use crate::app::{App, InputMode};
 use crate::details;
+
+/// Split `area` into content + optional 1-column scrollbar strip on the right.
+pub(crate) fn split_scrollbar(area: Rect, enabled: bool) -> (Rect, Option<Rect>) {
+    if !enabled || area.width < 2 {
+        return (area, None);
+    }
+    let chunks = Layout::horizontal([Constraint::Min(0), Constraint::Length(1)]).split(area);
+    (chunks[0], Some(chunks[1]))
+}
+
+pub(crate) fn draw_scrollbar(
+    frame: &mut Frame,
+    area: Rect,
+    content_len: usize,
+    position: usize,
+    viewport_len: usize,
+    thumb: Style,
+    track: Style,
+) {
+    let scrollable = content_len.saturating_sub(viewport_len);
+    if scrollable == 0 || area.height == 0 {
+        return;
+    }
+    let mut state = ScrollbarState::new(scrollable).position(position);
+    let bar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
+        .begin_symbol(None)
+        .end_symbol(None)
+        .thumb_style(thumb)
+        .track_style(track);
+    frame.render_stateful_widget(bar, area, &mut state);
+}
 
 pub fn draw(frame: &mut Frame, app: &mut App) {
     let area = frame.area();

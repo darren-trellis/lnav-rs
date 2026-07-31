@@ -1,0 +1,36 @@
+name = "github-light"
+
+[colors]
+background = "#ffffff"
+foreground = "#1f2328"
+selection_bg = "#ddf4ff"
+selection_fg = "#1f2328"
+overlay_bg = "#f6f8fa"
+status_bg = "#f6f8fa"
+status_fg = "#656d76"
+border = "#d0d7de"
+window_focus_border = "#9a6700"
+search_match = "#9a6700"
+dim = "#656d76"
+
+[levels]
+trace = "#656d76"
+debug = "#0969da"
+info = "#1a7f37"
+warn = "#9a6700"
+error = "#cf222e"
+fatal = "#8250df"
+unknown = "#1f2328"
+
+[ui]
+timestamp = "#0969da"
+key = "#0550ae"
+string = "#0a3069"
+number = "#0550ae"
+bool = "#cf222e"
+null = "#656d76"
+# Vertical rules between list columns (width 0 = space separator).
+# column_border = { fg = "#d0d7de", bg = "#ffffff" }
+# column_border_width = 1
+# column_border_padding = 1
+# column_border_padding = { left = 1, right = 2 }

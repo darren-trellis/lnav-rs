@@ -623,7 +623,7 @@ fn theme_command(app: &mut App, rest: &str) {
     }
 }
 
-const CONFIG_KEYS_USAGE: &str = "theme|follow|wrap_details|details_json_tree|details_max_height|details_tab_width|line_numbers|relative_line_numbers|scroll_lines|timestamp_format|case_mode|session_filters|session_stdin";
+const CONFIG_KEYS_USAGE: &str = "theme|follow|wrap_details|details_json_tree|details_max_height|details_tab_width|line_numbers|relative_line_numbers|scrollbar|scroll_lines|timestamp_format|case_mode|session_filters|session_stdin";
 
 fn config_command(app: &mut App, rest: &str) {
     let (sub, arg) = split_cmd(rest);
@@ -669,6 +669,7 @@ fn option_value(app: &App, key: &str) -> Option<String> {
         "relative_line_numbers" => {
             Some(current_bool_option(app, "relative_line_numbers").to_string())
         }
+        "scrollbar" => Some(current_bool_option(app, "scrollbar").to_string()),
         "session_filters" => Some(current_bool_option(app, "session_filters").to_string()),
         "session_stdin" => Some(current_bool_option(app, "session_stdin").to_string()),
         "case_mode" => Some(app.config.case_mode.as_str().to_string()),
@@ -728,6 +729,9 @@ fn set_option(app: &mut App, rest: &str) {
         "relative_line_numbers" => set_bool_option(app, "relative_line_numbers", value, |app, v| {
             app.config.relative_line_numbers = v;
         }),
+        "scrollbar" => set_bool_option(app, "scrollbar", value, |app, v| {
+            app.config.scrollbar = v;
+        }),
         "session_filters" => set_bool_option(app, "session_filters", value, |app, v| {
             app.config.session_filters = v;
         }),
@@ -777,6 +781,7 @@ fn current_bool_option(app: &App, name: &str) -> bool {
         "details_json_tree" => app.config.details_json_tree,
         "line_numbers" => app.config.line_numbers,
         "relative_line_numbers" => app.config.relative_line_numbers,
+        "scrollbar" => app.config.scrollbar,
         "session_filters" => app.config.session_filters,
         "session_stdin" => app.config.session_stdin,
         _ => false,

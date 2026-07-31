@@ -9,6 +9,7 @@ overlay_bg = "#3b4252"
 status_bg = "#232831"
 status_fg = "#d8dee9"
 border = "#4c566a"
+window_focus_border = "#ebcb8b"
 search_match = "#ebcb8b"
 dim = "#4c566a"
 

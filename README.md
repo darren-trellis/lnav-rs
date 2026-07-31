@@ -110,6 +110,7 @@ In `:` mode, **Up/Down** recall command history when no completion is selected (
 | `:config set details_tab_width N` | Details tree indent width (default 4, min 2) |
 | `:config set line_numbers on\|off\|toggle` | Show absolute view line numbers |
 | `:config set relative_line_numbers on\|off\|toggle` | Show relative line numbers (vim-style) |
+| `:config set scrollbar on\|off\|toggle` | Show a right-side scrollbar (list + details) |
 | `:config set scroll_lines N` | Mouse wheel step (default 1) |
 | `:config set timestamp_format …` | strftime for timestamp columns (`raw` = original) |
 | `:config set case_mode …` | `sensitive` / `insensitive` / `smart` (search + filters) |
@@ -150,6 +151,7 @@ details_max_height = 24
 details_tab_width = 4
 line_numbers = false
 relative_line_numbers = false
+scrollbar = false
 scroll_lines = 1
 timestamp_format = "%H:%M:%S"
 case_mode = "smart"   # or "sensitive" | "insensitive"
@@ -193,7 +195,7 @@ Details: `Enter` opens and focuses the overlay — the selection highlight moves
 
 Filters persist under `~/.local/share/lnav-rs/sessions/` (one file per log path hash; stdin uses `stdin.toml`). `session_filters` / `session_stdin` control that (both default on). Turn `session_stdin` off if you don’t want every pipe to share one filter set.
 
-`[theme]` selects the theme (`name`) and optional `[theme.colors]` / `[theme.levels]` / `[theme.ui]` patches (same keys as `themes/*.toml`). Text colors (`foreground`, `border`, `search_match`, `dim`, levels, and `[ui]` color keys) accept a hex string (fg only) or `{ fg = "...", bg = "..." }`. Surface keys (`background`, `overlay_bg`, `selection_*`, `status_*`) stay plain color strings. List column separators: `ui.column_border` (color), `ui.column_border_width` (`0` = space between columns; `N` draws `N`× `│`), and `ui.column_border_padding` (`1` or `{ left, right }`, like column `padding`). Unknown keys, invalid colors, unknown theme names, and unknown keybinding commands are rejected.
+`[theme]` selects the theme (`name`) and optional `[theme.colors]` / `[theme.levels]` / `[theme.ui]` patches (same keys as `themes/*.toml`). Text colors (`foreground`, `border`, `window_focus_border`, `search_match`, `dim`, levels, and `[ui]` color keys) accept a hex string (fg only) or `{ fg = "...", bg = "..." }`. Surface keys (`background`, `overlay_bg`, `selection_*`, `status_*`) stay plain color strings. Focused chrome: `window_focus_border` is the border of the focused pane (list or details); unfocused panes use `border`. List column separators: `ui.column_border` (color), `ui.column_border_width` (`0` = space between columns; `N` draws `N`× `│`), and `ui.column_border_padding` (`1` or `{ left, right }`, like column `padding`). Unknown keys, invalid colors, unknown theme names, and unknown keybinding commands are rejected.
 
 `[keys]` overrides defaults (merged). Use `key = ""` to unbind. Special key names: `enter`, `esc`, `up`, `down`, `home`, `end`, `pagedown`, `pageup`, `space`, `C-c`. `[details_keys]` overrides `[keys]` while the details overlay is focused (default: `space = "fold toggle"`).
 
@@ -218,7 +220,7 @@ Drop TOML themes in `~/.config/lnav-rs/themes/<name>.toml` (same shape as files 
 
 ## Themes
 
-Built-in: `catppuccin` (default), `nord`, `tokyo-night`. Patch individual colors in `config.toml` under `[theme]`.
+Built-in: `catppuccin` (default), `dracula`, `github-dark`, `github-light`, `gotham`, `nord`, `solarized-dark`, `solarized-light`, `tokyo-night`. Patch individual colors in `config.toml` under `[theme]`.
 
 ## Project layout
 

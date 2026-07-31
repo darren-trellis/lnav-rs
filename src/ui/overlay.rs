@@ -4,6 +4,8 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph, Wrap};
 use ratatui::Frame;
 
+use super::{draw_scrollbar, split_scrollbar};
+
 use crate::app::App;
 use crate::details::{self, DetailLine};
 use crate::highlight;
@@ -24,7 +26,6 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
         None
     };
     let cursor = app.overlay_cursor;
-    let theme_border = app.theme.border.fg;
     let match_fg = app.theme.search_match.fg;
     let match_bg = app.theme.search_match.bg;
     let overlay_bg = app.theme.overlay_bg;
@@ -32,6 +33,11 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
     let selection_bg = app.theme.selection_bg;
     let selection_fg = app.theme.selection_fg;
     let fg_tone = app.theme.foreground;
+    let border_tone = if focused {
+        app.theme.window_focus_border
+    } else {
+        app.theme.border
+    };
 
     app.overlay_content_len = content_len;
     if content_len == 0 {
@@ -44,13 +50,10 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
     let show_help = focused && app.overlay_help;
     let hint = " j/k move · Space fold · Tab focus · c copy · / search · Esc close · ? hide ";
 
-    let border = if focused {
-        Style::default()
-            .fg(match_fg)
-            .add_modifier(Modifier::BOLD)
-    } else {
-        Style::default().fg(theme_border)
-    };
+    let mut border = app.theme.tone_fg_style(border_tone);
+    if focused {
+        border = border.add_modifier(Modifier::BOLD);
+    }
 
     let mut block = Block::default()
         .borders(Borders::ALL)
@@ -63,9 +66,11 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
 
     let inner = block.inner(area);
     frame.render_widget(block, area);
-    app.overlay_inner_height = inner.height as usize;
+    let show_bar = app.config.scrollbar;
+    let (content_area, bar_area) = split_scrollbar(inner, show_bar);
+    app.overlay_inner_height = content_area.height as usize;
 
-    let max_scroll = content_len.saturating_sub(inner.height as usize);
+    let max_scroll = content_len.saturating_sub(content_area.height as usize);
     if app.overlay_scroll > max_scroll {
         app.overlay_scroll = max_scroll;
     }
@@ -73,6 +78,9 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
         app.ensure_overlay_cursor_visible();
     }
     let scroll = app.overlay_scroll;
+    let viewport = content_area.height as usize;
+    let thumb = app.theme.tone_fg_style(app.theme.window_focus_border);
+    let track = app.theme.tone_fg_style(app.theme.dim);
 
     let match_style = Style::default()
         .fg(match_fg)
@@ -101,7 +109,7 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
                 is_cursor,
                 cursor_style,
                 cursor_match_style,
-                inner.width as usize,
+                content_area.width as usize,
             )
         })
         .collect();
@@ -111,7 +119,19 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
     if wrap {
         paragraph = paragraph.wrap(Wrap { trim: false });
     }
-    frame.render_widget(paragraph, inner);
+    frame.render_widget(paragraph, content_area);
+
+    if let Some(bar) = bar_area {
+        draw_scrollbar(
+            frame,
+            bar,
+            content_len,
+            scroll,
+            viewport,
+            thumb,
+            track,
+        );
+    }
 }
 
 fn render_detail_line(

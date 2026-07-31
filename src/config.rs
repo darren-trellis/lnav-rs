@@ -231,6 +231,10 @@ pub struct Config {
     #[serde(default)]
     pub relative_line_numbers: bool,
 
+    /// Show a vertical scrollbar on the right of the list and details panes.
+    #[serde(default)]
+    pub scrollbar: bool,
+
     /// Lines to move per mouse-wheel notch in the log list.
     #[serde(default = "default_scroll_lines")]
     pub scroll_lines: usize,
@@ -322,6 +326,7 @@ impl Default for Config {
             details_tab_width: default_details_tab_width(),
             line_numbers: false,
             relative_line_numbers: false,
+            scrollbar: false,
             scroll_lines: default_scroll_lines(),
             timestamp_format: default_timestamp_format(),
             case_mode: CaseMode::default(),
@@ -462,6 +467,9 @@ impl Config {
                 "relative_line_numbers = {}\n",
                 self.relative_line_numbers
             ));
+        }
+        if self.scrollbar != defaults.scrollbar {
+            body.push_str(&format!("scrollbar = {}\n", self.scrollbar));
         }
         if self.scroll_lines.max(1) != defaults.scroll_lines {
             body.push_str(&format!("scroll_lines = {}\n", self.scroll_lines.max(1)));
@@ -619,6 +627,7 @@ fn write_theme_config(body: &mut String, theme: &ThemeConfig) {
         write_opt(body, "status_bg", &o.colors.status_bg);
         write_opt(body, "status_fg", &o.colors.status_fg);
         write_color_spec_opt(body, "border", &o.colors.border);
+        write_color_spec_opt(body, "window_focus_border", &o.colors.window_focus_border);
         write_color_spec_opt(body, "search_match", &o.colors.search_match);
         write_color_spec_opt(body, "dim", &o.colors.dim);
         body.push('\n');

@@ -1,0 +1,36 @@
+name = "dracula"
+
+[colors]
+background = "#282a36"
+foreground = "#f8f8f2"
+selection_bg = "#44475a"
+selection_fg = "#f8f8f2"
+overlay_bg = "#21222c"
+status_bg = "#191a21"
+status_fg = "#6272a4"
+border = "#6272a4"
+window_focus_border = "#f1fa8c"
+search_match = "#f1fa8c"
+dim = "#6272a4"
+
+[levels]
+trace = "#6272a4"
+debug = "#8be9fd"
+info = "#50fa7b"
+warn = "#f1fa8c"
+error = "#ff5555"
+fatal = "#bd93f9"
+unknown = "#f8f8f2"
+
+[ui]
+timestamp = "#8be9fd"
+key = "#ff79c6"
+string = "#50fa7b"
+number = "#bd93f9"
+bool = "#ffb86c"
+null = "#6272a4"
+# Vertical rules between list columns (width 0 = space separator).
+# column_border = { fg = "#6272a4", bg = "#282a36" }
+# column_border_width = 1
+# column_border_padding = 1
+# column_border_padding = { left = 1, right = 2 }

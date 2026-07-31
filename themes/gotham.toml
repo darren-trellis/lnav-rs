@@ -1,0 +1,36 @@
+name = "gotham"
+
+[colors]
+background = "#0c1014"
+foreground = "#99d1ce"
+selection_bg = "#091f2e"
+selection_fg = "#d3ebe9"
+overlay_bg = "#11151c"
+status_bg = "#0a0f14"
+status_fg = "#599cab"
+border = "#245361"
+window_focus_border = "#edb443"
+search_match = "#edb443"
+dim = "#245361"
+
+[levels]
+trace = "#245361"
+debug = "#599cab"
+info = "#2aa889"
+warn = "#edb443"
+error = "#c23127"
+fatal = "#888ca6"
+unknown = "#99d1ce"
+
+[ui]
+timestamp = "#599cab"
+key = "#599cab"
+string = "#2aa889"
+number = "#d26937"
+bool = "#888ca6"
+null = "#245361"
+# Vertical rules between list columns (width 0 = space separator).
+# column_border = { fg = "#245361", bg = "#0c1014" }
+# column_border_width = 1
+# column_border_padding = 1
+# column_border_padding = { left = 1, right = 2 }

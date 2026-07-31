@@ -12,10 +12,6 @@ use crate::model::LogEntry;
 use crate::theme::{Theme, Tone};
 
 pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
-    let inner = Block::default().borders(Borders::ALL).inner(area);
-    let viewport = inner.height as usize;
-    app.ensure_visible(viewport);
-
     let title = if app.hidden_count() > 0 {
         format!(
             " {} · {} filtered ",
@@ -27,9 +23,19 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
     };
     let block = {
         let theme = &app.theme;
+        let list_focused = !app.overlay_focused;
+        let border_tone = if list_focused {
+            theme.window_focus_border
+        } else {
+            theme.border
+        };
+        let mut border_style = theme.tone_fg_style(border_tone);
+        if list_focused {
+            border_style = border_style.add_modifier(Modifier::BOLD);
+        }
         Block::default()
             .borders(Borders::ALL)
-            .border_style(Style::default().fg(theme.border.fg))
+            .border_style(border_style)
             .title(title)
             .style(
                 Style::default()
@@ -40,7 +46,10 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
 
     let inner = block.inner(area);
     frame.render_widget(block, area);
-    app.hit.list_inner = inner;
+    let (content, bar_area) = super::split_scrollbar(inner, app.config.scrollbar);
+    app.hit.list_inner = content;
+    let viewport = content.height as usize;
+    app.ensure_visible(viewport);
 
     if app.visible.is_empty() {
         let theme = &app.theme;
@@ -54,7 +63,7 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
             theme.tone_style(theme.dim, theme.background),
         )))
         .style(Style::default().bg(theme.background));
-        frame.render_widget(empty, inner);
+        frame.render_widget(empty, content);
         return;
     }
 
@@ -104,13 +113,26 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
             gutter_num.as_deref(),
             line_no_width,
             selected,
-            inner.width as usize,
+            content.width as usize,
         ));
     }
 
     let paragraph =
         Paragraph::new(lines).style(Style::default().bg(app.theme.background));
-    frame.render_widget(paragraph, inner);
+    frame.render_widget(paragraph, content);
+
+    if let Some(bar) = bar_area {
+        let theme = &app.theme;
+        super::draw_scrollbar(
+            frame,
+            bar,
+            app.visible.len(),
+            app.scroll,
+            viewport,
+            theme.tone_fg_style(theme.window_focus_border),
+            theme.tone_fg_style(theme.dim),
+        );
+    }
 }
 
 fn line_number_label(app: &App, vis_idx: usize) -> Option<String> {
