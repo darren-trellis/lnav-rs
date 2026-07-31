@@ -16,6 +16,7 @@ use crate::completion::{self, CompletionState};
 use crate::config::Config;
 use crate::details;
 use crate::filter::{self, Filter};
+use crate::history::CommandHistory;
 use crate::keys;
 use crate::model::LogEntry;
 use crate::object_span;
@@ -101,6 +102,8 @@ pub struct App {
     pub overlay_inner_height: usize,
     /// Folded JSON tree paths (`details::path_key`).
     pub overlay_folded: HashSet<String>,
+    /// Show keybinding hints on the details overlay bottom border.
+    pub overlay_help: bool,
     pub input_mode: InputMode,
     pub pending_op: Option<PendingOp>,
     /// Visible-row anchor when the pending operator was started.
@@ -115,6 +118,7 @@ pub struct App {
     pub search_regex: Option<Regex>,
     pub search_error: Option<String>,
     pub command_buffer: String,
+    pub command_history: CommandHistory,
     pub completions: CompletionState,
     pub search_matches: Vec<usize>,
     pub search_cursor: Option<usize>,
@@ -169,6 +173,7 @@ impl App {
             overlay_content_len: 0,
             overlay_inner_height: 0,
             overlay_folded: HashSet::new(),
+            overlay_help: false,
             input_mode: InputMode::Normal,
             pending_op: None,
             op_anchor: 0,
@@ -180,6 +185,7 @@ impl App {
             search_regex: None,
             search_error: None,
             command_buffer: String::new(),
+            command_history: CommandHistory::load(),
             completions: CompletionState::default(),
             search_matches: Vec::new(),
             search_cursor: None,
@@ -304,6 +310,7 @@ impl App {
                 } else if self.input_mode == InputMode::Command && !self.completions.items.is_empty()
                 {
                     self.completions.select_prev();
+                    self.completions.browsed = true;
                 } else {
                     let n = self.config.scroll_lines.max(1) as isize;
                     self.with_motion(|a| a.move_selection(-n));
@@ -319,6 +326,7 @@ impl App {
                 } else if self.input_mode == InputMode::Command && !self.completions.items.is_empty()
                 {
                     self.completions.select_next();
+                    self.completions.browsed = true;
                 } else {
                     let n = self.config.scroll_lines.max(1) as isize;
                     self.with_motion(|a| a.move_selection(n));
@@ -330,7 +338,8 @@ impl App {
                     && contains(self.hit.suggest_inner, mouse.column, mouse.row) =>
             {
                 if let Some(idx) = self.suggest_index_at(mouse.column, mouse.row) {
-                    self.completions.selected = idx;
+                    self.completions.selected = Some(idx);
+                    self.completions.browsed = true;
                 }
             }
             _ => {}
@@ -340,7 +349,8 @@ impl App {
     fn handle_left_click(&mut self, col: u16, row: u16) {
         if contains(self.hit.suggest_inner, col, row) {
             if let Some(idx) = self.suggest_index_at(col, row) {
-                self.completions.selected = idx;
+                self.completions.selected = Some(idx);
+                self.completions.browsed = false;
                 completion::apply_selected(self);
             }
             return;
@@ -357,8 +367,6 @@ impl App {
                     self.jump_overlay_cursor(idx);
                 }
             }
-            self.status_message =
-                Some("details focused · j/k move · Tab fold · Esc close".into());
             return;
         }
 
@@ -371,10 +379,7 @@ impl App {
             match self.input_mode {
                 InputMode::Search | InputMode::Command => {}
                 InputMode::Normal => {
-                    self.input_mode = InputMode::Command;
-                    self.command_buffer.clear();
-                    self.status_message = None;
-                    completion::refresh(self);
+                    self.begin_command_mode();
                 }
             }
         }
@@ -395,6 +400,7 @@ impl App {
         if self.input_mode != InputMode::Normal {
             self.input_mode = InputMode::Normal;
             self.command_buffer.clear();
+            self.command_history.reset_navigation();
             self.completions.clear();
         }
         self.overlay_focused = false;
@@ -530,6 +536,7 @@ impl App {
         });
         self.input_mode = InputMode::Normal;
         self.command_buffer.clear();
+        self.command_history.reset_navigation();
         self.completions.clear();
         self.preview_theme_at_selection();
         self.status_message = Some("theme picker · click/Enter to set · Esc to cancel".into());
@@ -681,50 +688,89 @@ impl App {
         }
     }
 
+    pub fn begin_command_mode(&mut self) {
+        self.input_mode = InputMode::Command;
+        self.command_buffer.clear();
+        self.command_history.reset_navigation();
+        self.status_message = None;
+        completion::refresh(self);
+    }
+
     fn handle_command_key(&mut self, key: KeyEvent) {
         match key.code {
             KeyCode::Esc => {
                 self.input_mode = InputMode::Normal;
                 self.command_buffer.clear();
+                self.command_history.reset_navigation();
                 self.completions.clear();
                 self.status_message = None;
             }
             KeyCode::Enter => {
+                if self.completions.browsed && self.completions.selected().is_some() {
+                    completion::apply_selected(self);
+                    return;
+                }
                 let cmd = std::mem::take(&mut self.command_buffer);
                 self.completions.clear();
+                self.command_history.reset_navigation();
                 self.input_mode = InputMode::Normal;
+                if !cmd.trim().is_empty() {
+                    self.command_history.push(&cmd);
+                    let _ = self.command_history.save();
+                }
                 command::execute(self, &cmd);
             }
             KeyCode::Tab => {
                 if key.modifiers.contains(KeyModifiers::SHIFT) {
-                    self.completions.select_prev();
-                    completion::apply_selected(self);
+                    completion::tab_complete_prev(self);
                 } else {
                     completion::tab_complete(self);
                 }
             }
             KeyCode::BackTab => {
-                self.completions.select_prev();
-                completion::apply_selected(self);
+                completion::tab_complete_prev(self);
             }
             KeyCode::Down => {
-                self.completions.select_next();
+                if self.completions.selected.is_some() {
+                    self.completions.select_next();
+                    self.completions.browsed = true;
+                } else if let Some(line) = self.command_history.down() {
+                    self.command_buffer = line;
+                    completion::refresh(self);
+                }
             }
             KeyCode::Up => {
-                self.completions.select_prev();
+                if self.completions.selected.is_some() {
+                    self.completions.select_prev();
+                    self.completions.browsed = true;
+                } else if let Some(line) = self.command_history.up(&self.command_buffer) {
+                    self.command_buffer = line;
+                    completion::refresh(self);
+                }
             }
             KeyCode::Backspace => {
                 if self.command_buffer.is_empty() {
                     self.input_mode = InputMode::Normal;
+                    self.command_history.reset_navigation();
                     self.completions.clear();
                     self.status_message = None;
                 } else {
                     self.command_buffer.pop();
+                    self.command_history.reset_navigation();
                     completion::refresh(self);
                 }
             }
             KeyCode::Char(c) => {
+                // Commit a browsed (not yet applied) selection, then type and refilter.
+                // Tab-applied selections already match the buffer; Space/`-`/etc. refresh
+                // the list (siblings disappear only once the user types past Tab cycling).
+                if self.completions.selected().is_some()
+                    && !completion::selection_applied(self)
+                {
+                    completion::apply_selected(self);
+                }
                 self.command_buffer.push(c);
+                self.command_history.reset_navigation();
                 completion::refresh(self);
             }
             _ => {}
@@ -750,21 +796,35 @@ impl App {
         let Some(spec) = keys::encode(key) else {
             return;
         };
-        let Some(cmd) = self.config.keys.get(&spec).cloned() else {
+        let Some(cmd) = self.resolve_key_command(&spec) else {
             // Unbound key clears a half-typed count.
             self.count = None;
             return;
         };
-        if cmd.is_empty() {
-            self.count = None;
-            return;
-        }
         command::execute_from_key(self, &cmd);
     }
 
+    /// Look up a keybinding, applying `[details_keys]` over `[keys]` when focused.
+    fn resolve_key_command(&self, spec: &str) -> Option<String> {
+        if self.overlay_focused && self.show_overlay {
+            if let Some(cmd) = self.config.details_keys.get(spec) {
+                return if cmd.is_empty() {
+                    None
+                } else {
+                    Some(cmd.clone())
+                };
+            }
+        }
+        self.config
+            .keys
+            .get(spec)
+            .filter(|cmd| !cmd.is_empty())
+            .cloned()
+    }
+
     /// Handle keys while the details overlay is focused. Returns true if consumed.
-    /// Navigation is handled via normal keybindings (`down`/`up`/…) so only
-    /// Esc needs a hard intercept here; other keys fall through.
+    /// Navigation is handled via keybindings (`down`/`up`/…) so only a few keys
+    /// need a hard intercept here; others fall through.
     fn handle_overlay_key(&mut self, key: KeyEvent) -> bool {
         match key.code {
             KeyCode::Esc => {
@@ -774,36 +834,71 @@ impl App {
             // Leave focus so : / q use the list context, except / which searches details.
             KeyCode::Char(':') | KeyCode::Char('q') => {
                 self.overlay_focused = false;
+                self.overlay_help = false;
                 false
             }
             _ => false,
         }
     }
 
+    pub fn set_details(&mut self, action: FoldAction) {
+        match action {
+            FoldAction::On => self.open_details(),
+            FoldAction::Off => {
+                self.cancel_pending_op();
+                self.close_details();
+            }
+            FoldAction::Toggle => self.toggle_details(),
+        }
+    }
+
+    pub fn set_overlay_focus(&mut self, action: FoldAction) {
+        self.cancel_pending_op();
+        if !self.show_overlay {
+            if matches!(action, FoldAction::On | FoldAction::Toggle) {
+                self.open_details();
+            }
+            return;
+        }
+        let focus = match action {
+            FoldAction::On => true,
+            FoldAction::Off => false,
+            FoldAction::Toggle => !self.overlay_focused,
+        };
+        self.overlay_focused = focus;
+        if !focus {
+            self.overlay_help = false;
+        }
+    }
+
     pub fn toggle_details(&mut self) {
         self.cancel_pending_op();
         if !self.show_overlay {
-            if self.selected_entry().is_none() {
-                return;
-            }
-            self.show_overlay = true;
-            self.overlay_focused = true;
-            self.overlay_cursor = 0;
-            self.overlay_scroll = 0;
-            self.status_message =
-                Some("details focused · j/k move · Tab fold · Esc close".into());
+            self.open_details();
         } else if !self.overlay_focused {
             self.overlay_focused = true;
-            self.status_message =
-                Some("details focused · j/k move · Tab fold · Esc close".into());
         } else {
             self.close_details();
         }
     }
 
+    pub fn open_details(&mut self) {
+        self.cancel_pending_op();
+        if self.selected_entry().is_none() {
+            return;
+        }
+        if !self.show_overlay {
+            self.show_overlay = true;
+            self.overlay_cursor = 0;
+            self.overlay_scroll = 0;
+        }
+        self.overlay_focused = true;
+    }
+
     pub fn close_details(&mut self) {
         self.show_overlay = false;
         self.overlay_focused = false;
+        self.overlay_help = false;
         self.overlay_cursor = 0;
         self.overlay_scroll = 0;
         if self.search_in_overlay {
@@ -812,6 +907,30 @@ impl App {
                 self.run_search();
             }
         }
+    }
+
+    pub fn set_follow(&mut self, enabled: bool) {
+        self.follow = enabled;
+        self.config.follow = enabled;
+        if enabled && !self.visible.is_empty() {
+            self.jump_to_public(self.visible.len() - 1);
+        }
+        self.status_message = Some(if enabled {
+            "follow: on".into()
+        } else {
+            "follow: off".into()
+        });
+    }
+
+    pub fn set_overlay_help(&mut self, action: FoldAction) {
+        if !(self.show_overlay && self.overlay_focused) {
+            return;
+        }
+        self.overlay_help = match action {
+            FoldAction::On => true,
+            FoldAction::Off => false,
+            FoldAction::Toggle => !self.overlay_help,
+        };
     }
 
     pub fn move_overlay_cursor(&mut self, delta: isize) {
@@ -1229,6 +1348,12 @@ impl App {
             self.scroll = self.selected;
         } else if self.selected >= self.scroll + viewport_height {
             self.scroll = self.selected + 1 - viewport_height;
+        }
+        // When the viewport grows (e.g. details overlay closes), pull scroll back
+        // so we don't leave empty rows below the last line.
+        let max_scroll = self.visible.len().saturating_sub(viewport_height);
+        if self.scroll > max_scroll {
+            self.scroll = max_scroll;
         }
     }
 }

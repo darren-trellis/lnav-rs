@@ -1,0 +1,13 @@
+---
+description: New keybindings must be configurable via config, not hardcoded
+alwaysApply: true
+---
+
+# Configurable keybindings
+
+When adding or changing keybindings in lnav-rs:
+
+- Wire them through `[keys]` and/or `[details_keys]` (see `src/keys.rs` defaults), not hardcoded intercepts in input handlers.
+- Hardcode only rare exceptions that already exist for structural reasons (e.g. Esc closing details, `:` / `q` leaving overlay focus) — do not add new hardcoded action keys.
+- Prefer context via `[details_keys]` overlays when list and details need different bindings for the same key.
+- Document new bindings in the README key tables and example `[keys]` / `[details_keys]` snippets.

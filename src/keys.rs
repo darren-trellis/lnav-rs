@@ -25,19 +25,24 @@ pub fn defaults() -> BTreeMap<String, String> {
         ("G".into(), "bottom".into()),
         ("end".into(), "bottom".into()),
         ("enter".into(), "details".into()),
-        ("tab".into(), "fold toggle".into()),
+        ("tab".into(), "focus toggle".into()),
         ("c".into(), "copy".into()),
         ("esc".into(), "close".into()),
         ("/".into(), "search".into()),
         (":".into(), "command-mode".into()),
         ("n".into(), "next-match".into()),
         ("N".into(), "prev-match".into()),
-        ("f".into(), "toggle-follow".into()),
+        ("f".into(), "follow toggle".into()),
         ("t".into(), "cycle-theme".into()),
         ("d".into(), "hide".into()),
         ("D".into(), "delete".into()),
         ("?".into(), "help".into()),
     ])
+}
+
+/// Defaults applied when the details overlay is focused (override `[keys]`).
+pub fn details_defaults() -> BTreeMap<String, String> {
+    BTreeMap::from([("space".into(), "fold toggle".into())])
 }
 
 /// Merge user keybindings over defaults. Empty command string unbinds a key.

@@ -50,18 +50,19 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 | `PgUp` | `page-up` |
 | `g` / `Home` | `top` |
 | `G` / `End` | `bottom` |
-| `Enter` | `details` (open/focus details; again to close when focused) |
-| `Tab` | `fold toggle` (fold/unfold JSON tree item in details) |
+| `Enter` | `details` / `details toggle` (open/focus; again to close when focused) |
+| `Tab` | `focus toggle` (switch focus between details and list) |
+| `Space` | `page-down` (list); `fold toggle` via `[details_keys]` when details focused |
 | `c` | `copy` (copy focused details value to clipboard) |
 | `Esc` | `close` |
 | `/` | `search` (case-insensitive regex; highlights matched text) |
 | `:` | `command-mode` |
 | `n` / `N` | `next-match` / `prev-match` |
-| `f` | `toggle-follow` |
+| `f` | `follow toggle` |
 | `t` | `cycle-theme` |
 | `d` | `hide` operator — `dd` current, `dj`/`dG`/… range |
 | `D` | `delete` operator — `DD` current, `Dj`/`DG`/… range (in-place; safe with `tee -a`) |
-| `?` | `help` |
+| `?` | `help` (status cheat sheet; `help toggle` details key hints when focused) |
 | `q` | `quit` |
 
 ### Mouse
@@ -78,15 +79,21 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 
 ### Commands (`:`)
 
+In `:` mode, **Up/Down** recall command history when no completion is selected (Tab/↑↓ browse completions once one is selected). History is stored in `~/.local/share/lnav-rs/command_history`.
+
 | Command | Action |
 |---------|--------|
 | `:q` | Quit |
-| `:help` | List commands |
+| `:help` | Status cheat sheet |
+| `:help on\|off\|toggle` | Show/hide/toggle details key hints (when focused) |
 | `:filter` / `:filter list` | List active filters |
 | `:filter in [PATTERN]` | Keep only lines matching regex (omit PATTERN to use list `/` search, not details search) |
 | `:filter out [PATTERN]` | Hide lines matching regex (omit PATTERN to use list `/` search, not details search) |
 | `:filter on\|off\|toggle` | Enable/disable/toggle filtering |
 | `:fold on\|off\|toggle` | Fold/unfold details tree item under cursor |
+| `:follow on\|off\|toggle` | Enable/disable/toggle live follow |
+| `:details on\|off\|toggle` | Open/close/toggle details overlay |
+| `:focus on\|off\|toggle` | Focus details / list / switch between them |
 | `:copy` | Copy focused details value to the clipboard |
 | `:delete-filter N` | Remove filter by index |
 | `:clear-filters` | Remove all filters |
@@ -95,25 +102,25 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 | `:theme list` | List available themes |
 | `:theme set` | Open theme picker (preview on hover / ↑↓) |
 | `:theme set NAME` | Switch theme |
-| `:set theme NAME` | Set theme |
-| `:set follow on\|off` | Enable/disable live follow |
-| `:set wrap_details on\|off` | Wrap overlay text |
-| `:set details_json_tree on\|off` | Tree-view nested JSON in details (default on) |
-| `:set details_max_height N` | Max details overlay height in rows (default 24) |
-| `:set details_tab_width N` | Details tree indent width (default 4, min 2) |
-| `:set line_numbers on\|off` | Show absolute view line numbers |
-| `:set relative_line_numbers on\|off` | Show relative line numbers (vim-style) |
-| `:set scroll_lines N` | Mouse wheel step (default 1) |
-| `:set timestamp_format …` | strftime for timestamp columns (`raw` = original) |
-| `:set case_mode …` | `sensitive` / `insensitive` / `smart` (search + filters) |
-| `:set session_filters on\|off` | Persist filters per log file (default on) |
-| `:set session_stdin on\|off` | Persist filters for stdin (default on) |
+| `:config set theme NAME` | Set theme |
+| `:config set follow on\|off\|toggle` | Enable/disable/toggle live follow |
+| `:config set wrap_details on\|off\|toggle` | Wrap overlay text |
+| `:config set details_json_tree on\|off\|toggle` | Tree-view nested JSON in details (default on) |
+| `:config set details_max_height N` | Max details overlay height in rows (default 24) |
+| `:config set details_tab_width N` | Details tree indent width (default 4, min 2) |
+| `:config set line_numbers on\|off\|toggle` | Show absolute view line numbers |
+| `:config set relative_line_numbers on\|off\|toggle` | Show relative line numbers (vim-style) |
+| `:config set scroll_lines N` | Mouse wheel step (default 1) |
+| `:config set timestamp_format …` | strftime for timestamp columns (`raw` = original) |
+| `:config set case_mode …` | `sensitive` / `insensitive` / `smart` (search + filters) |
+| `:config set session_filters on\|off\|toggle` | Persist filters per log file (default on) |
+| `:config set session_stdin on\|off\|toggle` | Persist filters for stdin (default on) |
+| `:config get KEY` | Show current value of a config option |
 | `:w` / `:write` | Write current settings to config |
-| `:config` | Show config path |
+| `:config` / `:config path` | Show config path |
 | `:config init` | Create config from current settings |
 | `:hide` | Hide current line / JSON object (immediate) |
 | `:delete` | Delete current line / JSON object from file (immediate) |
-| `:details` | Toggle details overlay |
 | `:noh` | Clear search highlights |
 | `:N` | Jump to view line `N` |
 
@@ -131,6 +138,10 @@ name = "catppuccin"
 # error = { fg = "#1e1e2e", bg = "#f38ba8" }
 # [theme.ui]
 # timestamp = { fg = "#89b4fa", bg = "#11111b" }
+# column_border = { fg = "#585b70", bg = "#1e1e2e" }
+# column_border_width = 1
+# column_border_padding = 1
+# column_border_padding = { left = 1, right = 2 }
 
 follow = true
 wrap_details = true
@@ -162,6 +173,10 @@ source = "annotations.url"
 
 [keys]
 q = "quit"
+space = "page-down"
+
+[details_keys]
+space = "fold toggle"
 d = "hide"
 D = "delete"
 ```
@@ -174,13 +189,13 @@ D = "delete"
 
 `case_mode` controls `/` search and `:filter` matching: `smart` / `smartcase` (default; insensitive unless the pattern has an uppercase letter), `insensitive`, or `sensitive`.
 
-Details: `Enter` opens and focuses the overlay — the selection highlight moves into details (`j`/`k` move the cursor; Esc closes). `Tab` runs `fold toggle` on the tree item under the cursor (`:fold on|off|toggle`; rebind with `tab = "fold toggle"`). `c` / `:copy` copies the focused item’s value (strings without quotes; objects/arrays as pretty JSON). With details focused, `/` searches inside the overlay (`n`/`N` cycle matches). Nested JSON fields render as a tree when `details_json_tree` is on (`details_tab_width` sets indent per level). Overlay height grows with content up to `details_max_height` (and screen space).
+Details: `Enter` opens and focuses the overlay — the selection highlight moves into details (`j`/`k` move the cursor; Esc closes). `Tab` / `:focus toggle` switches focus between details and the list. `Space` folds/unfolds the tree item under the cursor when details is focused (`:fold on|off|toggle`). `?` toggles keybinding hints on the overlay border. `c` / `:copy` copies the focused item’s value (strings without quotes; objects/arrays as pretty JSON). With details focused, `/` searches inside the overlay (`n`/`N` cycle matches). Nested JSON fields render as a tree when `details_json_tree` is on (`details_tab_width` sets indent per level). Overlay height grows with content up to `details_max_height` (and screen space).
 
 Filters persist under `~/.local/share/lnav-rs/sessions/` (one file per log path hash; stdin uses `stdin.toml`). `session_filters` / `session_stdin` control that (both default on). Turn `session_stdin` off if you don’t want every pipe to share one filter set.
 
-`[theme]` selects the theme (`name`) and optional `[theme.colors]` / `[theme.levels]` / `[theme.ui]` patches (same keys as `themes/*.toml`). Text colors (`foreground`, `border`, `search_match`, `dim`, levels, and all `[ui]` keys) accept a hex string (fg only) or `{ fg = "...", bg = "..." }`. Surface keys (`background`, `overlay_bg`, `selection_*`, `status_*`) stay plain color strings. Unknown keys, invalid colors, unknown theme names, and unknown keybinding commands are rejected.
+`[theme]` selects the theme (`name`) and optional `[theme.colors]` / `[theme.levels]` / `[theme.ui]` patches (same keys as `themes/*.toml`). Text colors (`foreground`, `border`, `search_match`, `dim`, levels, and `[ui]` color keys) accept a hex string (fg only) or `{ fg = "...", bg = "..." }`. Surface keys (`background`, `overlay_bg`, `selection_*`, `status_*`) stay plain color strings. List column separators: `ui.column_border` (color), `ui.column_border_width` (`0` = space between columns; `N` draws `N`× `│`), and `ui.column_border_padding` (`1` or `{ left, right }`, like column `padding`). Unknown keys, invalid colors, unknown theme names, and unknown keybinding commands are rejected.
 
-`[keys]` overrides defaults (merged). Use `key = ""` to unbind. Special key names: `enter`, `esc`, `up`, `down`, `home`, `end`, `pagedown`, `pageup`, `space`, `C-c`.
+`[keys]` overrides defaults (merged). Use `key = ""` to unbind. Special key names: `enter`, `esc`, `up`, `down`, `home`, `end`, `pagedown`, `pageup`, `space`, `C-c`. `[details_keys]` overrides `[keys]` while the details overlay is focused (default: `space = "fold toggle"`).
 
 Create one with:
 
@@ -214,6 +229,7 @@ src/
   command.rs      # : command mode
   config.rs       # config.toml load/save
   details.rs      # details overlay content (JSON tree)
+  history.rs      # : command history
   model.rs        # log entries / fields
   parse/          # json + logfmt
   session.rs      # per-source filter persistence

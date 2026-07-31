@@ -26,7 +26,7 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
         Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(theme.border.fg))
-            .title(" completions · Tab · ↑↓ · click ")
+            .title(" completions · Tab cycle · ↑↓ then Tab/Enter · click ")
             .style(
                 Style::default()
                     .bg(theme.overlay_bg)
@@ -37,10 +37,8 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
     let inner = block.inner(area);
     frame.render_widget(block, area);
 
-    let start = app
-        .completions
-        .selected
-        .saturating_sub(inner.height as usize / 2);
+    let selected_idx = app.completions.selected.unwrap_or(0);
+    let start = selected_idx.saturating_sub(inner.height as usize / 2);
     let end = (start + inner.height as usize).min(app.completions.items.len());
     app.hit.suggest_inner = inner;
     app.hit.suggest_start = start;
@@ -50,7 +48,7 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
     let mut lines = Vec::new();
     for idx in start..end {
         let item = &app.completions.items[idx];
-        let selected = idx == app.completions.selected;
+        let selected = app.completions.selected == Some(idx);
         let marker = if selected { "▸ " } else { "  " };
         let label = format!("{marker}{:<18}", item.label);
         let help_budget = row_w.saturating_sub(UnicodeWidthStr::width(label.as_str()) + 1);

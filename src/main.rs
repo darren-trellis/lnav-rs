@@ -5,6 +5,7 @@ mod config;
 mod details;
 mod filter;
 mod highlight;
+mod history;
 mod keys;
 mod columns;
 mod model;

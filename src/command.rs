@@ -1,5 +1,4 @@
 use crate::app::{App, InputMode, PendingOp};
-use crate::completion;
 use crate::config::Config;
 use crate::filter::{Filter, FilterKind};
 use crate::theme::Theme;
@@ -27,7 +26,7 @@ pub fn catalog() -> &'static [CommandInfo] {
         },
         CommandInfo {
             name: "help",
-            help: "show command help",
+            help: "show help; on|off|toggle details hints when focused",
         },
         CommandInfo {
             name: "down",
@@ -55,7 +54,11 @@ pub fn catalog() -> &'static [CommandInfo] {
         },
         CommandInfo {
             name: "details",
-            help: "open/focus/close details overlay",
+            help: "on|off|toggle details overlay",
+        },
+        CommandInfo {
+            name: "focus",
+            help: "on|off|toggle details vs list focus",
         },
         CommandInfo {
             name: "fold",
@@ -86,8 +89,8 @@ pub fn catalog() -> &'static [CommandInfo] {
             help: "previous search match",
         },
         CommandInfo {
-            name: "toggle-follow",
-            help: "toggle live follow",
+            name: "follow",
+            help: "on|off|toggle live follow",
         },
         CommandInfo {
             name: "cycle-theme",
@@ -122,22 +125,27 @@ pub fn catalog() -> &'static [CommandInfo] {
             help: "delete filter by index",
         },
         CommandInfo {
-            name: "set",
-            help: "set option  :set KEY VAL",
-        },
-        CommandInfo {
             name: "write",
             help: "write config to disk",
         },
         CommandInfo {
             name: "config",
-            help: "config path | init",
+            help: "path | init | set KEY VAL | get KEY",
         },
         CommandInfo {
             name: "noh",
             help: "clear search highlights",
         },
     ]
+}
+
+/// Command names accepted in keybindings (catalog + compatibility aliases).
+pub fn is_known_command(name: &str) -> bool {
+    catalog()
+        .iter()
+        .any(|c| c.name.eq_ignore_ascii_case(name))
+        || name.eq_ignore_ascii_case("toggle-follow")
+        || name.eq_ignore_ascii_case("set")
 }
 
 pub fn execute(app: &mut App, raw: &str) {
@@ -164,10 +172,7 @@ fn execute_inner(app: &mut App, raw: &str, invoke: Invoke) {
         }
         "help" => {
             app.cancel_pending_op();
-            app.status_message = Some(
-                ":theme [list|set] · d/D: dd/DD · dj/dG · :hide/:delete · :clear-hidden"
-                    .into(),
-            );
+            help_command(app, rest);
         }
         "down" => {
             let n = app.take_count() as isize;
@@ -245,7 +250,14 @@ fn execute_inner(app: &mut App, raw: &str, invoke: Invoke) {
                 });
             }
         }
-        "details" => app.toggle_details(),
+        "details" => {
+            app.cancel_pending_op();
+            details_command(app, rest);
+        }
+        "focus" => {
+            app.cancel_pending_op();
+            focus_command(app, rest);
+        }
         "fold" => {
             app.cancel_pending_op();
             fold_command(app, rest);
@@ -275,10 +287,7 @@ fn execute_inner(app: &mut App, raw: &str, invoke: Invoke) {
         }
         "command-mode" => {
             app.cancel_pending_op();
-            app.input_mode = InputMode::Command;
-            app.command_buffer.clear();
-            app.status_message = None;
-            completion::refresh(app);
+            app.begin_command_mode();
         }
         "next-match" => {
             let n = app.take_count();
@@ -296,18 +305,14 @@ fn execute_inner(app: &mut App, raw: &str, invoke: Invoke) {
                 }
             });
         }
-        "toggle-follow" => {
+        "follow" | "toggle-follow" => {
             app.cancel_pending_op();
-            app.follow = !app.follow;
-            app.config.follow = app.follow;
-            if app.follow && !app.visible.is_empty() {
-                app.jump_to_public(app.visible.len() - 1);
-            }
-            app.status_message = Some(if app.follow {
-                "follow: on".into()
+            // `toggle-follow` is a compatibility alias for `follow toggle`.
+            if cmd_l == "toggle-follow" {
+                app.set_follow(!app.follow);
             } else {
-                "follow: off".into()
-            });
+                follow_command(app, rest);
+            }
         }
         "cycle-theme" => {
             app.cancel_pending_op();
@@ -349,23 +354,18 @@ fn execute_inner(app: &mut App, raw: &str, invoke: Invoke) {
             app.clear_search();
             app.status_message = Some("cleared search".into());
         }
-        "set" => set_option(app, rest),
+        // Compatibility alias for `config set`.
+        "set" => {
+            app.cancel_pending_op();
+            set_option(app, rest);
+        }
         "write" => match app.config.write() {
             Ok(path) => app.status_message = Some(format!("wrote {}", path.display())),
             Err(err) => app.status_message = Some(format!("error: {err:#}")),
         },
         "config" => {
-            if rest.is_empty() || rest == "path" {
-                app.status_message =
-                    Some(format!("config: {}", Config::default_path().display()));
-            } else if rest == "init" {
-                match init_config(app) {
-                    Ok(path) => app.status_message = Some(format!("wrote {}", path.display())),
-                    Err(err) => app.status_message = Some(format!("error: {err:#}")),
-                }
-            } else {
-                app.status_message = Some("usage: :config [path|init]".into());
-            }
+            app.cancel_pending_op();
+            config_command(app, rest);
         }
         other if other.chars().all(|c| c.is_ascii_digit()) => {
             if let Ok(n) = other.parse::<usize>() {
@@ -485,15 +485,86 @@ fn split_cmd(line: &str) -> (&str, &str) {
     }
 }
 
+fn parse_on_off_toggle(sub: &str) -> Option<crate::app::FoldAction> {
+    match sub.to_ascii_lowercase().as_str() {
+        "" | "toggle" => Some(crate::app::FoldAction::Toggle),
+        "on" => Some(crate::app::FoldAction::On),
+        "off" => Some(crate::app::FoldAction::Off),
+        _ => None,
+    }
+}
+
+fn help_command(app: &mut App, rest: &str) {
+    let (sub, _) = split_cmd(rest);
+    let focused = app.show_overlay && app.overlay_focused;
+    if focused {
+        match parse_on_off_toggle(sub) {
+            Some(action) => app.set_overlay_help(action),
+            None => {
+                app.status_message = Some(format!(
+                    "usage: :help [on|off|toggle]  (unknown: {sub})"
+                ));
+            }
+        }
+        return;
+    }
+    if sub.is_empty() {
+        app.status_message = Some(
+            ":theme [list|set] · d/D: dd/DD · dj/dG · :hide/:delete · :clear-hidden"
+                .into(),
+        );
+    } else {
+        app.status_message = Some(
+            "usage: :help  (or focus details, then :help [on|off|toggle])".into(),
+        );
+    }
+}
+
+fn details_command(app: &mut App, rest: &str) {
+    let (sub, _) = split_cmd(rest);
+    match parse_on_off_toggle(sub) {
+        Some(action) => app.set_details(action),
+        None => {
+            app.status_message = Some(format!(
+                "usage: :details [on|off|toggle]  (unknown: {sub})"
+            ));
+        }
+    }
+}
+
+fn focus_command(app: &mut App, rest: &str) {
+    let (sub, _) = split_cmd(rest);
+    match parse_on_off_toggle(sub) {
+        Some(action) => app.set_overlay_focus(action),
+        None => {
+            app.status_message = Some(format!(
+                "usage: :focus [on|off|toggle]  (unknown: {sub})"
+            ));
+        }
+    }
+}
+
+fn follow_command(app: &mut App, rest: &str) {
+    let (sub, _) = split_cmd(rest);
+    match parse_on_off_toggle(sub) {
+        Some(crate::app::FoldAction::On) => app.set_follow(true),
+        Some(crate::app::FoldAction::Off) => app.set_follow(false),
+        Some(crate::app::FoldAction::Toggle) => app.set_follow(!app.follow),
+        None => {
+            app.status_message = Some(format!(
+                "usage: :follow [on|off|toggle]  (unknown: {sub})"
+            ));
+        }
+    }
+}
+
 fn fold_command(app: &mut App, rest: &str) {
     let (sub, _) = split_cmd(rest);
-    match sub.to_ascii_lowercase().as_str() {
-        "" | "toggle" => app.set_overlay_fold(crate::app::FoldAction::Toggle),
-        "on" => app.set_overlay_fold(crate::app::FoldAction::On),
-        "off" => app.set_overlay_fold(crate::app::FoldAction::Off),
-        other => {
+    match parse_on_off_toggle(sub) {
+        Some(action) => app.set_overlay_fold(action),
+        None => {
             app.status_message = Some(format!(
-                "usage: :fold [on|off|toggle]  (unknown: {other})"
+                "usage: :fold [on|off|toggle]  (unknown: {sub})"
             ));
         }
     }
@@ -552,29 +623,77 @@ fn theme_command(app: &mut App, rest: &str) {
     }
 }
 
+const CONFIG_KEYS_USAGE: &str = "theme|follow|wrap_details|details_json_tree|details_max_height|details_tab_width|line_numbers|relative_line_numbers|scroll_lines|timestamp_format|case_mode|session_filters|session_stdin";
+
+fn config_command(app: &mut App, rest: &str) {
+    let (sub, arg) = split_cmd(rest);
+    match sub.to_ascii_lowercase().as_str() {
+        "" | "path" => {
+            app.status_message = Some(format!("config: {}", Config::default_path().display()));
+        }
+        "init" => match init_config(app) {
+            Ok(path) => app.status_message = Some(format!("wrote {}", path.display())),
+            Err(err) => app.status_message = Some(format!("error: {err:#}")),
+        },
+        "set" => set_option(app, arg),
+        "get" => get_option(app, arg),
+        other => {
+            app.status_message = Some(format!(
+                "usage: :config [path|init|set|get]  (unknown: {other})"
+            ));
+        }
+    }
+}
+
+fn get_option(app: &mut App, rest: &str) {
+    let (key, _) = split_cmd(rest);
+    if key.is_empty() {
+        app.status_message = Some(format!("usage: :config get {CONFIG_KEYS_USAGE}"));
+        return;
+    }
+    match option_value(app, key) {
+        Some(value) => app.status_message = Some(format!("{key}={value}")),
+        None => app.status_message = Some(format!("unknown option: {key}")),
+    }
+}
+
+fn option_value(app: &App, key: &str) -> Option<String> {
+    match key.to_ascii_lowercase().as_str() {
+        "theme" => Some(app.config.theme.name().to_string()),
+        "follow" => Some(current_bool_option(app, "follow").to_string()),
+        "wrap_details" => Some(current_bool_option(app, "wrap_details").to_string()),
+        "details_json_tree" => Some(current_bool_option(app, "details_json_tree").to_string()),
+        "details_max_height" => Some(app.config.details_max_height.max(4).to_string()),
+        "details_tab_width" => Some(app.config.details_tab_width.max(2).to_string()),
+        "line_numbers" => Some(current_bool_option(app, "line_numbers").to_string()),
+        "relative_line_numbers" => {
+            Some(current_bool_option(app, "relative_line_numbers").to_string())
+        }
+        "session_filters" => Some(current_bool_option(app, "session_filters").to_string()),
+        "session_stdin" => Some(current_bool_option(app, "session_stdin").to_string()),
+        "case_mode" => Some(app.config.case_mode.as_str().to_string()),
+        "scroll_lines" => Some(app.config.scroll_lines.max(1).to_string()),
+        "timestamp_format" => Some(app.config.timestamp_format.clone()),
+        _ => None,
+    }
+}
+
 fn set_option(app: &mut App, rest: &str) {
     let (key, value) = split_cmd(rest);
     if key.is_empty() {
-        app.status_message = Some(
-            "usage: :set theme|follow|wrap_details|details_json_tree|details_max_height|details_tab_width|line_numbers|relative_line_numbers|scroll_lines|timestamp_format|case_mode|session_filters|session_stdin VALUE"
-                .into(),
-        );
+        app.status_message = Some(format!("usage: :config set {CONFIG_KEYS_USAGE} VALUE"));
+        return;
+    }
+    if value.is_empty() {
+        app.status_message = Some(format!(
+            "usage: :config set {key} VALUE  (or :config get {key})"
+        ));
         return;
     }
     match key.to_ascii_lowercase().as_str() {
-        "theme" => {
-            if value.is_empty() {
-                app.status_message = Some(format!("theme={}", app.config.theme.name()));
-            } else {
-                app.commit_theme(value);
-            }
-        }
+        "theme" => app.commit_theme(value),
         "follow" => set_bool_option(app, "follow", value, |app, v| {
-            app.follow = v;
-            app.config.follow = v;
-            if v && !app.visible.is_empty() {
-                app.jump_to_public(app.visible.len() - 1);
-            }
+            app.set_follow(v);
         }),
         "wrap_details" => set_bool_option(app, "wrap_details", value, |app, v| {
             app.config.wrap_details = v;
@@ -583,44 +702,26 @@ fn set_option(app: &mut App, rest: &str) {
             app.config.details_json_tree = v;
             app.overlay_scroll = 0;
         }),
-        "details_max_height" => {
-            if value.is_empty() {
-                app.status_message = Some(format!(
-                    "details_max_height={}",
-                    app.config.details_max_height.max(4)
-                ));
-                return;
+        "details_max_height" => match value.parse::<usize>() {
+            Ok(n) if n >= 4 => {
+                app.config.details_max_height = n;
+                app.status_message = Some(format!("details_max_height={n}"));
             }
-            match value.parse::<usize>() {
-                Ok(n) if n >= 4 => {
-                    app.config.details_max_height = n;
-                    app.status_message = Some(format!("details_max_height={n}"));
-                }
-                _ => {
-                    app.status_message =
-                        Some("usage: :set details_max_height N (N >= 4)".into());
-                }
+            _ => {
+                app.status_message =
+                    Some("usage: :config set details_max_height N (N >= 4)".into());
             }
-        }
-        "details_tab_width" => {
-            if value.is_empty() {
-                app.status_message = Some(format!(
-                    "details_tab_width={}",
-                    app.config.details_tab_width.max(2)
-                ));
-                return;
+        },
+        "details_tab_width" => match value.parse::<usize>() {
+            Ok(n) if n >= 2 => {
+                app.config.details_tab_width = n;
+                app.status_message = Some(format!("details_tab_width={n}"));
             }
-            match value.parse::<usize>() {
-                Ok(n) if n >= 2 => {
-                    app.config.details_tab_width = n;
-                    app.status_message = Some(format!("details_tab_width={n}"));
-                }
-                _ => {
-                    app.status_message =
-                        Some("usage: :set details_tab_width N (N >= 2)".into());
-                }
+            _ => {
+                app.status_message =
+                    Some("usage: :config set details_tab_width N (N >= 2)".into());
             }
-        }
+        },
         "line_numbers" => set_bool_option(app, "line_numbers", value, |app, v| {
             app.config.line_numbers = v;
         }),
@@ -633,52 +734,35 @@ fn set_option(app: &mut App, rest: &str) {
         "session_stdin" => set_bool_option(app, "session_stdin", value, |app, v| {
             app.config.session_stdin = v;
         }),
-        "case_mode" => {
-            if value.is_empty() {
-                app.status_message =
-                    Some(format!("case_mode={}", app.config.case_mode.as_str()));
-                return;
+        "case_mode" => match crate::config::CaseMode::parse(value) {
+            Some(mode) => {
+                app.config.case_mode = mode;
+                app.status_message = app
+                    .apply_case_mode()
+                    .or_else(|| Some(format!("case_mode={}", mode.as_str())));
             }
-            match crate::config::CaseMode::parse(value) {
-                Some(mode) => {
-                    app.config.case_mode = mode;
-                    app.status_message = app
-                        .apply_case_mode()
-                        .or_else(|| Some(format!("case_mode={}", mode.as_str())));
-                }
-                None => {
-                    app.status_message = Some(
-                        "usage: :set case_mode sensitive|insensitive|smart".into(),
-                    );
-                }
+            None => {
+                app.status_message = Some(
+                    "usage: :config set case_mode sensitive|insensitive|smart".into(),
+                );
             }
-        }
-        "scroll_lines" => {
-            if value.is_empty() {
-                app.status_message =
-                    Some(format!("scroll_lines={}", app.config.scroll_lines.max(1)));
-                return;
+        },
+        "scroll_lines" => match value.parse::<usize>() {
+            Ok(0) => {
+                app.status_message = Some("usage: :config set scroll_lines N (N >= 1)".into());
             }
-            match value.parse::<usize>() {
-                Ok(0) => app.status_message = Some("usage: :set scroll_lines N (N >= 1)".into()),
-                Ok(n) => {
-                    app.config.scroll_lines = n;
-                    app.status_message = Some(format!("scroll_lines={n}"));
-                }
-                Err(_) => {
-                    app.status_message = Some("usage: :set scroll_lines N (N >= 1)".into());
-                }
+            Ok(n) => {
+                app.config.scroll_lines = n;
+                app.status_message = Some(format!("scroll_lines={n}"));
             }
-        }
+            Err(_) => {
+                app.status_message = Some("usage: :config set scroll_lines N (N >= 1)".into());
+            }
+        },
         "timestamp_format" => {
-            if value.is_empty() {
-                app.status_message =
-                    Some(format!("timestamp_format={}", app.config.timestamp_format));
-            } else {
-                app.config.timestamp_format = value.to_string();
-                app.status_message =
-                    Some(format!("timestamp_format={}", app.config.timestamp_format));
-            }
+            app.config.timestamp_format = value.to_string();
+            app.status_message =
+                Some(format!("timestamp_format={}", app.config.timestamp_format));
         }
         other => {
             app.status_message = Some(format!("unknown option: {other}"));
@@ -686,27 +770,35 @@ fn set_option(app: &mut App, rest: &str) {
     }
 }
 
-fn set_bool_option(app: &mut App, name: &str, value: &str, apply: impl FnOnce(&mut App, bool)) {
-    if value.is_empty() {
-        let current = match name {
-            "follow" => app.config.follow,
-            "wrap_details" => app.config.wrap_details,
-            "details_json_tree" => app.config.details_json_tree,
-            "line_numbers" => app.config.line_numbers,
-            "relative_line_numbers" => app.config.relative_line_numbers,
-            "session_filters" => app.config.session_filters,
-            "session_stdin" => app.config.session_stdin,
-            _ => false,
-        };
-        app.status_message = Some(format!("{name}={current}"));
-        return;
+fn current_bool_option(app: &App, name: &str) -> bool {
+    match name {
+        "follow" => app.follow,
+        "wrap_details" => app.config.wrap_details,
+        "details_json_tree" => app.config.details_json_tree,
+        "line_numbers" => app.config.line_numbers,
+        "relative_line_numbers" => app.config.relative_line_numbers,
+        "session_filters" => app.config.session_filters,
+        "session_stdin" => app.config.session_stdin,
+        _ => false,
     }
-    match parse_bool(value) {
+}
+
+fn set_bool_option(app: &mut App, name: &str, value: &str, apply: impl FnOnce(&mut App, bool)) {
+    let resolved = match value.to_ascii_lowercase().as_str() {
+        "toggle" => Some(!current_bool_option(app, name)),
+        other => parse_bool(other),
+    };
+    match resolved {
         Some(v) => {
             apply(app, v);
-            app.status_message = Some(format!("{name}={v}"));
+            // `set_follow` already sets the status message.
+            if name != "follow" {
+                app.status_message = Some(format!("{name}={v}"));
+            }
         }
-        None => app.status_message = Some(format!("usage: :set {name} on|off")),
+        None => {
+            app.status_message = Some(format!("usage: :config set {name} on|off|toggle"));
+        }
     }
 }
 

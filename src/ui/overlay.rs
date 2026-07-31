@@ -7,14 +7,12 @@ use ratatui::Frame;
 use crate::app::App;
 use crate::details::{self, DetailLine};
 use crate::highlight;
-use crate::model::LineFormat;
 
 pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
     app.hit.overlay = area;
     let Some(entry) = app.selected_entry() else {
         return;
     };
-    let format = entry.format;
     let content = details::build_lines(entry, &app.theme, &app.config, &app.overlay_folded);
     let content_len = content.len();
     let focused = app.overlay_focused;
@@ -42,34 +40,9 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
         app.overlay_cursor = content_len - 1;
     }
 
-    let title = match format {
-        LineFormat::Json => {
-            if focused {
-                " details · json · focused "
-            } else {
-                " details · json "
-            }
-        }
-        LineFormat::Logfmt => {
-            if focused {
-                " details · logfmt · focused "
-            } else {
-                " details · logfmt "
-            }
-        }
-        LineFormat::Plain => {
-            if focused {
-                " details · raw · focused "
-            } else {
-                " details · raw "
-            }
-        }
-    };
-    let hint = if focused {
-        " j/k move · Tab fold · c copy · / search · Esc close "
-    } else {
-        " Enter focus · Esc close "
-    };
+    let title = " details ";
+    let show_help = focused && app.overlay_help;
+    let hint = " j/k move · Space fold · Tab focus · c copy · / search · Esc close · ? hide ";
 
     let border = if focused {
         Style::default()
@@ -79,12 +52,14 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
         Style::default().fg(theme_border)
     };
 
-    let block = Block::default()
+    let mut block = Block::default()
         .borders(Borders::ALL)
         .border_style(border)
         .title(title)
-        .title_bottom(hint)
         .style(Style::default().bg(overlay_bg).fg(foreground));
+    if show_help {
+        block = block.title_bottom(hint);
+    }
 
     let inner = block.inner(area);
     frame.render_widget(block, area);

@@ -251,6 +251,10 @@ pub struct Config {
     #[serde(default)]
     pub keys: BTreeMap<String, String>,
 
+    /// Key overrides while the details overlay is focused (merged over `keys`).
+    #[serde(default)]
+    pub details_keys: BTreeMap<String, String>,
+
     /// Persist filters per log file under `~/.local/share/lnav-rs/sessions/`.
     #[serde(default = "default_true")]
     pub session_filters: bool,
@@ -323,6 +327,7 @@ impl Default for Config {
             case_mode: CaseMode::default(),
             columns: default_columns(),
             keys: keys::defaults(),
+            details_keys: keys::details_defaults(),
             session_filters: true,
             session_stdin: true,
         }
@@ -379,6 +384,8 @@ impl Config {
         cfg.validate()
             .with_context(|| format!("invalid config {}", path.display()))?;
         cfg.keys = keys::merge(keys::defaults(), std::mem::take(&mut cfg.keys));
+        cfg.details_keys =
+            keys::merge(keys::details_defaults(), std::mem::take(&mut cfg.details_keys));
         if cfg.columns.is_empty() {
             cfg.columns = default_columns();
         }
@@ -405,22 +412,8 @@ impl Config {
             }
         }
         let known: Vec<&str> = command::catalog().iter().map(|c| c.name).collect();
-        for (key, cmd) in &self.keys {
-            let cmd = cmd.trim();
-            if cmd.is_empty() {
-                continue;
-            }
-            let name = cmd
-                .split_whitespace()
-                .next()
-                .unwrap_or(cmd);
-            if !known.iter().any(|n| n.eq_ignore_ascii_case(name)) {
-                bail!(
-                    "unknown command {cmd:?} for key {key:?} (try: {})",
-                    known.join(", ")
-                );
-            }
-        }
+        validate_key_map("keys", &self.keys, &known)?;
+        validate_key_map("details_keys", &self.details_keys, &known)?;
         Ok(())
     }
 
@@ -517,32 +510,65 @@ impl Config {
             }
         }
 
-        let key_defaults = keys::defaults();
-        let key_overrides: Vec<(&String, &String)> = self
-            .keys
-            .iter()
-            .filter(|(key, cmd)| key_defaults.get(*key) != Some(*cmd))
-            .collect();
-        // Also emit explicit unbinds: default keys missing from merged map.
-        let unbinds: Vec<&String> = key_defaults
-            .keys()
-            .filter(|key| !self.keys.contains_key(*key))
-            .collect();
-
-        if !key_overrides.is_empty() || !unbinds.is_empty() {
-            body.push_str("[keys]\n");
-            for (key, cmd) in key_overrides {
-                body.push_str(&format!("{} = {:?}\n", toml_key(key), cmd));
-            }
-            for key in unbinds {
-                body.push_str(&format!("{} = \"\"\n", toml_key(key)));
-            }
-            body.push('\n');
-        }
+        write_key_section(&mut body, "keys", &self.keys, &keys::defaults());
+        write_key_section(
+            &mut body,
+            "details_keys",
+            &self.details_keys,
+            &keys::details_defaults(),
+        );
 
         fs::write(path, body).with_context(|| format!("failed to write {}", path.display()))?;
         Ok(path.to_path_buf())
     }
+}
+
+fn validate_key_map(
+    section: &str,
+    map: &BTreeMap<String, String>,
+    known: &[&str],
+) -> Result<()> {
+    for (key, cmd) in map {
+        let cmd = cmd.trim();
+        if cmd.is_empty() {
+            continue;
+        }
+        let name = cmd.split_whitespace().next().unwrap_or(cmd);
+        if !command::is_known_command(name) {
+            bail!(
+                "unknown command {cmd:?} for {section}.{key} (try: {})",
+                known.join(", ")
+            );
+        }
+    }
+    Ok(())
+}
+
+fn write_key_section(
+    body: &mut String,
+    section: &str,
+    map: &BTreeMap<String, String>,
+    defaults: &BTreeMap<String, String>,
+) {
+    let overrides: Vec<(&String, &String)> = map
+        .iter()
+        .filter(|(key, cmd)| defaults.get(*key) != Some(*cmd))
+        .collect();
+    let unbinds: Vec<&String> = defaults
+        .keys()
+        .filter(|key| !map.contains_key(*key))
+        .collect();
+    if overrides.is_empty() && unbinds.is_empty() {
+        return;
+    }
+    body.push_str(&format!("[{section}]\n"));
+    for (key, cmd) in overrides {
+        body.push_str(&format!("{} = {:?}\n", toml_key(key), cmd));
+    }
+    for key in unbinds {
+        body.push_str(&format!("{} = \"\"\n", toml_key(key)));
+    }
+    body.push('\n');
 }
 
 /// Quote key names that aren't bare TOML keys.
@@ -616,6 +642,20 @@ fn write_theme_config(body: &mut String, theme: &ThemeConfig) {
         write_color_spec_opt(body, "number", &o.ui.number);
         write_color_spec_opt(body, "bool", &o.ui.bool_color);
         write_color_spec_opt(body, "null", &o.ui.null);
+        write_color_spec_opt(body, "column_border", &o.ui.column_border);
+        if let Some(w) = o.ui.column_border_width {
+            body.push_str(&format!("column_border_width = {w}\n"));
+        }
+        if let Some(p) = o.ui.column_border_padding {
+            if p.left == p.right {
+                body.push_str(&format!("column_border_padding = {}\n", p.left));
+            } else {
+                body.push_str(&format!(
+                    "column_border_padding = {{ left = {}, right = {} }}\n",
+                    p.left, p.right
+                ));
+            }
+        }
         body.push('\n');
     }
 }

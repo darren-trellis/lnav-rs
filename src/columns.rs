@@ -15,6 +15,8 @@ pub struct FormatOptions<'a> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SegmentKind {
     Literal,
+    /// Vertical rule between columns (`│` × theme `column_border_width`).
+    ColumnBorder,
     Level,
     Timestamp,
     Message,
@@ -28,6 +30,13 @@ pub enum SegmentKind {
 pub struct Segment {
     pub kind: SegmentKind,
     pub text: String,
+}
+
+/// Vertical rule between list columns (`│` × width, with padding spaces).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct ColumnBorderStyle {
+    pub width: usize,
+    pub padding: crate::config::Padding,
 }
 
 /// Compute per-column display widths for a set of rows so columns share an X origin.
@@ -65,9 +74,10 @@ pub fn render_segments(
     columns: &[Column],
     entry: &LogEntry,
     opts: &FormatOptions<'_>,
+    border: ColumnBorderStyle,
 ) -> Vec<Segment> {
     let widths = measure_widths(columns, &[(entry, opts.view_line)], opts.timestamp_format);
-    render_segments_sized(columns, &widths, entry, opts)
+    render_segments_sized(columns, &widths, entry, opts, border)
 }
 
 /// Render using precomputed column widths (for aligned multi-row tables).
@@ -76,14 +86,12 @@ pub fn render_segments_sized(
     widths: &[usize],
     entry: &LogEntry,
     opts: &FormatOptions<'_>,
+    border: ColumnBorderStyle,
 ) -> Vec<Segment> {
     let mut out = Vec::new();
     for (i, col) in columns.iter().enumerate() {
         if i > 0 {
-            out.push(Segment {
-                kind: SegmentKind::Literal,
-                text: " ".into(),
-            });
+            out.push(column_separator(border));
         }
         let width = widths.get(i).copied().or(col.width);
         out.push(render_column(col, width, entry, opts));
@@ -91,11 +99,35 @@ pub fn render_segments_sized(
     out
 }
 
-pub fn render(columns: &[Column], entry: &LogEntry, opts: &FormatOptions<'_>) -> String {
-    render_segments(columns, entry, opts)
+pub fn render(
+    columns: &[Column],
+    entry: &LogEntry,
+    opts: &FormatOptions<'_>,
+    border: ColumnBorderStyle,
+) -> String {
+    render_segments(columns, entry, opts, border)
         .into_iter()
         .map(|s| s.text)
         .collect()
+}
+
+fn column_separator(border: ColumnBorderStyle) -> Segment {
+    if border.width == 0 {
+        Segment {
+            kind: SegmentKind::Literal,
+            text: " ".into(),
+        }
+    } else {
+        Segment {
+            kind: SegmentKind::ColumnBorder,
+            text: format!(
+                "{}{}{}",
+                " ".repeat(border.padding.left),
+                "│".repeat(border.width),
+                " ".repeat(border.padding.right)
+            ),
+        }
+    }
 }
 
 fn render_column(
@@ -329,7 +361,7 @@ mod tests {
             ("code", None, Align::Left),
         ]);
         assert_eq!(
-            render(&columns, &entry, &opts),
+            render(&columns, &entry, &opts, ColumnBorderStyle::default()),
             format!("ERROR {local_ts} hi 3 500")
         );
     }
@@ -341,7 +373,10 @@ mod tests {
             view_line: 1,
         };
         let columns = cols(&[("level", Some(8), Align::Right)]);
-        assert_eq!(render(&columns, &entry(), &opts), "   ERROR");
+        assert_eq!(
+            render(&columns, &entry(), &opts, ColumnBorderStyle::default()),
+            "   ERROR"
+        );
     }
 
     #[test]
@@ -352,18 +387,30 @@ mod tests {
         };
         let err = entry();
         let columns = cols(&[("level", Some(5), Align::Center)]);
-        assert_eq!(render(&columns, &err, &opts), "ERROR");
+        assert_eq!(
+            render(&columns, &err, &opts, ColumnBorderStyle::default()),
+            "ERROR"
+        );
 
         let mut info = entry();
         info.level = LogLevel::Info;
         let columns = cols(&[("level", Some(5), Align::Center)]);
-        assert_eq!(render(&columns, &info, &opts), " INFO");
+        assert_eq!(
+            render(&columns, &info, &opts, ColumnBorderStyle::default()),
+            " INFO"
+        );
 
         let columns = cols(&[("level", Some(6), Align::Center)]);
-        assert_eq!(render(&columns, &info, &opts), " INFO ");
+        assert_eq!(
+            render(&columns, &info, &opts, ColumnBorderStyle::default()),
+            " INFO "
+        );
 
         let columns = cols(&[("level", Some(8), Align::Center)]);
-        assert_eq!(render(&columns, &err, &opts), "  ERROR ");
+        assert_eq!(
+            render(&columns, &err, &opts, ColumnBorderStyle::default()),
+            "  ERROR "
+        );
     }
 
     #[test]
@@ -375,7 +422,10 @@ mod tests {
         let columns = cols(&[("message", Some(2), Align::Left)]);
         let mut e = entry();
         e.message = Some("hello".into());
-        assert_eq!(render(&columns, &e, &opts), "h…");
+        assert_eq!(
+            render(&columns, &e, &opts, ColumnBorderStyle::default()),
+            "h…"
+        );
     }
 
     #[test]
@@ -386,11 +436,14 @@ mod tests {
         };
         let columns = cols(&[("annotations.url", None, Align::Left)]);
         assert_eq!(
-            render(&columns, &entry(), &opts),
+            render(&columns, &entry(), &opts, ColumnBorderStyle::default()),
             "https://example.com/x"
         );
         let columns = cols(&[("annotations.items.1.id", None, Align::Left)]);
-        assert_eq!(render(&columns, &entry(), &opts), "b");
+        assert_eq!(
+            render(&columns, &entry(), &opts, ColumnBorderStyle::default()),
+            "b"
+        );
     }
 
     #[test]
@@ -404,11 +457,56 @@ mod tests {
             ("timestamp", None, Align::Left),
             ("message", None, Align::Left),
         ]);
-        let segs = render_segments(&columns, &entry(), &opts);
+        let segs = render_segments(&columns, &entry(), &opts, ColumnBorderStyle::default());
         assert_eq!(segs[0].kind, SegmentKind::Level);
         assert_eq!(segs[1].kind, SegmentKind::Literal);
         assert_eq!(segs[2].kind, SegmentKind::Timestamp);
         assert_eq!(segs[4].kind, SegmentKind::Message);
+
+        let bordered = render_segments(
+            &columns,
+            &entry(),
+            &opts,
+            ColumnBorderStyle {
+                width: 1,
+                padding: crate::config::Padding::default(),
+            },
+        );
+        assert_eq!(bordered[1].kind, SegmentKind::ColumnBorder);
+        assert_eq!(bordered[1].text, "│");
+        let wide = render_segments(
+            &columns,
+            &entry(),
+            &opts,
+            ColumnBorderStyle {
+                width: 2,
+                padding: crate::config::Padding::default(),
+            },
+        );
+        assert_eq!(wide[1].text, "││");
+        let padded = render_segments(
+            &columns,
+            &entry(),
+            &opts,
+            ColumnBorderStyle {
+                width: 1,
+                padding: crate::config::Padding::both(1),
+            },
+        );
+        assert_eq!(padded[1].text, " │ ");
+        let asymmetric = render_segments(
+            &columns,
+            &entry(),
+            &opts,
+            ColumnBorderStyle {
+                width: 1,
+                padding: crate::config::Padding {
+                    left: 2,
+                    right: 1,
+                },
+            },
+        );
+        assert_eq!(asymmetric[1].text, "  │ ");
     }
 
     #[test]
@@ -425,7 +523,10 @@ mod tests {
             align: Align::Left,
             padding: Padding::both(1),
         }];
-        assert_eq!(render(&columns, &entry(), &opts), " ERROR ");
+        assert_eq!(
+            render(&columns, &entry(), &opts, ColumnBorderStyle::default()),
+            " ERROR "
+        );
     }
 
     #[test]
@@ -456,6 +557,7 @@ mod tests {
                 timestamp_format: "raw",
                 view_line: 1,
             },
+            ColumnBorderStyle::default(),
         )
         .into_iter()
         .map(|s| s.text)
@@ -468,6 +570,7 @@ mod tests {
                 timestamp_format: "raw",
                 view_line: 2,
             },
+            ColumnBorderStyle::default(),
         )
         .into_iter()
         .map(|s| s.text)

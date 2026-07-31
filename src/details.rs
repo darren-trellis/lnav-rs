@@ -66,6 +66,14 @@ fn json_copy_value(value: &Value) -> String {
     }
 }
 
+fn json_empty_literal(value: &Value) -> Option<&'static str> {
+    match value {
+        Value::Object(m) if m.is_empty() => Some("{}"),
+        Value::Array(a) if a.is_empty() => Some("[]"),
+        _ => None,
+    }
+}
+
 /// Build the full details content for an entry (header + fields).
 pub fn build_lines(
     entry: &LogEntry,
@@ -179,7 +187,7 @@ fn push_field(
     if json_tree {
         if let FieldValue::Nested(raw) = value {
             if let Ok(v) = serde_json::from_str::<Value>(raw) {
-                if v.is_object() || v.is_array() {
+                if (v.is_object() || v.is_array()) && json_empty_literal(&v).is_none() {
                     let key_str = path_key(&path);
                     let is_folded = folded.contains(&key_str);
                     let mut spans = vec![
@@ -360,10 +368,29 @@ fn push_json_entry(
     let key_style = theme
         .tone_style(theme.key, surface)
         .add_modifier(Modifier::BOLD);
-    let child_prefix = format!("{prefix}{}", indent_guide(is_last, tab));
     let mut path = parent.to_vec();
     path.push(key.to_string());
 
+    if let Some(literal) = json_empty_literal(value) {
+        let fv = json_value_to_field(value);
+        let value_style = theme.field_value_style(&fv, surface);
+        lines.push(DetailLine {
+            spans: vec![
+                Span::styled(
+                    format!("{prefix}{branch}"),
+                    theme.tone_style(theme.dim, surface),
+                ),
+                Span::styled(format!("{key}: "), key_style),
+                Span::styled(literal.to_string(), value_style),
+            ],
+            path,
+            foldable: false,
+            copy_value: Some(literal.to_string()),
+        });
+        return;
+    }
+
+    let child_prefix = format!("{prefix}{}", indent_guide(is_last, tab));
     match value {
         Value::Object(map) => {
             let key_str = path_key(&path);
@@ -594,6 +621,47 @@ mod tests {
             .copy_value
             .as_ref()
             .is_some_and(|v| v.contains("url") && v.contains("tags")));
+    }
+
+    #[test]
+    fn empty_containers_render_as_literals() {
+        let entry = LogEntry {
+            line_no: 1,
+            raw: "{}".into(),
+            format: LineFormat::Json,
+            level: LogLevel::Info,
+            timestamp: None,
+            timestamp_parsed: None,
+            message: None,
+            fields: vec![
+                Field {
+                    key: "empty_obj".into(),
+                    value: FieldValue::Nested("{}".into()),
+                },
+                Field {
+                    key: "empty_arr".into(),
+                    value: FieldValue::Nested("[]".into()),
+                },
+                Field {
+                    key: "nested".into(),
+                    value: FieldValue::Nested(r#"{"a":{},"b":[]}"#.into()),
+                },
+            ],
+        };
+        let mut cfg = Config::default();
+        cfg.details_json_tree = true;
+        let lines = build_lines(&entry, &theme(), &cfg, &HashSet::new());
+        let text: Vec<String> = lines.iter().map(|l| l.plain_text()).collect();
+        assert!(text.iter().any(|t| t.contains("empty_obj") && t.contains("{}")));
+        assert!(text.iter().any(|t| t.contains("empty_arr") && t.contains("[]")));
+        assert!(text.iter().any(|t| t.contains("a: ") && t.contains("{}")));
+        assert!(text.iter().any(|t| t.contains("b: ") && t.contains("[]")));
+        assert!(!lines.iter().any(|l| {
+            l.path.last().map(|s| s.as_str()) == Some("empty_obj") && l.foldable
+        }));
+        assert!(!lines
+            .iter()
+            .any(|l| l.path.last().map(|s| s.as_str()) == Some("a") && l.foldable));
     }
 
     #[test]

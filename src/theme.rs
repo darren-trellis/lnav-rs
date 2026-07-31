@@ -65,6 +65,10 @@ pub struct Theme {
     pub status_bg: Color,
     pub status_fg: Color,
     pub border: Tone,
+    /// Main list border when the list (not details) has focus.
+    pub window_focus_border: Tone,
+    /// Details overlay border when the overlay has focus.
+    pub overlay_focus_border: Tone,
     pub search_match: Tone,
     pub dim: Tone,
     pub timestamp: Tone,
@@ -73,6 +77,12 @@ pub struct Theme {
     pub number: Tone,
     pub bool_color: Tone,
     pub null: Tone,
+    /// Vertical rules between list columns (`│` × `column_border_width`).
+    pub column_border: Tone,
+    /// `0` = plain space between columns (default); `N` = N× `│`.
+    pub column_border_width: usize,
+    /// Spaces around the column border rule (`1` or `{ left, right }`).
+    pub column_border_padding: crate::config::Padding,
     pub levels: HashMap<LogLevel, Tone>,
 }
 
@@ -144,6 +154,8 @@ struct ThemeColors {
     status_bg: String,
     status_fg: String,
     border: ColorSpec,
+    window_focus_border: ColorSpec,
+    overlay_focus_border: ColorSpec,
     search_match: ColorSpec,
     dim: ColorSpec,
 }
@@ -170,6 +182,15 @@ struct ThemeUi {
     #[serde(rename = "bool")]
     bool_color: ColorSpec,
     null: ColorSpec,
+    /// Optional; defaults to `dim` when omitted.
+    #[serde(default)]
+    column_border: Option<ColorSpec>,
+    /// Optional; `0` when omitted (space separator, no vertical rule).
+    #[serde(default)]
+    column_border_width: usize,
+    /// Optional; `1` or `{ left, right }` (default zero).
+    #[serde(default)]
+    column_border_padding: crate::config::Padding,
 }
 
 impl Theme {
@@ -237,6 +258,12 @@ impl Theme {
         if let Some(v) = &c.border {
             self.border = v.parse()?;
         }
+        if let Some(v) = &c.window_focus_border {
+            self.window_focus_border = v.parse()?;
+        }
+        if let Some(v) = &c.overlay_focus_border {
+            self.overlay_focus_border = v.parse()?;
+        }
         if let Some(v) = &c.search_match {
             self.search_match = v.parse()?;
         }
@@ -286,6 +313,15 @@ impl Theme {
         if let Some(v) = &u.null {
             self.null = v.parse()?;
         }
+        if let Some(v) = &u.column_border {
+            self.column_border = v.parse()?;
+        }
+        if let Some(v) = u.column_border_width {
+            self.column_border_width = v;
+        }
+        if let Some(v) = u.column_border_padding {
+            self.column_border_padding = v;
+        }
         Ok(())
     }
 
@@ -300,6 +336,12 @@ impl Theme {
         levels.insert(LogLevel::Fatal, file.levels.fatal.parse()?);
         levels.insert(LogLevel::Unknown, file.levels.unknown.parse()?);
 
+        let dim = file.colors.dim.parse()?;
+        let column_border = match file.ui.column_border {
+            Some(spec) => spec.parse()?,
+            None => dim,
+        };
+
         Ok(Self {
             name: file.name,
             background: parse_color(&file.colors.background)?,
@@ -310,14 +352,19 @@ impl Theme {
             status_bg: parse_color(&file.colors.status_bg)?,
             status_fg: parse_color(&file.colors.status_fg)?,
             border: file.colors.border.parse()?,
+            window_focus_border: file.colors.window_focus_border.parse()?,
+            overlay_focus_border: file.colors.overlay_focus_border.parse()?,
             search_match: file.colors.search_match.parse()?,
-            dim: file.colors.dim.parse()?,
+            dim,
             timestamp: file.ui.timestamp.parse()?,
             key: file.ui.key.parse()?,
             string: file.ui.string.parse()?,
             number: file.ui.number.parse()?,
             bool_color: file.ui.bool_color.parse()?,
             null: file.ui.null.parse()?,
+            column_border,
+            column_border_width: file.ui.column_border_width,
+            column_border_padding: file.ui.column_border_padding,
             levels,
         })
     }
@@ -381,6 +428,8 @@ pub struct ColorOverrides {
     pub status_bg: Option<String>,
     pub status_fg: Option<String>,
     pub border: Option<ColorSpec>,
+    pub window_focus_border: Option<ColorSpec>,
+    pub overlay_focus_border: Option<ColorSpec>,
     pub search_match: Option<ColorSpec>,
     pub dim: Option<ColorSpec>,
 }
@@ -395,6 +444,8 @@ impl ColorOverrides {
             && self.status_bg.is_none()
             && self.status_fg.is_none()
             && self.border.is_none()
+            && self.window_focus_border.is_none()
+            && self.overlay_focus_border.is_none()
             && self.search_match.is_none()
             && self.dim.is_none()
     }
@@ -408,6 +459,8 @@ impl ColorOverrides {
         validate_color_str("colors.status_bg", self.status_bg.as_deref())?;
         validate_color_str("colors.status_fg", self.status_fg.as_deref())?;
         validate_spec("colors.border", self.border.as_ref())?;
+        validate_spec("colors.window_focus_border", self.window_focus_border.as_ref())?;
+        validate_spec("colors.overlay_focus_border", self.overlay_focus_border.as_ref())?;
         validate_spec("colors.search_match", self.search_match.as_ref())?;
         validate_spec("colors.dim", self.dim.as_ref())?;
         Ok(())
@@ -459,6 +512,9 @@ pub struct UiOverrides {
     #[serde(rename = "bool")]
     pub bool_color: Option<ColorSpec>,
     pub null: Option<ColorSpec>,
+    pub column_border: Option<ColorSpec>,
+    pub column_border_width: Option<usize>,
+    pub column_border_padding: Option<crate::config::Padding>,
 }
 
 impl UiOverrides {
@@ -469,6 +525,9 @@ impl UiOverrides {
             && self.number.is_none()
             && self.bool_color.is_none()
             && self.null.is_none()
+            && self.column_border.is_none()
+            && self.column_border_width.is_none()
+            && self.column_border_padding.is_none()
     }
 
     pub fn validate(&self) -> Result<()> {
@@ -478,6 +537,7 @@ impl UiOverrides {
         validate_spec("ui.number", self.number.as_ref())?;
         validate_spec("ui.bool", self.bool_color.as_ref())?;
         validate_spec("ui.null", self.null.as_ref())?;
+        validate_spec("ui.column_border", self.column_border.as_ref())?;
         Ok(())
     }
 }
@@ -544,6 +604,48 @@ mod tests {
     }
 
     #[test]
+    fn column_border_defaults_and_overrides() {
+        let theme = Theme::builtin("catppuccin").unwrap();
+        assert_eq!(theme.column_border_width, 0);
+        assert!(theme.column_border_padding.is_zero());
+        assert_eq!(theme.column_border, theme.dim);
+
+        let mut theme = theme;
+        theme
+            .apply_overrides(&ThemeOverrides {
+                ui: UiOverrides {
+                    column_border: Some(ColorSpec::FgBg(ColorSpecFgBg {
+                        fg: "#ff0000".into(),
+                        bg: Some("#00ff00".into()),
+                    })),
+                    column_border_width: Some(2),
+                    column_border_padding: Some(crate::config::Padding {
+                        left: 2,
+                        right: 1,
+                    }),
+                    ..Default::default()
+                },
+                ..Default::default()
+            })
+            .unwrap();
+        assert_eq!(theme.column_border_width, 2);
+        assert_eq!(
+            theme.column_border_padding,
+            crate::config::Padding {
+                left: 2,
+                right: 1,
+            }
+        );
+        assert_eq!(
+            theme.column_border,
+            Tone {
+                fg: Color::Rgb(255, 0, 0),
+                bg: Some(Color::Rgb(0, 255, 0)),
+            }
+        );
+    }
+
+    #[test]
     fn color_spec_accepts_fg_bg_table() {
         let spec: ColorSpec = toml::from_str(
             r##"fg = "#111111"
@@ -569,6 +671,8 @@ overlay_bg = "#111111"
 status_bg = "#222222"
 status_fg = "#aaaaaa"
 border = "#444444"
+window_focus_border = "#0088ff"
+overlay_focus_border = "#ffff00"
 search_match = "#ffff00"
 dim = { fg = "#666666", bg = "#222222" }
 [levels]

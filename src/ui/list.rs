@@ -154,6 +154,10 @@ fn render_line<'a>(
             timestamp_format: &app.config.timestamp_format,
             view_line,
         },
+        columns::ColumnBorderStyle {
+            width: app.theme.column_border_width,
+            padding: app.theme.column_border_padding,
+        },
     );
 
     let gutter_style = if selected {
@@ -234,8 +238,18 @@ fn segment_style(
         );
     }
 
+    // Selected row: keep border fg, use selection bg so the highlight is continuous.
+    if segment.kind == SegmentKind::ColumnBorder {
+        if selected {
+            return Style::default()
+                .fg(theme.column_border.fg)
+                .bg(theme.selection_bg);
+        }
+        return apply_tone(theme, theme.column_border, false, row_bg, false);
+    }
+
     let tone = match segment.kind {
-        SegmentKind::Level => unreachable!(),
+        SegmentKind::Level | SegmentKind::ColumnBorder => unreachable!(),
         SegmentKind::Timestamp => theme.timestamp,
         SegmentKind::Message | SegmentKind::Raw => theme.foreground,
         SegmentKind::LineNo | SegmentKind::Format => theme.dim,
