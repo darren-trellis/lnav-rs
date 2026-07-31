@@ -2,41 +2,56 @@ mod json;
 mod logfmt;
 
 use crate::model::{LineFormat, LogEntry, LogLevel};
+use crate::timestamp;
 
 pub fn parse_line(line_no: usize, raw: String) -> LogEntry {
     if let Some((level, timestamp, message, fields)) = json::parse_json_line(&raw) {
-        return LogEntry {
-            line_no,
-            raw,
-            format: LineFormat::Json,
-            level,
-            timestamp,
-            message,
-            fields,
-        };
+        return make_entry(line_no, raw, LineFormat::Json, level, timestamp, message, fields);
     }
 
     if let Some((level, timestamp, message, fields)) = logfmt::parse_logfmt(&raw) {
-        return LogEntry {
+        return make_entry(
             line_no,
             raw,
-            format: LineFormat::Logfmt,
+            LineFormat::Logfmt,
             level,
             timestamp,
             message,
             fields,
-        };
+        );
     }
 
     let level = detect_plain_level(&raw);
+    make_entry(
+        line_no,
+        raw,
+        LineFormat::Plain,
+        level,
+        None,
+        None,
+        Vec::new(),
+    )
+}
+
+fn make_entry(
+    line_no: usize,
+    raw: String,
+    format: LineFormat,
+    level: LogLevel,
+    timestamp: Option<String>,
+    message: Option<String>,
+    fields: Vec<crate::model::Field>,
+) -> LogEntry {
+    let timestamp_parsed = timestamp.as_deref().and_then(timestamp::parse);
     LogEntry {
         line_no,
         raw,
-        format: LineFormat::Plain,
+        format,
         level,
-        timestamp: None,
-        message: None,
-        fields: Vec::new(),
+        timestamp,
+        timestamp_parsed,
+        message,
+        fields,
     }
 }
 
@@ -67,6 +82,7 @@ mod tests {
         assert!(entries.iter().all(|e| e.format == LineFormat::Json));
         assert_eq!(entries[4].level, LogLevel::Error);
         assert!(entries[4].fields.iter().any(|f| f.key == "service"));
+        assert!(entries[0].timestamp_parsed.is_some());
     }
 
     #[test]

@@ -1,5 +1,7 @@
 use std::fmt;
 
+use chrono::{DateTime, Utc};
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum LogLevel {
     Trace,
@@ -85,7 +87,10 @@ pub struct LogEntry {
     pub raw: String,
     pub format: LineFormat,
     pub level: LogLevel,
+    /// Original timestamp string from the log.
     pub timestamp: Option<String>,
+    /// Parsed UTC instant, when recognized.
+    pub timestamp_parsed: Option<DateTime<Utc>>,
     pub message: Option<String>,
     pub fields: Vec<Field>,
 }
