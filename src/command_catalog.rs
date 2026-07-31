@@ -14,16 +14,12 @@ const COMMANDS: &[CommandInfo] = &[
         help: "show help; on|off|toggle details hints when focused",
     },
     CommandInfo {
-        name: "details",
-        help: "on|off|toggle details overlay",
+        name: "view",
+        help: "details|sidebar [on|off|toggle]",
     },
     CommandInfo {
         name: "focus",
         help: "on|off|toggle focus across list/details/sidebar",
-    },
-    CommandInfo {
-        name: "sidebar",
-        help: "on|off|toggle filters sidebar",
     },
     CommandInfo {
         name: "fold",
@@ -79,25 +75,8 @@ const COMMANDS: &[CommandInfo] = &[
     },
 ];
 
-/// Accepted by keybindings (and typed for compatibility), but omitted from `:` completions.
-const HIDDEN_COMMANDS: &[&str] = &[
-    "nav",
-    "page",
-    "match",
-    "up",
-    "down",
-    "top",
-    "bottom",
-    "page-up",
-    "page-down",
-    "next-match",
-    "prev-match",
-    "cycle-theme",
-    "clear-filters",
-    "delete-filter",
-    "toggle-follow",
-    "set",
-];
+/// Keybinding-only parents omitted from `:` completions.
+const HIDDEN_COMMANDS: &[&str] = &["nav", "page", "match"];
 
 pub fn catalog() -> &'static [CommandInfo] {
     COMMANDS

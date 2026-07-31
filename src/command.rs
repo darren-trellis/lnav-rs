@@ -48,42 +48,13 @@ fn execute_inner(app: &mut App, raw: &str, invoke: Invoke) {
         }
         "nav" => nav_command(app, rest),
         "page" => page_command(app, rest),
-        // Compatibility aliases for `nav` / `page`.
-        "down" => {
-            let n = app.take_count() as isize;
-            navigate(app, Navigation::Lines(n));
-        }
-        "up" => {
-            let n = app.take_count() as isize;
-            navigate(app, Navigation::Lines(-n));
-        }
-        "page-down" => {
-            let n = app.take_count() as isize;
-            navigate(app, Navigation::Pages(n));
-        }
-        "page-up" => {
-            let n = app.take_count() as isize;
-            navigate(app, Navigation::Pages(-n));
-        }
-        "top" => {
-            let line = app.take_count_opt();
-            navigate(app, Navigation::Top(line));
-        }
-        "bottom" => {
-            let line = app.take_count_opt();
-            navigate(app, Navigation::Bottom(line));
-        }
-        "details" => {
+        "view" => {
             app.cancel_pending_op();
-            details_command(app, rest);
+            view_command(app, rest);
         }
         "focus" => {
             app.cancel_pending_op();
             focus_command(app, rest);
-        }
-        "sidebar" => {
-            app.cancel_pending_op();
-            sidebar_command(app, rest);
         }
         "fold" => {
             app.cancel_pending_op();
@@ -119,22 +90,9 @@ fn execute_inner(app: &mut App, raw: &str, invoke: Invoke) {
             app.begin_command_mode();
         }
         "match" => match_command(app, rest),
-        // Compatibility aliases for `match next` / `match prev`.
-        "next-match" => match_command(app, "next"),
-        "prev-match" => match_command(app, "prev"),
-        "follow" | "toggle-follow" => {
+        "follow" => {
             app.cancel_pending_op();
-            // `toggle-follow` is a compatibility alias for `follow toggle`.
-            if cmd_l == "toggle-follow" {
-                app.set_follow(!app.view.follow);
-            } else {
-                follow_command(app, rest);
-            }
-        }
-        // Compatibility alias for `theme cycle`.
-        "cycle-theme" => {
-            app.cancel_pending_op();
-            theme_command(app, "cycle");
+            follow_command(app, rest);
         }
         "hide" => match invoke {
             Invoke::Key => app.start_or_repeat_op(PendingOp::Hide),
@@ -149,8 +107,6 @@ fn execute_inner(app: &mut App, raw: &str, invoke: Invoke) {
             theme_command(app, rest);
         }
         "filter" => filter_command(app, rest, invoke),
-        // Compatibility aliases for `filter clear` / `filter delete`.
-        "clear-filters" => filter_command(app, "clear", invoke),
         "clear-hidden" => {
             app.cancel_pending_op();
             let n = app.view.hidden.len();
@@ -158,21 +114,9 @@ fn execute_inner(app: &mut App, raw: &str, invoke: Invoke) {
             app.rebuild_visible(None);
             app.status_message = Some(format!("unhid {n} line(s)"));
         }
-        "delete-filter" => match invoke {
-            Invoke::Key if rest.is_empty() => app.start_or_repeat_filter_delete(),
-            _ => {
-                app.cancel_pending_op();
-                delete_filter(app, rest);
-            }
-        },
         "noh" => {
             app.clear_search();
             app.status_message = Some("cleared search".into());
-        }
-        // Compatibility alias for `config set`.
-        "set" => {
-            app.cancel_pending_op();
-            set_option(app, rest);
         }
         "config" => {
             app.cancel_pending_op();
@@ -443,12 +387,32 @@ fn help_command(app: &mut App, rest: &str) {
     }
 }
 
-fn details_command(app: &mut App, rest: &str) {
-    let (sub, _) = split_cmd(rest);
-    match parse_on_off_toggle(sub) {
-        Some(action) => app.set_details(action),
-        None => {
-            app.status_message = Some(format!("usage: :details [on|off|toggle]  (unknown: {sub})"));
+fn view_command(app: &mut App, rest: &str) {
+    let (target, arg) = split_cmd(rest);
+    match target.to_ascii_lowercase().as_str() {
+        "details" => match parse_on_off_toggle(arg) {
+            Some(action) => app.set_details(action),
+            None => {
+                app.status_message = Some(format!(
+                    "usage: :view details [on|off|toggle]  (unknown: {arg})"
+                ));
+            }
+        },
+        "sidebar" => match parse_on_off_toggle(arg) {
+            Some(action) => {
+                app.set_sidebar(action);
+                maybe_autosave(app);
+            }
+            None => {
+                app.status_message = Some(format!(
+                    "usage: :view sidebar [on|off|toggle]  (unknown: {arg})"
+                ));
+            }
+        },
+        other => {
+            app.status_message = Some(format!(
+                "usage: :view [details|sidebar] [on|off|toggle]  (unknown: {other})"
+            ));
         }
     }
 }
@@ -459,19 +423,6 @@ fn focus_command(app: &mut App, rest: &str) {
         Some(action) => app.set_overlay_focus(action),
         None => {
             app.status_message = Some(format!("usage: :focus [on|off|toggle]  (unknown: {sub})"));
-        }
-    }
-}
-
-fn sidebar_command(app: &mut App, rest: &str) {
-    let (sub, _) = split_cmd(rest);
-    match parse_on_off_toggle(sub) {
-        Some(action) => {
-            app.set_sidebar(action);
-            maybe_autosave(app);
-        }
-        None => {
-            app.status_message = Some(format!("usage: :sidebar [on|off|toggle]  (unknown: {sub})"));
         }
     }
 }

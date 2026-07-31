@@ -50,7 +50,7 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 | `PgUp` | `page up` |
 | `g` / `Home` | `nav top` |
 | `G` / `End` | `nav bottom` |
-| `Enter` | `details` / `details toggle` (open/focus; again to close when focused) |
+| `Enter` | `view details` (open/focus; again to close when focused) |
 | `Tab` | `focus toggle` (cycle list → details → sidebar) |
 | `Space` | `page down` (list); `fold toggle` via `[details_keys]` when details focused |
 | `c` | `copy` (copy focused details value to clipboard) |
@@ -59,7 +59,7 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 | `:` | `command-mode` |
 | `n` / `N` | `match next` / `match prev` |
 | `f` | `follow toggle` |
-| `s` | `sidebar toggle` (filters sidebar) |
+| `s` | `view sidebar toggle` (filters sidebar) |
 | `t` | `theme cycle` |
 | `d` | `hide` operator — `dd` current, `dj`/`dG`/… range; in sidebar `dd` deletes filter |
 | `D` | `delete` operator — `DD` current, `Dj`/`DG`/… range (in-place; safe with `tee -a`) |
@@ -99,7 +99,8 @@ In `/` mode, **Up/Down** recall search history (shared for list and details sear
 | `:filter delete [N]` | Remove filter by index (or selected sidebar filter) |
 | `:fold on\|off\|toggle` | Fold/unfold details tree item under cursor |
 | `:follow on\|off\|toggle` | Enable/disable/toggle live follow |
-| `:details on\|off\|toggle` | Open/close/toggle details overlay |
+| `:view details [on\|off\|toggle]` | Open/close/toggle details overlay |
+| `:view sidebar [on\|off\|toggle]` | Show/hide/toggle filters sidebar |
 | `:focus on\|off\|toggle` | Focus details / list / switch between them |
 | `:copy` | Copy focused details value to the clipboard |
 | `:clear-hidden` | Restore lines hidden with `d` |
@@ -118,8 +119,7 @@ In `/` mode, **Up/Down** recall search history (shared for list and details sear
 | `:config set relative_line_numbers on\|off\|toggle` | Show relative line numbers (vim-style) |
 | `:config set scrollbar on\|off\|toggle` | Show a right-side scrollbar (default on) |
 | `:config set autosave on\|off\|toggle` | Auto-save after `:config set` (default on) |
-| `:config set sidebar on\|off\|toggle` | Show filters sidebar (default off) |
-| `:sidebar on\|off\|toggle` | Same as config sidebar (default key: `s`) |
+| `:config set sidebar on\|off\|toggle` | Show filters sidebar (default off; same as `:view sidebar`) |
 | `:config set scroll_lines N` | Mouse wheel step (default 1) |
 | `:config set timestamp_format …` | strftime for timestamp columns (`raw` = original) |
 | `:config set case_mode …` | `sensitive` / `insensitive` / `smart` (search + filters) |
@@ -209,7 +209,7 @@ Boolean `:config set` values use `on` / `off` / `toggle` only. With `autosave` o
 
 Details: `Enter` opens and focuses the overlay — the selection highlight moves into details (`j`/`k` move the cursor; Esc closes). `Tab` / `:focus toggle` cycles focus across the list, details (if open), and the filters sidebar (if open). `Space` folds/unfolds the tree item under the cursor when details is focused (`:fold on|off|toggle`). `?` toggles keybinding hints on the overlay border. `c` / `:copy` copies the focused item’s value (strings without quotes; objects/arrays as pretty JSON). With details focused, `/` searches inside the overlay (`n`/`N` cycle matches). Nested JSON fields render as a tree when `details_json_tree` is on (`details_tab_width` sets indent per level). Overlay height grows with content up to `details_max_height` (and screen space).
 
-Filters sidebar: `s` / `:sidebar toggle` shows a right-hand list of current filters. When focused, `j`/`k` move the selection and `dd` deletes the selected filter (`[sidebar_keys]` default: `d = "filter delete"`). Esc returns focus to the list without hiding the sidebar.
+Filters sidebar: `s` / `:view sidebar toggle` shows a right-hand list of current filters. When focused, `j`/`k` move the selection and `dd` deletes the selected filter (`[sidebar_keys]` default: `d = "filter delete"`). Esc returns focus to the list without hiding the sidebar.
 
 Filters persist under `~/.local/share/lnav-rs/sessions/` (one file per log path hash; stdin uses `stdin.toml`). `session_filters` / `session_stdin` control that (both default on). Turn `session_stdin` off if you don’t want every pipe to share one filter set.
 

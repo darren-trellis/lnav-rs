@@ -24,7 +24,7 @@ pub fn defaults() -> BTreeMap<String, String> {
         ("home".into(), "nav top".into()),
         ("G".into(), "nav bottom".into()),
         ("end".into(), "nav bottom".into()),
-        ("enter".into(), "details".into()),
+        ("enter".into(), "view details".into()),
         ("tab".into(), "focus toggle".into()),
         ("c".into(), "copy".into()),
         ("esc".into(), "close".into()),
@@ -37,7 +37,7 @@ pub fn defaults() -> BTreeMap<String, String> {
         ("d".into(), "hide".into()),
         ("D".into(), "delete".into()),
         ("?".into(), "help".into()),
-        ("s".into(), "sidebar toggle".into()),
+        ("s".into(), "view sidebar toggle".into()),
     ])
 }
 
@@ -160,7 +160,7 @@ mod tests {
         assert_eq!(defaults().get("q").map(String::as_str), Some("quit"));
         assert_eq!(
             defaults().get("s").map(String::as_str),
-            Some("sidebar toggle")
+            Some("view sidebar toggle")
         );
         assert_eq!(
             sidebar_defaults().get("d").map(String::as_str),

@@ -142,10 +142,8 @@ fn suggestions_for(buffer: &str, app: &App) -> Vec<Suggestion> {
             "fold" => on_off_toggle_suggestions(rest, rest_from, FOLD_SUBS),
             "focus" => on_off_toggle_suggestions(rest, rest_from, FOCUS_SUBS),
             "follow" => on_off_toggle_suggestions(rest, rest_from, FOLLOW_SUBS),
-            "details" => on_off_toggle_suggestions(rest, rest_from, DETAILS_SUBS),
-            "sidebar" => on_off_toggle_suggestions(rest, rest_from, SIDEBAR_SUBS),
+            "view" => view_suggestions(rest, rest_from),
             "help" => on_off_toggle_suggestions(rest, rest_from, HELP_SUBS),
-            "set" => set_key_suggestions(rest, rest_from),
             "config" => config_suggestions(rest, rest_from),
             _ => Vec::new(),
         }
@@ -186,22 +184,27 @@ const FOCUS_SUBS: &[(&str, &str)] = &[
     ("toggle", "cycle list/details/sidebar focus"),
 ];
 
-const SIDEBAR_SUBS: &[(&str, &str)] = &[
-    ("on", "show filters sidebar"),
-    ("off", "hide filters sidebar"),
-    ("toggle", "toggle filters sidebar"),
-];
-
 const FOLLOW_SUBS: &[(&str, &str)] = &[
     ("on", "enable live follow"),
     ("off", "pause live follow"),
     ("toggle", "toggle live follow"),
 ];
 
+const VIEW_SUBS: &[(&str, &str)] = &[
+    ("details", "open/close/toggle details overlay"),
+    ("sidebar", "show/hide/toggle filters sidebar"),
+];
+
 const DETAILS_SUBS: &[(&str, &str)] = &[
     ("on", "open and focus details"),
     ("off", "close details overlay"),
     ("toggle", "open/focus/close details"),
+];
+
+const SIDEBAR_SUBS: &[(&str, &str)] = &[
+    ("on", "show filters sidebar"),
+    ("off", "hide filters sidebar"),
+    ("toggle", "toggle filters sidebar"),
 ];
 
 const HELP_SUBS: &[(&str, &str)] = &[
@@ -228,6 +231,20 @@ fn on_off_toggle_suggestions(
             replace_from: rest_from,
         })
         .collect()
+}
+
+fn view_suggestions(rest: &str, rest_from: usize) -> Vec<Suggestion> {
+    if !rest.contains(char::is_whitespace) {
+        return on_off_toggle_suggestions(rest, rest_from, VIEW_SUBS);
+    }
+    let (target, arg_raw) = split_once_ws(rest);
+    let arg = arg_raw.trim_start();
+    let arg_from = rest_from + (rest.len() - arg.len());
+    match target.to_ascii_lowercase().as_str() {
+        "details" => on_off_toggle_suggestions(arg, arg_from, DETAILS_SUBS),
+        "sidebar" => on_off_toggle_suggestions(arg, arg_from, SIDEBAR_SUBS),
+        _ => Vec::new(),
+    }
 }
 
 fn filter_suggestions(rest: &str, rest_from: usize, filter_count: usize) -> Vec<Suggestion> {
@@ -509,33 +526,14 @@ mod tests {
     }
 
     #[test]
-    fn does_not_suggest_keybinding_aliases() {
+    fn does_not_suggest_keybinding_only_commands() {
         let items = command_suggestions("", 0);
         assert!(items.iter().any(|s| s.text == "quit"));
         assert!(items.iter().any(|s| s.text == "hide"));
         assert!(items.iter().any(|s| s.text == "delete"));
         assert!(items.iter().any(|s| s.text == "config"));
         assert!(items.iter().all(|s| {
-            !matches!(
-                s.text.as_str(),
-                "q" | "d"
-                    | "D"
-                    | "set"
-                    | "nav"
-                    | "page"
-                    | "match"
-                    | "up"
-                    | "down"
-                    | "top"
-                    | "bottom"
-                    | "page-up"
-                    | "page-down"
-                    | "next-match"
-                    | "prev-match"
-                    | "cycle-theme"
-                    | "clear-filters"
-                    | "delete-filter"
-            )
+            !matches!(s.text.as_str(), "nav" | "page" | "match" | "q" | "d" | "D")
         }));
     }
 

@@ -28,9 +28,9 @@ impl App {
                     .and_then(|spec| self.config.keys.get(&spec))
                     .map(|raw| raw.trim().to_ascii_lowercase());
                 match command.as_deref() {
-                    Some("nav up" | "up") => self.theme_picker_move(-1),
-                    Some("nav down" | "down") => self.theme_picker_move(1),
-                    Some("page up" | "page-up") => {
+                    Some("nav up") => self.theme_picker_move(-1),
+                    Some("nav down") => self.theme_picker_move(1),
+                    Some("page up") => {
                         let page = self
                             .theme_picker
                             .as_ref()
@@ -38,7 +38,7 @@ impl App {
                             .unwrap_or(1);
                         self.theme_picker_move(-page);
                     }
-                    Some("page down" | "page-down") => {
+                    Some("page down") => {
                         let page = self
                             .theme_picker
                             .as_ref()
@@ -46,14 +46,14 @@ impl App {
                             .unwrap_or(1);
                         self.theme_picker_move(page);
                     }
-                    Some("nav top" | "top") => self.theme_picker_select(0),
-                    Some("nav bottom" | "bottom") => {
+                    Some("nav top") => self.theme_picker_select(0),
+                    Some("nav bottom") => {
                         if let Some(picker) = &self.theme_picker {
                             let last = picker.names.len().saturating_sub(1);
                             self.theme_picker_select(last);
                         }
                     }
-                    Some("details" | "details toggle" | "details on") => {
+                    Some("view details" | "view details toggle" | "view details on") => {
                         self.close_theme_picker(true)
                     }
                     Some("close") => self.close_theme_picker(false),
@@ -125,7 +125,7 @@ impl App {
         self.command_line.completions.clear();
         self.preview_theme_at_selection();
         let confirm =
-            keys::binding_for_command(&self.config.keys, None, "details").unwrap_or("enter");
+            keys::binding_for_command(&self.config.keys, None, "view details").unwrap_or("enter");
         self.status_message = Some(format!(
             "theme picker · click/{confirm} to set · Esc to cancel"
         ));
