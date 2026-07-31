@@ -192,6 +192,14 @@ pub struct Config {
     /// Key → command map. User values override defaults; `""` unbinds.
     #[serde(default)]
     pub keys: BTreeMap<String, String>,
+
+    /// Persist filters per log file under `~/.local/share/lnav-rs/sessions/`.
+    #[serde(default = "default_true")]
+    pub session_filters: bool,
+
+    /// Persist filters for stdin under a shared `sessions/stdin.toml`.
+    #[serde(default = "default_true")]
+    pub session_stdin: bool,
 }
 
 fn default_theme() -> String {
@@ -245,6 +253,8 @@ impl Default for Config {
             timestamp_format: default_timestamp_format(),
             columns: default_columns(),
             keys: keys::defaults(),
+            session_filters: true,
+            session_stdin: true,
         }
     }
 }
@@ -267,6 +277,21 @@ impl Config {
 
     pub fn default_path() -> PathBuf {
         Self::config_dir().join("config.toml")
+    }
+
+    pub fn data_dir() -> PathBuf {
+        if let Ok(xdg) = std::env::var("XDG_DATA_HOME") {
+            if !xdg.is_empty() {
+                return PathBuf::from(xdg).join("lnav-rs");
+            }
+        }
+        dirs_home()
+            .map(|h| h.join(".local").join("share").join("lnav-rs"))
+            .unwrap_or_else(|| PathBuf::from(".lnav-rs-data"))
+    }
+
+    pub fn sessions_dir() -> PathBuf {
+        Self::data_dir().join("sessions")
     }
 
     pub fn load() -> Result<(Self, Option<PathBuf>)> {
@@ -355,6 +380,12 @@ impl Config {
         }
         if self.timestamp_format != defaults.timestamp_format {
             body.push_str(&format!("timestamp_format = {:?}\n", self.timestamp_format));
+        }
+        if self.session_filters != defaults.session_filters {
+            body.push_str(&format!("session_filters = {}\n", self.session_filters));
+        }
+        if self.session_stdin != defaults.session_stdin {
+            body.push_str(&format!("session_stdin = {}\n", self.session_stdin));
         }
         if !body.is_empty() {
             body.push('\n');
@@ -608,6 +639,8 @@ mod tests {
         assert!(!raw.contains("follow = "));
         assert!(!raw.contains("wrap_details = "));
         assert!(!raw.contains("line_numbers = "));
+        assert!(!raw.contains("session_filters = "));
+        assert!(!raw.contains("session_stdin = "));
         assert!(!raw.contains("[[columns]]"));
         assert!(raw.contains("[theme]"));
         let _ = fs::remove_dir_all(&dir);

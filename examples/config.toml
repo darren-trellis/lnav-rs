@@ -1,4 +1,6 @@
 line_numbers = true
+# session_filters = true
+# session_stdin = true
 
 [theme]
 name = "catppuccin"

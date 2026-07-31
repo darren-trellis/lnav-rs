@@ -56,6 +56,8 @@ const SET_KEYS: &[(&str, &str)] = &[
     ("relative_line_numbers", "on|off"),
     ("scroll_lines", "mouse wheel step"),
     ("timestamp_format", "strftime or raw"),
+    ("session_filters", "on|off"),
+    ("session_stdin", "on|off"),
 ];
 
 const BOOLS: &[&str] = &["on", "off", "true", "false"];
@@ -287,9 +289,12 @@ fn set_suggestions(rest: &str, rest_from: usize, _app: &App) -> Vec<Suggestion> 
 
     match key.to_ascii_lowercase().as_str() {
         "theme" => value_suggestions(value, value_from, &Theme::list_names(), "theme"),
-        "follow" | "wrap_details" | "line_numbers" | "relative_line_numbers" => {
-            value_suggestions(value, value_from, &bool_opts(), "bool")
-        }
+        "follow"
+        | "wrap_details"
+        | "line_numbers"
+        | "relative_line_numbers"
+        | "session_filters"
+        | "session_stdin" => value_suggestions(value, value_from, &bool_opts(), "bool"),
         "timestamp_format" => {
             let presets = [
                 "%H:%M:%S".to_string(),

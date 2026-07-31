@@ -8,6 +8,7 @@ mod columns;
 mod model;
 mod object_span;
 mod parse;
+mod session;
 mod tail;
 mod theme;
 mod timestamp;

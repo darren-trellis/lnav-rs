@@ -284,6 +284,7 @@ fn execute_inner(app: &mut App, raw: &str, invoke: Invoke) {
             let n = app.filters.len();
             app.filters.clear();
             app.rebuild_visible(None);
+            app.persist_session();
             app.status_message = Some(format!("cleared {n} filters"));
         }
         "clear-hidden" => {
@@ -346,6 +347,7 @@ fn add_filter(app: &mut App, kind: FilterKind, pattern: &str) {
             if app.follow && !app.visible.is_empty() {
                 app.selected = app.visible.len() - 1;
             }
+            app.persist_session();
             app.status_message = Some(format!(
                 "filter-{label}: /{pattern}/  ({} visible, {} hidden)",
                 app.visible_len(),
@@ -391,6 +393,7 @@ fn delete_filter(app: &mut App, rest: &str) {
     }
     let removed = app.filters.remove(idx);
     app.rebuild_visible(None);
+    app.persist_session();
     app.status_message = Some(format!(
         "deleted filter-{} /{}/",
         removed.label(),
@@ -426,6 +429,7 @@ fn filter_command(app: &mut App, rest: &str) {
 fn set_filtering(app: &mut App, enabled: bool) {
     app.filtering_enabled = enabled;
     app.rebuild_visible(None);
+    app.persist_session();
     app.status_message = Some(if enabled {
         "filtering: on".into()
     } else {
@@ -462,7 +466,7 @@ fn set_option(app: &mut App, rest: &str) {
     let (key, value) = split_cmd(rest);
     if key.is_empty() {
         app.status_message = Some(
-            "usage: :set theme|follow|wrap_details|line_numbers|relative_line_numbers|scroll_lines|timestamp_format VALUE"
+            "usage: :set theme|follow|wrap_details|line_numbers|relative_line_numbers|scroll_lines|timestamp_format|session_filters|session_stdin VALUE"
                 .into(),
         );
         return;
@@ -490,6 +494,12 @@ fn set_option(app: &mut App, rest: &str) {
         }),
         "relative_line_numbers" => set_bool_option(app, "relative_line_numbers", value, |app, v| {
             app.config.relative_line_numbers = v;
+        }),
+        "session_filters" => set_bool_option(app, "session_filters", value, |app, v| {
+            app.config.session_filters = v;
+        }),
+        "session_stdin" => set_bool_option(app, "session_stdin", value, |app, v| {
+            app.config.session_stdin = v;
         }),
         "scroll_lines" => {
             if value.is_empty() {
@@ -531,6 +541,8 @@ fn set_bool_option(app: &mut App, name: &str, value: &str, apply: impl FnOnce(&m
             "wrap_details" => app.config.wrap_details,
             "line_numbers" => app.config.line_numbers,
             "relative_line_numbers" => app.config.relative_line_numbers,
+            "session_filters" => app.config.session_filters,
+            "session_stdin" => app.config.session_stdin,
             _ => false,
         };
         app.status_message = Some(format!("{name}={current}"));

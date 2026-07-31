@@ -17,6 +17,7 @@ use crate::filter::{self, Filter};
 use crate::keys;
 use crate::model::LogEntry;
 use crate::object_span;
+use crate::session::{self, Session};
 use crate::tail::LogSource;
 use crate::theme::Theme;
 use crate::ui;
@@ -110,14 +111,30 @@ impl App {
             .position(|t| t == config.theme.name() || t == &theme.name)
             .unwrap_or(0);
 
+        let mut status_message = None;
+        let (filters, filtering_enabled) = match session::load(&source, &config) {
+            Ok(Some(s)) => match s.into_filters() {
+                Ok(pair) => pair,
+                Err(err) => {
+                    status_message = Some(format!("session: {err:#}"));
+                    (Vec::new(), true)
+                }
+            },
+            Ok(None) => (Vec::new(), true),
+            Err(err) => {
+                status_message = Some(format!("session: {err:#}"));
+                (Vec::new(), true)
+            }
+        };
+
         let mut app = Self {
             source,
             follow: config.follow,
             config,
             theme,
             theme_index,
-            filters: Vec::new(),
-            filtering_enabled: true,
+            filters,
+            filtering_enabled,
             hidden: HashSet::new(),
             visible: Vec::new(),
             selected: 0,
@@ -135,7 +152,7 @@ impl App {
             completions: CompletionState::default(),
             search_matches: Vec::new(),
             search_cursor: None,
-            status_message: None,
+            status_message,
             should_quit: false,
         };
         app.rebuild_visible(None);
@@ -143,6 +160,11 @@ impl App {
             app.selected = app.visible.len() - 1;
         }
         Ok(app)
+    }
+
+    pub fn persist_session(&self) {
+        let session = Session::from_app(&self.filters, self.filtering_enabled);
+        let _ = session::save(&self.source, &self.config, &session);
     }
 
     pub fn selected_entry(&self) -> Option<&LogEntry> {
@@ -215,6 +237,7 @@ impl App {
             terminal.draw(|frame| ui::draw(frame, self))?;
 
             if self.should_quit {
+                self.persist_session();
                 break;
             }
 

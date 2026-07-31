@@ -98,6 +98,8 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 | `:set relative_line_numbers on\|off` | Show relative line numbers (vim-style) |
 | `:set scroll_lines N` | Mouse wheel step (default 1) |
 | `:set timestamp_format …` | strftime for timestamp columns (`raw` = original) |
+| `:set session_filters on\|off` | Persist filters per log file (default on) |
+| `:set session_stdin on\|off` | Persist filters for stdin (default on) |
 | `:w` / `:write` | Write current settings to config |
 | `:config` | Show config path |
 | `:config init` | Create config from current settings |
@@ -128,6 +130,8 @@ line_numbers = false
 relative_line_numbers = false
 scroll_lines = 1
 timestamp_format = "%H:%M:%S"
+session_filters = true
+session_stdin = true
 
 [[columns]]
 source = "level"
@@ -155,6 +159,8 @@ D = "delete"
 `[[columns]]` define the list layout. `source` is a builtin (`level`, `timestamp`, `message`, `raw`, `line`, `format`) or a field path (`annotations.url`, `items.0.id`). Columns without `width` auto-size to the widest value in the current viewport so fields share an X position. Set `width` to fix/truncate; `align` is `"left"` (default), `"center"`, or `"right"`. `padding` is spaces around the cell (`1` for both sides, or `{ left = 1, right = 2 }`).
 
 `timestamp_format` uses [chrono strftime](https://docs.rs/chrono/latest/chrono/format/strftime/index.html) (default `%H:%M:%S`). Set to `raw` to keep the original log string.
+
+Filters persist under `~/.local/share/lnav-rs/sessions/` (one file per log path hash; stdin uses `stdin.toml`). `session_filters` / `session_stdin` control that (both default on). Turn `session_stdin` off if you don’t want every pipe to share one filter set.
 
 `[theme]` selects the theme (`name`) and optional `[theme.colors]` / `[theme.levels]` / `[theme.ui]` patches (same keys as `themes/*.toml`). Text colors (`foreground`, `border`, `search_match`, `dim`, levels, and all `[ui]` keys) accept a hex string (fg only) or `{ fg = "...", bg = "..." }`. Surface keys (`background`, `overlay_bg`, `selection_*`, `status_*`) stay plain color strings. Unknown keys, invalid colors, unknown theme names, and unknown keybinding commands are rejected.
 
@@ -193,6 +199,7 @@ src/
   config.rs       # config.toml load/save
   model.rs        # log entries / fields
   parse/          # json + logfmt
+  session.rs      # per-source filter persistence
   tail.rs         # file read + live watch
   theme.rs        # theme loader
   ui/             # ratatui views
@@ -203,6 +210,6 @@ examples/         # sample logs + example config
 ## Roadmap (not yet)
 
 - Multiple files / time merge
-- Filters and bookmarks
+- Bookmarks
 - SQL / query surface
 - Custom format definitions
