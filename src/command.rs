@@ -329,6 +329,17 @@ fn execute_inner(app: &mut App, raw: &str, invoke: Invoke) {
 
 fn add_filter(app: &mut App, kind: FilterKind, pattern: &str) {
     let pattern = if pattern.is_empty() {
+        if app.search_in_overlay {
+            app.status_message = Some(match kind {
+                FilterKind::Include => {
+                    "usage: :filter in PATTERN  (details search is not a list filter)".into()
+                }
+                FilterKind::Exclude => {
+                    "usage: :filter out PATTERN  (details search is not a list filter)".into()
+                }
+            });
+            return;
+        }
         if app.search_query.is_empty() {
             app.status_message = Some(match kind {
                 FilterKind::Include => {
