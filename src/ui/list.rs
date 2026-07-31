@@ -51,7 +51,7 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
     app.pointer.hit.list_inner = content;
     app.pointer.hit.list_scrollbar = bar_area.unwrap_or_default();
     let viewport = content.height as usize;
-    app.ensure_visible(viewport);
+    app.ensure_visible(viewport, app.config.scroll_moves_selection);
 
     if app.view.visible.is_empty() {
         let theme = &app.theme;

@@ -249,6 +249,11 @@ pub struct Config {
     #[serde(default = "default_scroll_lines")]
     pub scroll_lines: usize,
 
+    /// When true, mouse-wheel scrolling moves the selected log line.
+    /// When false, the wheel scrolls the viewport only.
+    #[serde(default = "default_true")]
+    pub scroll_moves_selection: bool,
+
     /// strftime format for timestamp columns (chrono syntax), or `"raw"`.
     #[serde(default = "default_timestamp_format")]
     pub timestamp_format: String,
@@ -306,6 +311,8 @@ struct PersistedConfig<'a> {
     sidebar: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     scroll_lines: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    scroll_moves_selection: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     timestamp_format: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -375,6 +382,9 @@ impl<'a> PersistedConfig<'a> {
             autosave: (config.autosave != defaults.autosave).then_some(config.autosave),
             sidebar: (config.sidebar != defaults.sidebar).then_some(config.sidebar),
             scroll_lines: (scroll_lines != defaults.scroll_lines).then_some(scroll_lines),
+            scroll_moves_selection: (config.scroll_moves_selection
+                != defaults.scroll_moves_selection)
+                .then_some(config.scroll_moves_selection),
             timestamp_format: (config.timestamp_format != defaults.timestamp_format)
                 .then_some(config.timestamp_format.as_str()),
             case_mode: (config.case_mode != defaults.case_mode).then_some(config.case_mode),
@@ -453,6 +463,7 @@ impl Default for Config {
             autosave: true,
             sidebar: false,
             scroll_lines: default_scroll_lines(),
+            scroll_moves_selection: true,
             timestamp_format: default_timestamp_format(),
             case_mode: CaseMode::default(),
             columns: default_columns(),

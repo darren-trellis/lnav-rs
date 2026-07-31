@@ -152,6 +152,13 @@ const OPTIONS: &[ConfigOption] = &[
         setter: set_scroll_lines,
     },
     ConfigOption {
+        name: "scroll_moves_selection",
+        help: "on|off|toggle",
+        value_kind: ValueKind::Bool,
+        getter: get_scroll_moves_selection,
+        setter: set_scroll_moves_selection,
+    },
+    ConfigOption {
         name: "timestamp_format",
         help: "strftime or raw",
         value_kind: ValueKind::TimestampFormat,
@@ -425,6 +432,21 @@ fn set_scroll_lines(app: &mut App, value: &str) -> bool {
             true
         }
     }
+}
+
+fn get_scroll_moves_selection(app: &App) -> String {
+    on_off(app.config.scroll_moves_selection)
+}
+
+fn set_scroll_moves_selection(app: &mut App, value: &str) -> bool {
+    set_bool(
+        app,
+        "scroll_moves_selection",
+        value,
+        |app| app.config.scroll_moves_selection,
+        |app, enabled| app.config.scroll_moves_selection = enabled,
+        false,
+    )
 }
 
 fn get_timestamp_format(app: &App) -> String {

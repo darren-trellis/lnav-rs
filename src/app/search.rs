@@ -185,6 +185,7 @@ impl App {
             self.reset_overlay_for_selection_change();
         }
         self.view.selected = next;
+        self.ensure_selection_visible();
     }
 
     pub(crate) fn jump_to(&mut self, idx: usize) {
@@ -196,6 +197,25 @@ impl App {
             self.reset_overlay_for_selection_change();
         }
         self.view.selected = next;
+        self.ensure_selection_visible();
+    }
+
+    pub(crate) fn scroll_list(&mut self, delta: isize) {
+        if self.view.visible.is_empty() {
+            return;
+        }
+        self.view.follow = false;
+        let viewport = self.pointer.hit.list_inner.height.max(1) as usize;
+        let max_scroll = self.view.visible.len().saturating_sub(viewport);
+        let next = (self.view.scroll as isize + delta).clamp(0, max_scroll as isize) as usize;
+        self.view.scroll = next;
+    }
+
+    fn ensure_selection_visible(&mut self) {
+        let viewport = self.pointer.hit.list_inner.height as usize;
+        if viewport > 0 {
+            self.ensure_visible(viewport, true);
+        }
     }
 
     pub fn clear_search(&mut self) {
@@ -289,14 +309,16 @@ impl App {
         }
     }
 
-    pub fn ensure_visible(&mut self, viewport_height: usize) {
+    pub fn ensure_visible(&mut self, viewport_height: usize, follow_selection: bool) {
         if viewport_height == 0 || self.view.visible.is_empty() {
             return;
         }
-        if self.view.selected < self.view.scroll {
-            self.view.scroll = self.view.selected;
-        } else if self.view.selected >= self.view.scroll + viewport_height {
-            self.view.scroll = self.view.selected + 1 - viewport_height;
+        if follow_selection {
+            if self.view.selected < self.view.scroll {
+                self.view.scroll = self.view.selected;
+            } else if self.view.selected >= self.view.scroll + viewport_height {
+                self.view.scroll = self.view.selected + 1 - viewport_height;
+            }
         }
         let max_scroll = self.view.visible.len().saturating_sub(viewport_height);
         if self.view.scroll > max_scroll {

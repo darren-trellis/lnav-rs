@@ -33,7 +33,11 @@ impl App {
                     self.command_line.completions.browsed = true;
                 } else {
                     let n = self.config.scroll_lines.max(1) as isize;
-                    self.with_motion(|a| a.move_selection(-n));
+                    if self.config.scroll_moves_selection {
+                        self.with_motion(|a| a.move_selection(-n));
+                    } else {
+                        self.scroll_list(-n);
+                    }
                 }
             }
             MouseEventKind::ScrollDown => {
@@ -55,7 +59,11 @@ impl App {
                     self.command_line.completions.browsed = true;
                 } else {
                     let n = self.config.scroll_lines.max(1) as isize;
-                    self.with_motion(|a| a.move_selection(n));
+                    if self.config.scroll_moves_selection {
+                        self.with_motion(|a| a.move_selection(n));
+                    } else {
+                        self.scroll_list(n);
+                    }
                 }
             }
             MouseEventKind::Down(MouseButton::Left) => {
@@ -131,18 +139,22 @@ impl App {
         let new_scroll = scroll_index_at(bar, row, self.view.visible.len(), viewport);
         let max_scroll = self.view.visible.len().saturating_sub(viewport);
         let new_scroll = new_scroll.min(max_scroll);
-        let offset = self
-            .view
-            .selected
-            .saturating_sub(self.view.scroll)
-            .min(viewport.saturating_sub(1));
         self.view.follow = false;
         self.focus_list();
-        self.view.scroll = new_scroll;
-        let new_selected = (new_scroll + offset).min(self.view.visible.len() - 1);
-        if new_selected != self.view.selected {
-            self.reset_overlay_for_selection_change();
-            self.view.selected = new_selected;
+        if self.config.scroll_moves_selection {
+            let offset = self
+                .view
+                .selected
+                .saturating_sub(self.view.scroll)
+                .min(viewport.saturating_sub(1));
+            self.view.scroll = new_scroll;
+            let new_selected = (new_scroll + offset).min(self.view.visible.len() - 1);
+            if new_selected != self.view.selected {
+                self.reset_overlay_for_selection_change();
+                self.view.selected = new_selected;
+            }
+        } else {
+            self.view.scroll = new_scroll;
         }
     }
 
