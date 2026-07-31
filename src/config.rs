@@ -19,6 +19,59 @@ pub enum Align {
     Right,
 }
 
+/// Horizontal padding around a column cell.
+///
+/// Config accepts `padding = 1` (both sides) or `padding = { left = 1, right = 2 }`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct Padding {
+    pub left: usize,
+    pub right: usize,
+}
+
+impl Padding {
+    pub fn both(n: usize) -> Self {
+        Self { left: n, right: n }
+    }
+
+    pub fn is_zero(self) -> bool {
+        self.left == 0 && self.right == 0
+    }
+}
+
+impl Serialize for Padding {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        if self.left == self.right {
+            serializer.serialize_u64(self.left as u64)
+        } else {
+            use serde::ser::SerializeMap;
+            let mut map = serializer.serialize_map(Some(2))?;
+            map.serialize_entry("left", &self.left)?;
+            map.serialize_entry("right", &self.right)?;
+            map.end()
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for Padding {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum Spec {
+            Both(usize),
+            Sides {
+                #[serde(default)]
+                left: usize,
+                #[serde(default)]
+                right: usize,
+            },
+        }
+        match Spec::deserialize(deserializer)? {
+            Spec::Both(n) => Ok(Self::both(n)),
+            Spec::Sides { left, right } => Ok(Self { left, right }),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct Column {
@@ -27,6 +80,8 @@ pub struct Column {
     pub width: Option<usize>,
     #[serde(default)]
     pub align: Align,
+    #[serde(default)]
+    pub padding: Padding,
 }
 
 /// Theme selection and optional color patches.
@@ -159,18 +214,21 @@ pub fn default_columns() -> Vec<Column> {
     vec![
         Column {
             source: "level".into(),
-            width: Some(6),
+            width: Some(5),
             align: Align::Center,
+            padding: Padding::both(1),
         },
         Column {
             source: "timestamp".into(),
             width: None,
             align: Align::Left,
+            padding: Padding::default(),
         },
         Column {
             source: "message".into(),
             width: None,
             align: Align::Left,
+            padding: Padding::default(),
         },
     ]
 }
@@ -315,6 +373,16 @@ impl Config {
                     Align::Left => {}
                     Align::Center => body.push_str("align = \"center\"\n"),
                     Align::Right => body.push_str("align = \"right\"\n"),
+                }
+                if !col.padding.is_zero() {
+                    if col.padding.left == col.padding.right {
+                        body.push_str(&format!("padding = {}\n", col.padding.left));
+                    } else {
+                        body.push_str(&format!(
+                            "padding = {{ left = {}, right = {} }}\n",
+                            col.padding.left, col.padding.right
+                        ));
+                    }
                 }
                 body.push('\n');
             }
@@ -562,11 +630,13 @@ mod tests {
                 source: "level".into(),
                 width: Some(5),
                 align: Align::Center,
+                padding: Padding::both(1),
             },
             Column {
                 source: "annotations.url".into(),
                 width: None,
                 align: Align::Left,
+                padding: Padding::default(),
             },
         ];
 
@@ -613,6 +683,38 @@ source = "annotations.url"
         let (cfg, _) = Config::load_from(&path).unwrap();
         assert_eq!(cfg.columns.len(), 2);
         assert_eq!(cfg.columns[1].source, "annotations.url");
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn load_column_padding_from_toml() {
+        let dir = std::env::temp_dir().join(format!("lnav-rs-pad-{}", std::process::id()));
+        let _ = fs::create_dir_all(&dir);
+        let path = dir.join("config.toml");
+        fs::write(
+            &path,
+            r#"
+[[columns]]
+source = "level"
+width = 5
+padding = 1
+
+[[columns]]
+source = "message"
+padding = { left = 1, right = 2 }
+"#,
+        )
+        .unwrap();
+        let (cfg, _) = Config::load_from(&path).unwrap();
+        assert_eq!(cfg.columns.len(), 2);
+        assert_eq!(cfg.columns[0].padding, Padding::both(1));
+        assert_eq!(
+            cfg.columns[1].padding,
+            Padding {
+                left: 1,
+                right: 2
+            }
+        );
         let _ = fs::remove_dir_all(&dir);
     }
 

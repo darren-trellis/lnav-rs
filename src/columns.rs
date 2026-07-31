@@ -105,7 +105,16 @@ fn render_column(
     opts: &FormatOptions<'_>,
 ) -> Segment {
     let (kind, raw) = column_value(&col.source, entry, opts);
-    let text = fit_width(&raw, width, col.align);
+    let fitted = fit_width(&raw, width, col.align);
+    let text = if col.padding.is_zero() {
+        fitted
+    } else {
+        format!(
+            "{}{fitted}{}",
+            " ".repeat(col.padding.left),
+            " ".repeat(col.padding.right)
+        )
+    };
     Segment { kind, text }
 }
 
@@ -294,6 +303,7 @@ mod tests {
                 source: (*source).into(),
                 width: *width,
                 align: *align,
+                padding: crate::config::Padding::default(),
             })
             .collect()
     }
@@ -399,6 +409,23 @@ mod tests {
         assert_eq!(segs[1].kind, SegmentKind::Literal);
         assert_eq!(segs[2].kind, SegmentKind::Timestamp);
         assert_eq!(segs[4].kind, SegmentKind::Message);
+    }
+
+    #[test]
+    fn padding_wraps_fitted_content() {
+        use crate::config::Padding;
+
+        let opts = FormatOptions {
+            timestamp_format: "raw",
+            view_line: 1,
+        };
+        let columns = vec![Column {
+            source: "level".into(),
+            width: Some(5),
+            align: Align::Left,
+            padding: Padding::both(1),
+        }];
+        assert_eq!(render(&columns, &entry(), &opts), " ERROR ");
     }
 
     #[test]

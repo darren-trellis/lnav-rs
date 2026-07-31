@@ -8,8 +8,9 @@ name = "catppuccin"
 
 [[columns]]
 source = "level"
-width = 6
+width = 5
 align = "center"
+padding = 1
 
 [[columns]]
 source = "timestamp"
