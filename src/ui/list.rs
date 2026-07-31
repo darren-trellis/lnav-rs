@@ -48,6 +48,7 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
     frame.render_widget(block, area);
     let (content, bar_area) = super::split_scrollbar(inner, app.config.scrollbar);
     app.hit.list_inner = content;
+    app.hit.list_scrollbar = bar_area.unwrap_or_default();
     let viewport = content.height as usize;
     app.ensure_visible(viewport);
 

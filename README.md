@@ -72,8 +72,9 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 | Click a log line | Select it (completes a pending `d`/`D` operator) |
 | Double-click a log line | Toggle details overlay |
 | Scroll wheel | Move selection (or cycle completions / theme picker) |
+| Click / drag scrollbar | Scroll the list or details (requires `scrollbar = true`) |
 | Click a completion | Insert it |
-| Click details overlay | Close it |
+| Click details overlay | Focus it / move details cursor |
 | Click status bar | Enter `:` command mode |
 | Theme picker hover / click | Preview / set theme |
 

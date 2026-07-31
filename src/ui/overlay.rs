@@ -66,6 +66,7 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
     frame.render_widget(block, area);
     let show_bar = app.config.scrollbar;
     let (content_area, bar_area) = split_scrollbar(inner, show_bar);
+    app.hit.overlay_scrollbar = bar_area.unwrap_or_default();
     app.overlay_inner_height = content_area.height as usize;
 
     let max_scroll = content_len.saturating_sub(content_area.height as usize);

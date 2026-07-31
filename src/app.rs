@@ -65,7 +65,9 @@ pub struct ThemePicker {
 #[derive(Debug, Default, Clone, Copy)]
 pub struct HitAreas {
     pub list_inner: Rect,
+    pub list_scrollbar: Rect,
     pub overlay: Rect,
+    pub overlay_scrollbar: Rect,
     pub suggest_inner: Rect,
     pub suggest_start: usize,
     pub status: Rect,
@@ -75,6 +77,12 @@ pub struct HitAreas {
 struct LastClick {
     at: Instant,
     vis_idx: usize,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ScrollbarDrag {
+    List,
+    Overlay,
 }
 
 pub struct App {
@@ -113,6 +121,7 @@ pub struct App {
     pub theme_picker: Option<ThemePicker>,
     pub hit: HitAreas,
     last_click: Option<LastClick>,
+    scrollbar_drag: Option<ScrollbarDrag>,
     pub search_query: String,
     /// Compiled from `search_query` (case-insensitive). `None` if empty/invalid.
     pub search_regex: Option<Regex>,
@@ -182,6 +191,7 @@ impl App {
             theme_picker: None,
             hit: HitAreas::default(),
             last_click: None,
+            scrollbar_drag: None,
             search_query: String::new(),
             search_regex: None,
             search_error: None,
@@ -334,7 +344,18 @@ impl App {
                     self.with_motion(|a| a.move_selection(n));
                 }
             }
-            MouseEventKind::Down(MouseButton::Left) => self.handle_left_click(mouse.column, mouse.row),
+            MouseEventKind::Down(MouseButton::Left) => {
+                if self.handle_scrollbar_pointer(mouse.column, mouse.row, true) {
+                    return;
+                }
+                self.handle_left_click(mouse.column, mouse.row);
+            }
+            MouseEventKind::Drag(MouseButton::Left) => {
+                let _ = self.handle_scrollbar_pointer(mouse.column, mouse.row, false);
+            }
+            MouseEventKind::Up(MouseButton::Left) => {
+                self.scrollbar_drag = None;
+            }
             MouseEventKind::Moved
                 if self.input_mode == InputMode::Command
                     && contains(self.hit.suggest_inner, mouse.column, mouse.row) =>
@@ -345,6 +366,86 @@ impl App {
                 }
             }
             _ => {}
+        }
+    }
+
+    /// Click/drag on a scrollbar track. `is_down` starts a drag when over a bar.
+    fn handle_scrollbar_pointer(&mut self, col: u16, row: u16, is_down: bool) -> bool {
+        if is_down {
+            if contains(self.hit.overlay_scrollbar, col, row) {
+                self.scrollbar_drag = Some(ScrollbarDrag::Overlay);
+                self.apply_overlay_scrollbar(row);
+                return true;
+            }
+            if contains(self.hit.list_scrollbar, col, row) {
+                self.leave_editing_modes();
+                self.scrollbar_drag = Some(ScrollbarDrag::List);
+                self.apply_list_scrollbar(row);
+                return true;
+            }
+            self.scrollbar_drag = None;
+            return false;
+        }
+        match self.scrollbar_drag {
+            Some(ScrollbarDrag::List) => {
+                self.apply_list_scrollbar(row);
+                true
+            }
+            Some(ScrollbarDrag::Overlay) => {
+                self.apply_overlay_scrollbar(row);
+                true
+            }
+            None => false,
+        }
+    }
+
+    fn leave_editing_modes(&mut self) {
+        if self.input_mode != InputMode::Normal {
+            self.input_mode = InputMode::Normal;
+            self.command_buffer.clear();
+            self.command_history.reset_navigation();
+            self.search_history.reset_navigation();
+            self.completions.clear();
+        }
+    }
+
+    fn apply_list_scrollbar(&mut self, row: u16) {
+        let bar = self.hit.list_scrollbar;
+        let viewport = self.hit.list_inner.height as usize;
+        if viewport == 0 || bar.height == 0 || self.visible.is_empty() {
+            return;
+        }
+        let new_scroll = scroll_index_at(bar, row, self.visible.len(), viewport);
+        let max_scroll = self.visible.len().saturating_sub(viewport);
+        let new_scroll = new_scroll.min(max_scroll);
+        let offset = self
+            .selected
+            .saturating_sub(self.scroll)
+            .min(viewport.saturating_sub(1));
+        self.follow = false;
+        self.overlay_focused = false;
+        self.scroll = new_scroll;
+        let new_selected = (new_scroll + offset).min(self.visible.len() - 1);
+        if new_selected != self.selected {
+            self.reset_overlay_for_selection_change();
+            self.selected = new_selected;
+        }
+    }
+
+    fn apply_overlay_scrollbar(&mut self, row: u16) {
+        let bar = self.hit.overlay_scrollbar;
+        let viewport = self.overlay_inner_height;
+        if viewport == 0 || bar.height == 0 || self.overlay_content_len == 0 {
+            return;
+        }
+        let new_scroll = scroll_index_at(bar, row, self.overlay_content_len, viewport);
+        let max_scroll = self.overlay_content_len.saturating_sub(viewport);
+        self.overlay_scroll = new_scroll.min(max_scroll);
+        self.overlay_focused = true;
+        if self.overlay_cursor < self.overlay_scroll {
+            self.overlay_cursor = self.overlay_scroll;
+        } else if self.overlay_cursor >= self.overlay_scroll + viewport {
+            self.overlay_cursor = self.overlay_scroll + viewport - 1;
         }
     }
 
@@ -359,6 +460,10 @@ impl App {
         }
 
         if contains(self.hit.overlay, col, row) {
+            // Scrollbar clicks are handled earlier; ignore the bar strip here.
+            if contains(self.hit.overlay_scrollbar, col, row) {
+                return;
+            }
             self.overlay_focused = true;
             // Click a row inside the overlay to move the cursor there.
             let inner_y = self.hit.overlay.y.saturating_add(1);
@@ -398,14 +503,7 @@ impl App {
             return;
         }
 
-        // Leave search/command editing when interacting with the list.
-        if self.input_mode != InputMode::Normal {
-            self.input_mode = InputMode::Normal;
-            self.command_buffer.clear();
-            self.command_history.reset_navigation();
-            self.search_history.reset_navigation();
-            self.completions.clear();
-        }
+        self.leave_editing_modes();
         self.overlay_focused = false;
 
         let double = self
@@ -1390,6 +1488,30 @@ fn contains(area: Rect, col: u16, row: u16) -> bool {
         && col < area.x.saturating_add(area.width)
         && row >= area.y
         && row < area.y.saturating_add(area.height)
+}
+
+/// Map a pointer row on a vertical scrollbar track to a scroll offset.
+fn scroll_index_at(bar: Rect, row: u16, content_len: usize, viewport: usize) -> usize {
+    let max_scroll = content_len.saturating_sub(viewport);
+    if max_scroll == 0 || bar.height <= 1 {
+        return 0;
+    }
+    let y = row.saturating_sub(bar.y) as usize;
+    let y = y.min(bar.height as usize - 1);
+    (y * max_scroll) / (bar.height as usize - 1)
+}
+
+#[cfg(test)]
+mod scrollbar_tests {
+    use super::*;
+
+    #[test]
+    fn scroll_index_maps_track_ends() {
+        let bar = Rect::new(10, 5, 1, 11);
+        assert_eq!(scroll_index_at(bar, 5, 100, 10), 0);
+        assert_eq!(scroll_index_at(bar, 15, 100, 10), 90);
+        assert_eq!(scroll_index_at(bar, 10, 100, 10), 45);
+    }
 }
 
 fn copy_to_clipboard(text: &str) -> anyhow::Result<()> {
