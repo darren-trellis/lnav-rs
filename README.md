@@ -50,7 +50,7 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 | `PgUp` | `page-up` |
 | `g` / `Home` | `top` |
 | `G` / `End` | `bottom` |
-| `Enter` | `details` |
+| `Enter` | `details` (open/focus details; again to close when focused) |
 | `Esc` | `close` |
 | `/` | `search` (case-insensitive regex; highlights matched text) |
 | `:` | `command-mode` |
@@ -94,6 +94,8 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 | `:set theme NAME` | Set theme |
 | `:set follow on\|off` | Enable/disable live follow |
 | `:set wrap_details on\|off` | Wrap overlay text |
+| `:set details_json_tree on\|off` | Tree-view nested JSON in details (default on) |
+| `:set details_max_height N` | Max details overlay height in rows (default 24) |
 | `:set line_numbers on\|off` | Show absolute view line numbers |
 | `:set relative_line_numbers on\|off` | Show relative line numbers (vim-style) |
 | `:set scroll_lines N` | Mouse wheel step (default 1) |
@@ -127,6 +129,8 @@ name = "catppuccin"
 
 follow = true
 wrap_details = true
+details_json_tree = true
+details_max_height = 24
 line_numbers = false
 relative_line_numbers = false
 scroll_lines = 1
@@ -163,6 +167,8 @@ D = "delete"
 `timestamp_format` uses [chrono strftime](https://docs.rs/chrono/latest/chrono/format/strftime/index.html) (default `%H:%M:%S`). Set to `raw` to keep the original log string.
 
 `case_mode` controls `/` search and `:filter` matching: `smart` / `smartcase` (default; insensitive unless the pattern has an uppercase letter), `insensitive`, or `sensitive`.
+
+Details: `Enter` opens and focuses the overlay (j/k/PgUp/PgDn scroll; Esc closes). Nested JSON fields render as a tree when `details_json_tree` is on. Overlay height grows with content up to `details_max_height` (and screen space).
 
 Filters persist under `~/.local/share/lnav-rs/sessions/` (one file per log path hash; stdin uses `stdin.toml`). `session_filters` / `session_stdin` control that (both default on). Turn `session_stdin` off if you don’t want every pipe to share one filter set.
 
@@ -201,6 +207,7 @@ src/
   columns.rs      # list column rendering
   command.rs      # : command mode
   config.rs       # config.toml load/save
+  details.rs      # details overlay content (JSON tree)
   model.rs        # log entries / fields
   parse/          # json + logfmt
   session.rs      # per-source filter persistence

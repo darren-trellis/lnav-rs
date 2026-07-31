@@ -84,6 +84,11 @@ pub struct App {
     pub scroll: usize,
     pub follow: bool,
     pub show_overlay: bool,
+    /// When true, navigation keys scroll the details overlay instead of the list.
+    pub overlay_focused: bool,
+    pub overlay_scroll: usize,
+    pub overlay_content_len: usize,
+    pub overlay_inner_height: usize,
     pub input_mode: InputMode,
     pub pending_op: Option<PendingOp>,
     /// Visible-row anchor when the pending operator was started.
@@ -144,6 +149,10 @@ impl App {
             selected: 0,
             scroll: 0,
             show_overlay: false,
+            overlay_focused: false,
+            overlay_scroll: 0,
+            overlay_content_len: 0,
+            overlay_inner_height: 0,
             input_mode: InputMode::Normal,
             pending_op: None,
             op_anchor: 0,
@@ -270,7 +279,13 @@ impl App {
         match mouse.kind {
             MouseEventKind::ScrollUp => {
                 self.cancel_pending_op();
-                if self.input_mode == InputMode::Command && !self.completions.items.is_empty() {
+                if self.show_overlay
+                    && (self.overlay_focused
+                        || contains(self.hit.overlay, mouse.column, mouse.row))
+                {
+                    self.scroll_overlay(-(self.config.scroll_lines.max(1) as isize));
+                } else if self.input_mode == InputMode::Command && !self.completions.items.is_empty()
+                {
                     self.completions.select_prev();
                 } else {
                     let n = self.config.scroll_lines.max(1) as isize;
@@ -279,7 +294,13 @@ impl App {
             }
             MouseEventKind::ScrollDown => {
                 self.cancel_pending_op();
-                if self.input_mode == InputMode::Command && !self.completions.items.is_empty() {
+                if self.show_overlay
+                    && (self.overlay_focused
+                        || contains(self.hit.overlay, mouse.column, mouse.row))
+                {
+                    self.scroll_overlay(self.config.scroll_lines.max(1) as isize);
+                } else if self.input_mode == InputMode::Command && !self.completions.items.is_empty()
+                {
                     self.completions.select_next();
                 } else {
                     let n = self.config.scroll_lines.max(1) as isize;
@@ -309,8 +330,8 @@ impl App {
         }
 
         if contains(self.hit.overlay, col, row) {
-            // Clicking the details panel closes it.
-            self.show_overlay = false;
+            self.overlay_focused = true;
+            self.status_message = Some("details focused · j/k scroll · Esc close".into());
             return;
         }
 
@@ -349,6 +370,7 @@ impl App {
             self.command_buffer.clear();
             self.completions.clear();
         }
+        self.overlay_focused = false;
 
         let double = self
             .last_click
@@ -372,7 +394,7 @@ impl App {
         self.follow = false;
         self.selected = vis_idx;
         if double {
-            self.show_overlay = !self.show_overlay;
+            self.toggle_details();
             self.last_click = None;
         } else {
             self.last_click = Some(LastClick {
@@ -668,6 +690,10 @@ impl App {
     }
 
     fn handle_normal_key(&mut self, key: KeyEvent) {
+        if self.overlay_focused && self.show_overlay && self.handle_overlay_key(key) {
+            return;
+        }
+
         // Vim-style count prefix: `5j`, `3dd`, `10G`, …
         if key.modifiers.is_empty()
             && let KeyCode::Char(c) = key.code
@@ -692,6 +718,88 @@ impl App {
             return;
         }
         command::execute_from_key(self, &cmd);
+    }
+
+    /// Handle keys while the details overlay is focused. Returns true if consumed.
+    fn handle_overlay_key(&mut self, key: KeyEvent) -> bool {
+        let page = self.overlay_inner_height.max(1) as isize;
+        match key.code {
+            KeyCode::Esc => {
+                self.close_details();
+                true
+            }
+            KeyCode::Enter => {
+                self.toggle_details();
+                true
+            }
+            KeyCode::Down | KeyCode::Char('j') => {
+                self.scroll_overlay(1);
+                true
+            }
+            KeyCode::Up | KeyCode::Char('k') => {
+                self.scroll_overlay(-1);
+                true
+            }
+            KeyCode::PageDown | KeyCode::Char(' ') => {
+                self.scroll_overlay(page);
+                true
+            }
+            KeyCode::PageUp => {
+                self.scroll_overlay(-page);
+                true
+            }
+            KeyCode::Home | KeyCode::Char('g') => {
+                self.overlay_scroll = 0;
+                true
+            }
+            KeyCode::End | KeyCode::Char('G') => {
+                self.overlay_scroll = self
+                    .overlay_content_len
+                    .saturating_sub(self.overlay_inner_height.max(1));
+                true
+            }
+            // Let search/command/quit still work by unfocusing first.
+            KeyCode::Char('/') | KeyCode::Char(':') | KeyCode::Char('q') => {
+                self.overlay_focused = false;
+                false
+            }
+            _ => false,
+        }
+    }
+
+    pub fn toggle_details(&mut self) {
+        self.cancel_pending_op();
+        if !self.show_overlay {
+            if self.selected_entry().is_none() {
+                return;
+            }
+            self.show_overlay = true;
+            self.overlay_focused = true;
+            self.overlay_scroll = 0;
+            self.status_message = Some("details focused · j/k scroll · Esc close".into());
+        } else if !self.overlay_focused {
+            self.overlay_focused = true;
+            self.status_message = Some("details focused · j/k scroll · Esc close".into());
+        } else {
+            self.close_details();
+        }
+    }
+
+    pub fn close_details(&mut self) {
+        self.show_overlay = false;
+        self.overlay_focused = false;
+        self.overlay_scroll = 0;
+    }
+
+    pub fn scroll_overlay(&mut self, delta: isize) {
+        if !self.show_overlay {
+            return;
+        }
+        let max = self
+            .overlay_content_len
+            .saturating_sub(self.overlay_inner_height.max(1));
+        let next = (self.overlay_scroll as isize + delta).clamp(0, max as isize);
+        self.overlay_scroll = next as usize;
     }
 
     /// Consume the typed count prefix, or `1` if none.
@@ -785,7 +893,9 @@ impl App {
                     lo.min(self.visible.len() - 1)
                 };
                 if self.visible.is_empty() {
-                    self.show_overlay = false;
+                    self.close_details();
+                } else {
+                    self.overlay_scroll = 0;
                 }
                 if !self.search_query.is_empty() {
                     self.run_search();
@@ -810,7 +920,9 @@ impl App {
                             lo.min(self.visible.len() - 1)
                         };
                         if self.visible.is_empty() {
-                            self.show_overlay = false;
+                            self.close_details();
+                        } else {
+                            self.overlay_scroll = 0;
                         }
                         if !self.search_query.is_empty() {
                             self.run_search();
@@ -849,6 +961,9 @@ impl App {
         self.follow = false;
         let next = (self.selected as isize + delta)
             .clamp(0, self.visible.len() as isize - 1) as usize;
+        if next != self.selected {
+            self.overlay_scroll = 0;
+        }
         self.selected = next;
     }
 
@@ -856,7 +971,11 @@ impl App {
         if self.visible.is_empty() {
             return;
         }
-        self.selected = idx.min(self.visible.len() - 1);
+        let next = idx.min(self.visible.len() - 1);
+        if next != self.selected {
+            self.overlay_scroll = 0;
+        }
+        self.selected = next;
     }
 
     pub fn clear_search(&mut self) {

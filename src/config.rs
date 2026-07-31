@@ -210,6 +210,14 @@ pub struct Config {
     #[serde(default = "default_true")]
     pub wrap_details: bool,
 
+    /// Render nested JSON fields as an indented tree in the details overlay.
+    #[serde(default = "default_true")]
+    pub details_json_tree: bool,
+
+    /// Maximum height of the details overlay (rows, including border).
+    #[serde(default = "default_details_max_height")]
+    pub details_max_height: usize,
+
     /// Show 1-based view line numbers in the list (not file line numbers).
     #[serde(default)]
     pub line_numbers: bool,
@@ -260,6 +268,10 @@ fn default_scroll_lines() -> usize {
     1
 }
 
+fn default_details_max_height() -> usize {
+    24
+}
+
 fn default_timestamp_format() -> String {
     timestamp::DEFAULT_FORMAT.into()
 }
@@ -293,6 +305,8 @@ impl Default for Config {
             theme: ThemeConfig::default(),
             follow: true,
             wrap_details: true,
+            details_json_tree: true,
+            details_max_height: default_details_max_height(),
             line_numbers: false,
             relative_line_numbers: false,
             scroll_lines: default_scroll_lines(),
@@ -366,6 +380,9 @@ impl Config {
         if self.scroll_lines == 0 {
             bail!("scroll_lines must be >= 1");
         }
+        if self.details_max_height < 4 {
+            bail!("details_max_height must be >= 4");
+        }
         if self.timestamp_format.trim().is_empty() {
             bail!("timestamp_format must not be empty");
         }
@@ -412,6 +429,15 @@ impl Config {
         }
         if self.wrap_details != defaults.wrap_details {
             body.push_str(&format!("wrap_details = {}\n", self.wrap_details));
+        }
+        if self.details_json_tree != defaults.details_json_tree {
+            body.push_str(&format!("details_json_tree = {}\n", self.details_json_tree));
+        }
+        if self.details_max_height != defaults.details_max_height {
+            body.push_str(&format!(
+                "details_max_height = {}\n",
+                self.details_max_height.max(4)
+            ));
         }
         if self.line_numbers != defaults.line_numbers {
             body.push_str(&format!("line_numbers = {}\n", self.line_numbers));
@@ -688,6 +714,8 @@ mod tests {
         assert!(!raw.contains("[keys]"));
         assert!(!raw.contains("follow = "));
         assert!(!raw.contains("wrap_details = "));
+        assert!(!raw.contains("details_json_tree = "));
+        assert!(!raw.contains("details_max_height = "));
         assert!(!raw.contains("line_numbers = "));
         assert!(!raw.contains("session_filters = "));
         assert!(!raw.contains("session_stdin = "));

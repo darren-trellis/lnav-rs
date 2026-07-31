@@ -8,6 +8,7 @@ use ratatui::layout::{Constraint, Layout};
 use ratatui::Frame;
 
 use crate::app::{App, InputMode};
+use crate::details;
 
 pub fn draw(frame: &mut Frame, app: &mut App) {
     let area = frame.area();
@@ -59,11 +60,6 @@ fn overlay_desired_height(app: &App, available: u16) -> u16 {
     let Some(entry) = app.selected_entry() else {
         return 0;
     };
-    let content_lines = if entry.fields.is_empty() {
-        3
-    } else {
-        entry.fields.len() + 2
-    };
-    let max = (available as usize).saturating_sub(4).max(4);
-    (content_lines.min(max).max(4)) as u16
+    let content_lines = details::build_lines(entry, &app.theme, &app.config).len();
+    details::desired_height(content_lines, available, app.config.details_max_height)
 }

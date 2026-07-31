@@ -52,6 +52,8 @@ const SET_KEYS: &[(&str, &str)] = &[
     ("theme", "theme name"),
     ("follow", "on|off"),
     ("wrap_details", "on|off"),
+    ("details_json_tree", "on|off"),
+    ("details_max_height", "max overlay rows"),
     ("line_numbers", "on|off"),
     ("relative_line_numbers", "on|off"),
     ("scroll_lines", "mouse wheel step"),
@@ -292,6 +294,7 @@ fn set_suggestions(rest: &str, rest_from: usize, _app: &App) -> Vec<Suggestion> 
         "theme" => value_suggestions(value, value_from, &Theme::list_names(), "theme"),
         "follow"
         | "wrap_details"
+        | "details_json_tree"
         | "line_numbers"
         | "relative_line_numbers"
         | "session_filters"

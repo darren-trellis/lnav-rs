@@ -55,7 +55,7 @@ pub fn catalog() -> &'static [CommandInfo] {
         },
         CommandInfo {
             name: "details",
-            help: "toggle details overlay",
+            help: "open/focus/close details overlay",
         },
         CommandInfo {
             name: "close",
@@ -202,17 +202,12 @@ fn execute_inner(app: &mut App, raw: &str, invoke: Invoke) {
                 }
             });
         }
-        "details" => {
-            app.cancel_pending_op();
-            if app.selected_entry().is_some() {
-                app.show_overlay = !app.show_overlay;
-            }
-        }
+        "details" => app.toggle_details(),
         "close" => {
             if app.pending_op.is_some() || app.count.is_some() {
                 app.cancel_pending_op();
             } else if app.show_overlay {
-                app.show_overlay = false;
+                app.close_details();
             }
         }
         "search" => {
@@ -479,7 +474,7 @@ fn set_option(app: &mut App, rest: &str) {
     let (key, value) = split_cmd(rest);
     if key.is_empty() {
         app.status_message = Some(
-            "usage: :set theme|follow|wrap_details|line_numbers|relative_line_numbers|scroll_lines|timestamp_format|case_mode|session_filters|session_stdin VALUE"
+            "usage: :set theme|follow|wrap_details|details_json_tree|details_max_height|line_numbers|relative_line_numbers|scroll_lines|timestamp_format|case_mode|session_filters|session_stdin VALUE"
                 .into(),
         );
         return;
@@ -502,6 +497,29 @@ fn set_option(app: &mut App, rest: &str) {
         "wrap_details" => set_bool_option(app, "wrap_details", value, |app, v| {
             app.config.wrap_details = v;
         }),
+        "details_json_tree" => set_bool_option(app, "details_json_tree", value, |app, v| {
+            app.config.details_json_tree = v;
+            app.overlay_scroll = 0;
+        }),
+        "details_max_height" => {
+            if value.is_empty() {
+                app.status_message = Some(format!(
+                    "details_max_height={}",
+                    app.config.details_max_height.max(4)
+                ));
+                return;
+            }
+            match value.parse::<usize>() {
+                Ok(n) if n >= 4 => {
+                    app.config.details_max_height = n;
+                    app.status_message = Some(format!("details_max_height={n}"));
+                }
+                _ => {
+                    app.status_message =
+                        Some("usage: :set details_max_height N (N >= 4)".into());
+                }
+            }
+        }
         "line_numbers" => set_bool_option(app, "line_numbers", value, |app, v| {
             app.config.line_numbers = v;
         }),
@@ -572,6 +590,7 @@ fn set_bool_option(app: &mut App, name: &str, value: &str, apply: impl FnOnce(&m
         let current = match name {
             "follow" => app.config.follow,
             "wrap_details" => app.config.wrap_details,
+            "details_json_tree" => app.config.details_json_tree,
             "line_numbers" => app.config.line_numbers,
             "relative_line_numbers" => app.config.relative_line_numbers,
             "session_filters" => app.config.session_filters,

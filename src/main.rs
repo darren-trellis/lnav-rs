@@ -2,6 +2,7 @@ mod app;
 mod command;
 mod completion;
 mod config;
+mod details;
 mod filter;
 mod keys;
 mod columns;
