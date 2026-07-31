@@ -138,7 +138,7 @@ fn suggestions_for(buffer: &str, app: &App) -> Vec<Suggestion> {
 
         match cmd.to_ascii_lowercase().as_str() {
             "theme" => theme_suggestions(rest, rest_from),
-            "filter" => filter_suggestions(rest, rest_from),
+            "filter" => filter_suggestions(rest, rest_from, app.filters.len()),
             "fold" => on_off_toggle_suggestions(rest, rest_from, FOLD_SUBS),
             "focus" => on_off_toggle_suggestions(rest, rest_from, FOCUS_SUBS),
             "follow" => on_off_toggle_suggestions(rest, rest_from, FOLLOW_SUBS),
@@ -147,10 +147,6 @@ fn suggestions_for(buffer: &str, app: &App) -> Vec<Suggestion> {
             "help" => on_off_toggle_suggestions(rest, rest_from, HELP_SUBS),
             "set" => set_key_suggestions(rest, rest_from),
             "config" => config_suggestions(rest, rest_from),
-            "delete-filter" | "delete_filter" => {
-                let idxs: Vec<String> = (0..app.filters.len()).map(|i| i.to_string()).collect();
-                value_suggestions(rest, rest_from, &idxs, "index")
-            }
             _ => Vec::new(),
         }
     };
@@ -174,6 +170,8 @@ const FILTER_SUBS: &[(&str, &str)] = &[
     ("on", "enable filtering"),
     ("off", "disable filtering"),
     ("toggle", "toggle filtering on/off"),
+    ("clear", "remove all filters"),
+    ("delete", "delete filter by index"),
 ];
 
 const FOLD_SUBS: &[(&str, &str)] = &[
@@ -232,7 +230,7 @@ fn on_off_toggle_suggestions(
         .collect()
 }
 
-fn filter_suggestions(rest: &str, rest_from: usize) -> Vec<Suggestion> {
+fn filter_suggestions(rest: &str, rest_from: usize, filter_count: usize) -> Vec<Suggestion> {
     if !rest.contains(char::is_whitespace) {
         let prefix = rest.to_ascii_lowercase();
         return FILTER_SUBS
@@ -257,6 +255,10 @@ fn filter_suggestions(rest: &str, rest_from: usize) -> Vec<Suggestion> {
             help: "pattern matched against each raw line".into(),
             replace_from: value_from,
         }],
+        "delete" => {
+            let idxs: Vec<String> = (0..filter_count).map(|i| i.to_string()).collect();
+            value_suggestions(value, value_from, &idxs, "index")
+        }
         _ => Vec::new(),
     }
 }
@@ -306,6 +308,7 @@ fn command_suggestions(prefix: &str, replace_from: usize) -> Vec<Suggestion> {
 const THEME_SUBS: &[(&str, &str)] = &[
     ("list", "list available themes"),
     ("set", "set theme or open picker"),
+    ("cycle", "cycle to the next theme"),
 ];
 
 fn theme_suggestions(rest: &str, rest_from: usize) -> Vec<Suggestion> {
@@ -496,11 +499,13 @@ mod tests {
 
     #[test]
     fn completes_filter_subcommands() {
-        let items = filter_suggestions("", 0);
+        let items = filter_suggestions("", 0, 0);
         assert!(items.iter().any(|s| s.text == "list"));
         assert!(items.iter().any(|s| s.text == "in"));
         assert!(items.iter().any(|s| s.text == "out"));
         assert!(items.iter().any(|s| s.text == "toggle"));
+        assert!(items.iter().any(|s| s.text == "clear"));
+        assert!(items.iter().any(|s| s.text == "delete"));
     }
 
     #[test]
@@ -510,11 +515,28 @@ mod tests {
         assert!(items.iter().any(|s| s.text == "hide"));
         assert!(items.iter().any(|s| s.text == "delete"));
         assert!(items.iter().any(|s| s.text == "config"));
-        assert!(
-            items
-                .iter()
-                .all(|s| { s.text != "q" && s.text != "d" && s.text != "D" && s.text != "set" })
-        );
+        assert!(items.iter().all(|s| {
+            !matches!(
+                s.text.as_str(),
+                "q" | "d"
+                    | "D"
+                    | "set"
+                    | "nav"
+                    | "page"
+                    | "match"
+                    | "up"
+                    | "down"
+                    | "top"
+                    | "bottom"
+                    | "page-up"
+                    | "page-down"
+                    | "next-match"
+                    | "prev-match"
+                    | "cycle-theme"
+                    | "clear-filters"
+                    | "delete-filter"
+            )
+        }));
     }
 
     #[test]
@@ -529,8 +551,8 @@ mod tests {
     #[test]
     fn common_prefix_works() {
         assert_eq!(
-            common_prefix(["filter", "clear-filters", "delete-filter"].into_iter()).as_deref(),
-            None
+            common_prefix(["filter", "follow", "fold"].into_iter()).as_deref(),
+            Some("f")
         );
         assert_eq!(
             common_prefix(["list", "in", "out"].into_iter()).as_deref(),

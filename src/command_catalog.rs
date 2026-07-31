@@ -14,30 +14,6 @@ const COMMANDS: &[CommandInfo] = &[
         help: "show help; on|off|toggle details hints when focused",
     },
     CommandInfo {
-        name: "down",
-        help: "move selection down",
-    },
-    CommandInfo {
-        name: "up",
-        help: "move selection up",
-    },
-    CommandInfo {
-        name: "page-down",
-        help: "page down",
-    },
-    CommandInfo {
-        name: "page-up",
-        help: "page up",
-    },
-    CommandInfo {
-        name: "top",
-        help: "jump to first line",
-    },
-    CommandInfo {
-        name: "bottom",
-        help: "jump to last line (follow)",
-    },
-    CommandInfo {
         name: "details",
         help: "on|off|toggle details overlay",
     },
@@ -70,20 +46,8 @@ const COMMANDS: &[CommandInfo] = &[
         help: "open command line",
     },
     CommandInfo {
-        name: "next-match",
-        help: "next search match",
-    },
-    CommandInfo {
-        name: "prev-match",
-        help: "previous search match",
-    },
-    CommandInfo {
         name: "follow",
         help: "on|off|toggle live follow",
-    },
-    CommandInfo {
-        name: "cycle-theme",
-        help: "cycle color theme",
     },
     CommandInfo {
         name: "hide",
@@ -95,23 +59,15 @@ const COMMANDS: &[CommandInfo] = &[
     },
     CommandInfo {
         name: "theme",
-        help: "theme | list | set [NAME]",
+        help: "theme | list | set [NAME] | cycle",
     },
     CommandInfo {
         name: "filter",
-        help: "list | in|out [PATTERN] | on|off|toggle",
-    },
-    CommandInfo {
-        name: "clear-filters",
-        help: "remove all filters",
+        help: "list | in|out [PATTERN] | on|off|toggle | clear | delete [N]",
     },
     CommandInfo {
         name: "clear-hidden",
         help: "restore lines hidden with hide",
-    },
-    CommandInfo {
-        name: "delete-filter",
-        help: "delete filter by index",
     },
     CommandInfo {
         name: "config",
@@ -123,7 +79,25 @@ const COMMANDS: &[CommandInfo] = &[
     },
 ];
 
-const COMPATIBILITY_ALIASES: &[&str] = &["toggle-follow", "set"];
+/// Accepted by keybindings (and typed for compatibility), but omitted from `:` completions.
+const HIDDEN_COMMANDS: &[&str] = &[
+    "nav",
+    "page",
+    "match",
+    "up",
+    "down",
+    "top",
+    "bottom",
+    "page-up",
+    "page-down",
+    "next-match",
+    "prev-match",
+    "cycle-theme",
+    "clear-filters",
+    "delete-filter",
+    "toggle-follow",
+    "set",
+];
 
 pub fn catalog() -> &'static [CommandInfo] {
     COMMANDS
@@ -133,7 +107,7 @@ pub fn is_known_command(name: &str) -> bool {
     COMMANDS
         .iter()
         .any(|command| command.name.eq_ignore_ascii_case(name))
-        || COMPATIBILITY_ALIASES
+        || HIDDEN_COMMANDS
             .iter()
-            .any(|alias| alias.eq_ignore_ascii_case(name))
+            .any(|command| command.eq_ignore_ascii_case(name))
 }

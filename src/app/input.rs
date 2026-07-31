@@ -26,12 +26,11 @@ impl App {
             _ => {
                 let command = keys::encode(key)
                     .and_then(|spec| self.config.keys.get(&spec))
-                    .and_then(|raw| raw.split_whitespace().next())
-                    .map(str::to_ascii_lowercase);
+                    .map(|raw| raw.trim().to_ascii_lowercase());
                 match command.as_deref() {
-                    Some("up") => self.theme_picker_move(-1),
-                    Some("down") => self.theme_picker_move(1),
-                    Some("page-up") => {
+                    Some("nav up" | "up") => self.theme_picker_move(-1),
+                    Some("nav down" | "down") => self.theme_picker_move(1),
+                    Some("page up" | "page-up") => {
                         let page = self
                             .theme_picker
                             .as_ref()
@@ -39,7 +38,7 @@ impl App {
                             .unwrap_or(1);
                         self.theme_picker_move(-page);
                     }
-                    Some("page-down") => {
+                    Some("page down" | "page-down") => {
                         let page = self
                             .theme_picker
                             .as_ref()
@@ -47,14 +46,16 @@ impl App {
                             .unwrap_or(1);
                         self.theme_picker_move(page);
                     }
-                    Some("top") => self.theme_picker_select(0),
-                    Some("bottom") => {
+                    Some("nav top" | "top") => self.theme_picker_select(0),
+                    Some("nav bottom" | "bottom") => {
                         if let Some(picker) = &self.theme_picker {
                             let last = picker.names.len().saturating_sub(1);
                             self.theme_picker_select(last);
                         }
                     }
-                    Some("details") => self.close_theme_picker(true),
+                    Some("details" | "details toggle" | "details on") => {
+                        self.close_theme_picker(true)
+                    }
                     Some("close") => self.close_theme_picker(false),
                     _ => {}
                 }

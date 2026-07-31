@@ -49,8 +49,8 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect, content: &[DetailLine]
     };
     let hint = format!(
         " {}/{} move · {} fold · {} focus · {} copy · {} search · Esc close · {} hide ",
-        binding("down", "down"),
-        binding("up", "up"),
+        binding("nav down", "j"),
+        binding("nav up", "k"),
         binding("fold toggle", "fold"),
         binding("focus toggle", "focus"),
         binding("copy", "copy"),

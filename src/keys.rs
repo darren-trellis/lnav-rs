@@ -13,27 +13,27 @@ pub fn defaults() -> BTreeMap<String, String> {
     BTreeMap::from([
         ("q".into(), "quit".into()),
         ("C-c".into(), "quit".into()),
-        ("j".into(), "down".into()),
-        ("down".into(), "down".into()),
-        ("k".into(), "up".into()),
-        ("up".into(), "up".into()),
-        ("pagedown".into(), "page-down".into()),
-        ("space".into(), "page-down".into()),
-        ("pageup".into(), "page-up".into()),
-        ("g".into(), "top".into()),
-        ("home".into(), "top".into()),
-        ("G".into(), "bottom".into()),
-        ("end".into(), "bottom".into()),
+        ("j".into(), "nav down".into()),
+        ("down".into(), "nav down".into()),
+        ("k".into(), "nav up".into()),
+        ("up".into(), "nav up".into()),
+        ("pagedown".into(), "page down".into()),
+        ("space".into(), "page down".into()),
+        ("pageup".into(), "page up".into()),
+        ("g".into(), "nav top".into()),
+        ("home".into(), "nav top".into()),
+        ("G".into(), "nav bottom".into()),
+        ("end".into(), "nav bottom".into()),
         ("enter".into(), "details".into()),
         ("tab".into(), "focus toggle".into()),
         ("c".into(), "copy".into()),
         ("esc".into(), "close".into()),
         ("/".into(), "search".into()),
         (":".into(), "command-mode".into()),
-        ("n".into(), "next-match".into()),
-        ("N".into(), "prev-match".into()),
+        ("n".into(), "match next".into()),
+        ("N".into(), "match prev".into()),
         ("f".into(), "follow toggle".into()),
-        ("t".into(), "cycle-theme".into()),
+        ("t".into(), "theme cycle".into()),
         ("d".into(), "hide".into()),
         ("D".into(), "delete".into()),
         ("?".into(), "help".into()),
@@ -48,7 +48,7 @@ pub fn details_defaults() -> BTreeMap<String, String> {
 
 /// Defaults applied when the filters sidebar is focused (override `[keys]`).
 pub fn sidebar_defaults() -> BTreeMap<String, String> {
-    BTreeMap::from([("d".into(), "delete-filter".into())])
+    BTreeMap::from([("d".into(), "filter delete".into())])
 }
 
 /// Merge user keybindings over defaults. Empty command string unbinds a key.
@@ -164,7 +164,7 @@ mod tests {
         );
         assert_eq!(
             sidebar_defaults().get("d").map(String::as_str),
-            Some("delete-filter")
+            Some("filter delete")
         );
     }
 }

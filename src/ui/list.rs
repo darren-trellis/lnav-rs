@@ -58,7 +58,7 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
         let msg = if app.source.len() == 0 {
             " waiting for log lines… "
         } else {
-            " no lines match filters (:clear-filters / :filter off) "
+            " no lines match filters (:filter clear / :filter off) "
         };
         let empty = Paragraph::new(Line::from(Span::styled(
             msg,
