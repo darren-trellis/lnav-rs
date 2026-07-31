@@ -15,6 +15,7 @@ use crate::timestamp;
 pub enum Align {
     #[default]
     Left,
+    Center,
     Right,
 }
 
@@ -159,7 +160,7 @@ pub fn default_columns() -> Vec<Column> {
         Column {
             source: "level".into(),
             width: Some(5),
-            align: Align::Left,
+            align: Align::Center,
         },
         Column {
             source: "timestamp".into(),
@@ -280,7 +281,7 @@ impl Config {
              #   source = builtin (level|timestamp|message|raw|line|format)\n\
              #            or field path (annotations.url, items.0.id)\n\
              #   width  = optional fixed width; omit to auto-align with other rows\n\
-             #   align  = \"left\" | \"right\"\n\
+             #   align  = \"left\" | \"center\" | \"right\"\n\
              #\n\
              # timestamp_format: chrono/strftime, or \"raw\"\n\n",
             path.display(),
@@ -310,8 +311,10 @@ impl Config {
             if let Some(w) = col.width {
                 body.push_str(&format!("width = {w}\n"));
             }
-            if col.align != Align::Left {
-                body.push_str("align = \"right\"\n");
+            match col.align {
+                Align::Left => {}
+                Align::Center => body.push_str("align = \"center\"\n"),
+                Align::Right => body.push_str("align = \"right\"\n"),
             }
             body.push('\n');
         }

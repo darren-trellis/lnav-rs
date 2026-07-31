@@ -155,6 +155,10 @@ fn fit_width(value: &str, width: Option<usize>, align: Align) -> String {
     let pad = width - vw;
     match align {
         Align::Left => format!("{value}{}", " ".repeat(pad)),
+        Align::Center => {
+            let left = pad / 2;
+            format!("{}{value}{}", " ".repeat(left), " ".repeat(pad - left))
+        }
         Align::Right => format!("{}{value}", " ".repeat(pad)),
     }
 }
@@ -325,6 +329,16 @@ mod tests {
         };
         let columns = cols(&[("level", Some(8), Align::Right)]);
         assert_eq!(render(&columns, &entry(), &opts), "   ERROR");
+    }
+
+    #[test]
+    fn center_aligns_in_fixed_width() {
+        let opts = FormatOptions {
+            timestamp_format: "raw",
+            view_line: 1,
+        };
+        let columns = cols(&[("level", Some(8), Align::Center)]);
+        assert_eq!(render(&columns, &entry(), &opts), " ERROR  ");
     }
 
     #[test]

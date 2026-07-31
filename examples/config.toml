@@ -27,9 +27,11 @@ timestamp_format = "%H:%M:%S"
 # List-view columns. Builtins: level timestamp message raw line format
 # Or a field path: annotations.url, items.0.id
 # Omit width to auto-align with other rows in the viewport.
+# align = "left" (default), "center", or "right" when width is set.
 [[columns]]
 source = "level"
 width = 5
+align = "center"
 
 [[columns]]
 source = "timestamp"
