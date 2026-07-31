@@ -5,7 +5,7 @@ use std::fs::{File, OpenOptions};
 use std::io::{self, IsTerminal};
 use std::os::fd::{AsRawFd, FromRawFd};
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 
 /// If stdin is a pipe/file (not a TTY), duplicate it and replace stdin with `/dev/tty`.
 /// Returns the duplicated pipe for the log reader.
@@ -30,8 +30,7 @@ fn take_piped_stdin_unix() -> Result<Option<File>> {
     let stdin_fd = io::stdin().as_raw_fd();
     let pipe_fd = unsafe { libc::dup(stdin_fd) };
     if pipe_fd < 0 {
-        return Err(io::Error::last_os_error())
-            .context("failed to duplicate stdin pipe");
+        return Err(io::Error::last_os_error()).context("failed to duplicate stdin pipe");
     }
     let pipe = unsafe { File::from_raw_fd(pipe_fd) };
 
@@ -45,8 +44,7 @@ fn take_piped_stdin_unix() -> Result<Option<File>> {
         )?;
 
     if unsafe { libc::dup2(tty.as_raw_fd(), stdin_fd) } < 0 {
-        return Err(io::Error::last_os_error())
-            .context("failed to attach /dev/tty to stdin");
+        return Err(io::Error::last_os_error()).context("failed to attach /dev/tty to stdin");
     }
 
     Ok(Some(pipe))

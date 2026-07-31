@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 use std::path::Path;
 use std::str::FromStr;
+use std::sync::OnceLock;
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use ratatui::style::{Color, Modifier, Style};
 use serde::{Deserialize, Serialize};
 
@@ -34,7 +35,7 @@ pub enum ColorSpec {
 #[serde(deny_unknown_fields)]
 pub struct ColorSpecFgBg {
     pub fg: String,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bg: Option<String>,
 }
 
@@ -52,6 +53,43 @@ impl ColorSpec {
     pub fn validate(&self) -> Result<()> {
         self.parse().map(|_| ())
     }
+}
+
+fn apply_optional<T, P: ?Sized>(
+    target: &mut T,
+    patch: Option<&P>,
+    parse: impl FnOnce(&P) -> Result<T>,
+) -> Result<()> {
+    if let Some(value) = patch {
+        *target = parse(value)?;
+    }
+    Ok(())
+}
+
+fn apply_level(
+    levels: &mut HashMap<LogLevel, Tone>,
+    level: LogLevel,
+    patch: Option<&ColorSpec>,
+) -> Result<()> {
+    if let Some(value) = patch {
+        levels.insert(level, value.parse()?);
+    }
+    Ok(())
+}
+
+fn parse_levels(levels: &ThemeLevels) -> Result<HashMap<LogLevel, Tone>> {
+    [
+        (LogLevel::Trace, &levels.trace),
+        (LogLevel::Debug, &levels.debug),
+        (LogLevel::Info, &levels.info),
+        (LogLevel::Warn, &levels.warn),
+        (LogLevel::Error, &levels.error),
+        (LogLevel::Fatal, &levels.fatal),
+        (LogLevel::Unknown, &levels.unknown),
+    ]
+    .into_iter()
+    .map(|(level, spec)| Ok((level, spec.parse()?)))
+    .collect()
 }
 
 #[derive(Debug, Clone)]
@@ -255,104 +293,79 @@ impl Theme {
 
     pub fn apply_overrides(&mut self, overrides: &ThemeOverrides) -> Result<()> {
         let c = &overrides.colors;
-        if let Some(v) = &c.background {
-            self.background = parse_color(v)?;
-        }
-        if let Some(v) = &c.foreground {
-            self.foreground = v.parse()?;
-        }
-        if let Some(v) = &c.selection_bg {
-            self.selection_bg = parse_color(v)?;
-        }
-        if let Some(v) = &c.selection_fg {
-            self.selection_fg = parse_color(v)?;
-        }
-        if let Some(v) = &c.overlay_bg {
-            self.overlay_bg = parse_color(v)?;
-        }
-        if let Some(v) = &c.status_bg {
-            self.status_bg = parse_color(v)?;
-        }
-        if let Some(v) = &c.status_fg {
-            self.status_fg = parse_color(v)?;
-        }
-        if let Some(v) = &c.border {
-            self.border = v.parse()?;
-        }
-        if let Some(v) = &c.window_focus_border {
-            self.window_focus_border = v.parse()?;
-        }
-        if let Some(v) = &c.search_match {
-            self.search_match = v.parse()?;
-        }
-        if let Some(v) = &c.dim {
-            self.dim = v.parse()?;
-        }
+        apply_optional(&mut self.background, c.background.as_deref(), parse_color)?;
+        apply_optional(
+            &mut self.foreground,
+            c.foreground.as_ref(),
+            ColorSpec::parse,
+        )?;
+        apply_optional(
+            &mut self.selection_bg,
+            c.selection_bg.as_deref(),
+            parse_color,
+        )?;
+        apply_optional(
+            &mut self.selection_fg,
+            c.selection_fg.as_deref(),
+            parse_color,
+        )?;
+        apply_optional(&mut self.overlay_bg, c.overlay_bg.as_deref(), parse_color)?;
+        apply_optional(&mut self.status_bg, c.status_bg.as_deref(), parse_color)?;
+        apply_optional(&mut self.status_fg, c.status_fg.as_deref(), parse_color)?;
+        apply_optional(&mut self.border, c.border.as_ref(), ColorSpec::parse)?;
+        apply_optional(
+            &mut self.window_focus_border,
+            c.window_focus_border.as_ref(),
+            ColorSpec::parse,
+        )?;
+        apply_optional(
+            &mut self.search_match,
+            c.search_match.as_ref(),
+            ColorSpec::parse,
+        )?;
+        apply_optional(&mut self.dim, c.dim.as_ref(), ColorSpec::parse)?;
 
         let l = &overrides.levels;
-        if let Some(v) = &l.trace {
-            self.levels.insert(LogLevel::Trace, v.parse()?);
-        }
-        if let Some(v) = &l.debug {
-            self.levels.insert(LogLevel::Debug, v.parse()?);
-        }
-        if let Some(v) = &l.info {
-            self.levels.insert(LogLevel::Info, v.parse()?);
-        }
-        if let Some(v) = &l.warn {
-            self.levels.insert(LogLevel::Warn, v.parse()?);
-        }
-        if let Some(v) = &l.error {
-            self.levels.insert(LogLevel::Error, v.parse()?);
-        }
-        if let Some(v) = &l.fatal {
-            self.levels.insert(LogLevel::Fatal, v.parse()?);
-        }
-        if let Some(v) = &l.unknown {
-            self.levels.insert(LogLevel::Unknown, v.parse()?);
-        }
+        apply_level(&mut self.levels, LogLevel::Trace, l.trace.as_ref())?;
+        apply_level(&mut self.levels, LogLevel::Debug, l.debug.as_ref())?;
+        apply_level(&mut self.levels, LogLevel::Info, l.info.as_ref())?;
+        apply_level(&mut self.levels, LogLevel::Warn, l.warn.as_ref())?;
+        apply_level(&mut self.levels, LogLevel::Error, l.error.as_ref())?;
+        apply_level(&mut self.levels, LogLevel::Fatal, l.fatal.as_ref())?;
+        apply_level(&mut self.levels, LogLevel::Unknown, l.unknown.as_ref())?;
 
         let u = &overrides.ui;
-        if let Some(v) = &u.timestamp {
-            self.timestamp = v.parse()?;
-        }
-        if let Some(v) = &u.key {
-            self.key = v.parse()?;
-        }
-        if let Some(v) = &u.string {
-            self.string = v.parse()?;
-        }
-        if let Some(v) = &u.number {
-            self.number = v.parse()?;
-        }
-        if let Some(v) = &u.bool_color {
-            self.bool_color = v.parse()?;
-        }
-        if let Some(v) = &u.null {
-            self.null = v.parse()?;
-        }
-        if let Some(v) = &u.column_border {
-            self.column_border = v.parse()?;
-        }
-        if let Some(v) = u.column_border_width {
-            self.column_border_width = v;
-        }
-        if let Some(v) = u.column_border_padding {
-            self.column_border_padding = v;
-        }
+        apply_optional(&mut self.timestamp, u.timestamp.as_ref(), ColorSpec::parse)?;
+        apply_optional(&mut self.key, u.key.as_ref(), ColorSpec::parse)?;
+        apply_optional(&mut self.string, u.string.as_ref(), ColorSpec::parse)?;
+        apply_optional(&mut self.number, u.number.as_ref(), ColorSpec::parse)?;
+        apply_optional(
+            &mut self.bool_color,
+            u.bool_color.as_ref(),
+            ColorSpec::parse,
+        )?;
+        apply_optional(&mut self.null, u.null.as_ref(), ColorSpec::parse)?;
+        apply_optional(
+            &mut self.column_border,
+            u.column_border.as_ref(),
+            ColorSpec::parse,
+        )?;
+        apply_optional(
+            &mut self.column_border_width,
+            u.column_border_width.as_ref(),
+            |value| Ok(*value),
+        )?;
+        apply_optional(
+            &mut self.column_border_padding,
+            u.column_border_padding.as_ref(),
+            |value| Ok(*value),
+        )?;
         Ok(())
     }
 
     pub fn parse(raw: &str) -> Result<Self> {
         let file: ThemeFile = toml::from_str(raw).context("invalid theme toml")?;
-        let mut levels = HashMap::new();
-        levels.insert(LogLevel::Trace, file.levels.trace.parse()?);
-        levels.insert(LogLevel::Debug, file.levels.debug.parse()?);
-        levels.insert(LogLevel::Info, file.levels.info.parse()?);
-        levels.insert(LogLevel::Warn, file.levels.warn.parse()?);
-        levels.insert(LogLevel::Error, file.levels.error.parse()?);
-        levels.insert(LogLevel::Fatal, file.levels.fatal.parse()?);
-        levels.insert(LogLevel::Unknown, file.levels.unknown.parse()?);
+        let levels = parse_levels(&file.levels)?;
 
         let dim = file.colors.dim.parse()?;
         let column_border = match file.ui.column_border {
@@ -401,21 +414,28 @@ impl Theme {
     }
 
     pub fn list_names() -> Vec<String> {
-        let mut names: Vec<String> = Self::available().iter().map(|s| (*s).to_string()).collect();
-        if let Ok(entries) = std::fs::read_dir(Config::themes_dir()) {
-            for entry in entries.flatten() {
-                let path = entry.path();
-                if path.extension().and_then(|e| e.to_str()) == Some("toml") {
-                    if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
-                        if !names.iter().any(|n| n == stem) {
+        static NAMES: OnceLock<Vec<String>> = OnceLock::new();
+        NAMES
+            .get_or_init(|| {
+                let mut names: Vec<String> = Self::available()
+                    .iter()
+                    .map(|name| (*name).to_string())
+                    .collect();
+                if let Ok(entries) = std::fs::read_dir(Config::themes_dir()) {
+                    for entry in entries.flatten() {
+                        let path = entry.path();
+                        if path.extension().and_then(|extension| extension.to_str()) == Some("toml")
+                            && let Some(stem) = path.file_stem().and_then(|stem| stem.to_str())
+                            && !names.iter().any(|name| name == stem)
+                        {
                             names.push(stem.to_string());
                         }
                     }
                 }
-            }
-        }
-        names.sort();
-        names
+                names.sort();
+                names
+            })
+            .clone()
     }
 }
 
@@ -423,19 +443,15 @@ impl Theme {
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct ThemeOverrides {
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "ColorOverrides::is_empty")]
     pub colors: ColorOverrides,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "LevelOverrides::is_empty")]
     pub levels: LevelOverrides,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "UiOverrides::is_empty")]
     pub ui: UiOverrides,
 }
 
 impl ThemeOverrides {
-    pub fn is_empty(&self) -> bool {
-        self.colors.is_empty() && self.levels.is_empty() && self.ui.is_empty()
-    }
-
     pub fn validate(&self) -> Result<()> {
         self.colors.validate()?;
         self.levels.validate()?;
@@ -447,16 +463,27 @@ impl ThemeOverrides {
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct ColorOverrides {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub background: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub foreground: Option<ColorSpec>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub selection_bg: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub selection_fg: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub overlay_bg: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub status_bg: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub status_fg: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub border: Option<ColorSpec>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub window_focus_border: Option<ColorSpec>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub search_match: Option<ColorSpec>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub dim: Option<ColorSpec>,
 }
 
@@ -476,17 +503,24 @@ impl ColorOverrides {
     }
 
     pub fn validate(&self) -> Result<()> {
-        validate_color_str("colors.background", self.background.as_deref())?;
-        validate_spec("colors.foreground", self.foreground.as_ref())?;
-        validate_color_str("colors.selection_bg", self.selection_bg.as_deref())?;
-        validate_color_str("colors.selection_fg", self.selection_fg.as_deref())?;
-        validate_color_str("colors.overlay_bg", self.overlay_bg.as_deref())?;
-        validate_color_str("colors.status_bg", self.status_bg.as_deref())?;
-        validate_color_str("colors.status_fg", self.status_fg.as_deref())?;
-        validate_spec("colors.border", self.border.as_ref())?;
-        validate_spec("colors.window_focus_border", self.window_focus_border.as_ref())?;
-        validate_spec("colors.search_match", self.search_match.as_ref())?;
-        validate_spec("colors.dim", self.dim.as_ref())?;
+        validate_color_strings([
+            ("colors.background", self.background.as_deref()),
+            ("colors.selection_bg", self.selection_bg.as_deref()),
+            ("colors.selection_fg", self.selection_fg.as_deref()),
+            ("colors.overlay_bg", self.overlay_bg.as_deref()),
+            ("colors.status_bg", self.status_bg.as_deref()),
+            ("colors.status_fg", self.status_fg.as_deref()),
+        ])?;
+        validate_specs([
+            ("colors.foreground", self.foreground.as_ref()),
+            ("colors.border", self.border.as_ref()),
+            (
+                "colors.window_focus_border",
+                self.window_focus_border.as_ref(),
+            ),
+            ("colors.search_match", self.search_match.as_ref()),
+            ("colors.dim", self.dim.as_ref()),
+        ])?;
         Ok(())
     }
 }
@@ -494,12 +528,19 @@ impl ColorOverrides {
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct LevelOverrides {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub trace: Option<ColorSpec>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub debug: Option<ColorSpec>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub info: Option<ColorSpec>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub warn: Option<ColorSpec>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<ColorSpec>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub fatal: Option<ColorSpec>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub unknown: Option<ColorSpec>,
 }
 
@@ -515,13 +556,15 @@ impl LevelOverrides {
     }
 
     pub fn validate(&self) -> Result<()> {
-        validate_spec("levels.trace", self.trace.as_ref())?;
-        validate_spec("levels.debug", self.debug.as_ref())?;
-        validate_spec("levels.info", self.info.as_ref())?;
-        validate_spec("levels.warn", self.warn.as_ref())?;
-        validate_spec("levels.error", self.error.as_ref())?;
-        validate_spec("levels.fatal", self.fatal.as_ref())?;
-        validate_spec("levels.unknown", self.unknown.as_ref())?;
+        validate_specs([
+            ("levels.trace", self.trace.as_ref()),
+            ("levels.debug", self.debug.as_ref()),
+            ("levels.info", self.info.as_ref()),
+            ("levels.warn", self.warn.as_ref()),
+            ("levels.error", self.error.as_ref()),
+            ("levels.fatal", self.fatal.as_ref()),
+            ("levels.unknown", self.unknown.as_ref()),
+        ])?;
         Ok(())
     }
 }
@@ -529,15 +572,23 @@ impl LevelOverrides {
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct UiOverrides {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub timestamp: Option<ColorSpec>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub key: Option<ColorSpec>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub string: Option<ColorSpec>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub number: Option<ColorSpec>,
-    #[serde(rename = "bool")]
+    #[serde(rename = "bool", skip_serializing_if = "Option::is_none")]
     pub bool_color: Option<ColorSpec>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub null: Option<ColorSpec>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub column_border: Option<ColorSpec>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub column_border_width: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub column_border_padding: Option<crate::config::Padding>,
 }
 
@@ -555,40 +606,52 @@ impl UiOverrides {
     }
 
     pub fn validate(&self) -> Result<()> {
-        validate_spec("ui.timestamp", self.timestamp.as_ref())?;
-        validate_spec("ui.key", self.key.as_ref())?;
-        validate_spec("ui.string", self.string.as_ref())?;
-        validate_spec("ui.number", self.number.as_ref())?;
-        validate_spec("ui.bool", self.bool_color.as_ref())?;
-        validate_spec("ui.null", self.null.as_ref())?;
-        validate_spec("ui.column_border", self.column_border.as_ref())?;
+        validate_specs([
+            ("ui.timestamp", self.timestamp.as_ref()),
+            ("ui.key", self.key.as_ref()),
+            ("ui.string", self.string.as_ref()),
+            ("ui.number", self.number.as_ref()),
+            ("ui.bool", self.bool_color.as_ref()),
+            ("ui.null", self.null.as_ref()),
+            ("ui.column_border", self.column_border.as_ref()),
+        ])?;
         Ok(())
     }
 }
 
-fn validate_color_str(path: &str, value: Option<&str>) -> Result<()> {
-    if let Some(s) = value {
-        parse_color(s).with_context(|| format!("invalid {path}"))?;
+fn validate_color_strings<'a>(
+    values: impl IntoIterator<Item = (&'static str, Option<&'a str>)>,
+) -> Result<()> {
+    for (path, value) in values {
+        if let Some(value) = value {
+            parse_color(value).with_context(|| format!("invalid {path}"))?;
+        }
     }
     Ok(())
 }
 
-fn validate_spec(path: &str, value: Option<&ColorSpec>) -> Result<()> {
-    if let Some(spec) = value {
-        spec.validate().with_context(|| format!("invalid {path}"))?;
+fn validate_specs<'a>(
+    values: impl IntoIterator<Item = (&'static str, Option<&'a ColorSpec>)>,
+) -> Result<()> {
+    for (path, value) in values {
+        if let Some(value) = value {
+            value
+                .validate()
+                .with_context(|| format!("invalid {path}"))?;
+        }
     }
     Ok(())
 }
 
 pub(crate) fn parse_color(s: &str) -> Result<Color> {
     let s = s.trim();
-    if let Some(hex) = s.strip_prefix('#') {
-        if hex.len() == 6 {
-            let r = u8::from_str_radix(&hex[0..2], 16)?;
-            let g = u8::from_str_radix(&hex[2..4], 16)?;
-            let b = u8::from_str_radix(&hex[4..6], 16)?;
-            return Ok(Color::Rgb(r, g, b));
-        }
+    if let Some(hex) = s.strip_prefix('#')
+        && hex.len() == 6
+    {
+        let r = u8::from_str_radix(&hex[0..2], 16)?;
+        let g = u8::from_str_radix(&hex[2..4], 16)?;
+        let b = u8::from_str_radix(&hex[4..6], 16)?;
+        return Ok(Color::Rgb(r, g, b));
     }
     Color::from_str(s).map_err(|_| anyhow::anyhow!("invalid color '{s}'"))
 }
@@ -665,10 +728,7 @@ mod tests {
                         bg: Some("#00ff00".into()),
                     })),
                     column_border_width: Some(2),
-                    column_border_padding: Some(crate::config::Padding {
-                        left: 2,
-                        right: 1,
-                    }),
+                    column_border_padding: Some(crate::config::Padding { left: 2, right: 1 }),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -677,10 +737,7 @@ mod tests {
         assert_eq!(theme.column_border_width, 2);
         assert_eq!(
             theme.column_border_padding,
-            crate::config::Padding {
-                left: 2,
-                right: 1,
-            }
+            crate::config::Padding { left: 2, right: 1 }
         );
         assert_eq!(
             theme.column_border,

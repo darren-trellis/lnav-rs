@@ -1,5 +1,6 @@
 use crate::app::App;
-use crate::command;
+use crate::command_catalog;
+use crate::config_options;
 use crate::theme::Theme;
 
 #[derive(Debug, Clone)]
@@ -54,93 +55,72 @@ impl CompletionState {
     }
 }
 
-const SET_KEYS: &[(&str, &str)] = &[
-    ("theme", "theme name"),
-    ("follow", "on|off|toggle"),
-    ("wrap_details", "on|off|toggle"),
-    ("details_json_tree", "on|off|toggle"),
-    ("details_max_height", "max overlay rows"),
-    ("details_tab_width", "tree indent columns"),
-    ("line_numbers", "on|off|toggle"),
-    ("relative_line_numbers", "on|off|toggle"),
-    ("scrollbar", "on|off|toggle"),
-    ("autosave", "on|off|toggle"),
-    ("sidebar", "on|off|toggle"),
-    ("scroll_lines", "mouse wheel step"),
-    ("timestamp_format", "strftime or raw"),
-    ("case_mode", "sensitive|insensitive|smart"),
-    ("session_filters", "on|off|toggle"),
-    ("session_stdin", "on|off|toggle"),
-];
-
-const BOOLS: &[&str] = &["on", "off", "toggle"];
-
 /// Refresh suggestions for the current command buffer. Clears selection.
 pub fn refresh(app: &mut App) {
-    let buffer = app.command_buffer.clone();
-    app.completions.items = suggestions_for(&buffer, app);
-    app.completions.selected = None;
-    app.completions.browsed = false;
+    let buffer = app.command_line.buffer.clone();
+    app.command_line.completions.items = suggestions_for(&buffer, app);
+    app.command_line.completions.selected = None;
+    app.command_line.completions.browsed = false;
 }
 
 /// Insert the selected suggestion into the buffer. Keeps the current suggestion
 /// list frozen so Tab can cycle without the other matches disappearing.
 pub fn apply_selected(app: &mut App) {
-    let Some(sel) = app.completions.selected().cloned() else {
+    let Some(sel) = app.command_line.completions.selected().cloned() else {
         return;
     };
     if sel.text.is_empty() {
         return;
     }
     let mut new_buf =
-        app.command_buffer[..sel.replace_from.min(app.command_buffer.len())].to_string();
+        app.command_line.buffer[..sel.replace_from.min(app.command_line.buffer.len())].to_string();
     new_buf.push_str(&sel.text);
-    app.command_buffer = new_buf;
-    app.completions.browsed = false;
+    app.command_line.buffer = new_buf;
+    app.command_line.completions.browsed = false;
 }
 
 /// True when the buffer already has the selected suggestion applied.
 pub fn selection_applied(app: &App) -> bool {
-    let Some(sel) = app.completions.selected() else {
+    let Some(sel) = app.command_line.completions.selected() else {
         return false;
     };
-    let from = sel.replace_from.min(app.command_buffer.len());
-    app.command_buffer[from..] == sel.text
+    let from = sel.replace_from.min(app.command_line.buffer.len());
+    app.command_line.buffer[from..] == sel.text
 }
 
 /// Tab: apply current after ↑↓/mouse browse; otherwise select first/next and apply.
 pub fn tab_complete(app: &mut App) {
-    if app.completions.items.is_empty() {
+    if app.command_line.completions.items.is_empty() {
         refresh(app);
-        if app.completions.items.is_empty() {
+        if app.command_line.completions.items.is_empty() {
             return;
         }
     }
 
-    if app.completions.browsed {
+    if app.command_line.completions.browsed {
         apply_selected(app);
         return;
     }
 
-    app.completions.select_next();
+    app.command_line.completions.select_next();
     apply_selected(app);
 }
 
 /// Shift-Tab / BackTab: apply current after browse; otherwise select previous and apply.
 pub fn tab_complete_prev(app: &mut App) {
-    if app.completions.items.is_empty() {
+    if app.command_line.completions.items.is_empty() {
         refresh(app);
-        if app.completions.items.is_empty() {
+        if app.command_line.completions.items.is_empty() {
             return;
         }
     }
 
-    if app.completions.browsed {
+    if app.command_line.completions.browsed {
         apply_selected(app);
         return;
     }
 
-    app.completions.select_prev();
+    app.command_line.completions.select_prev();
     apply_selected(app);
 }
 
@@ -159,12 +139,12 @@ fn suggestions_for(buffer: &str, app: &App) -> Vec<Suggestion> {
         match cmd.to_ascii_lowercase().as_str() {
             "theme" => theme_suggestions(rest, rest_from),
             "filter" => filter_suggestions(rest, rest_from),
-            "fold" => on_off_toggle_suggestions(rest, rest_from, &FOLD_SUBS),
-            "focus" => on_off_toggle_suggestions(rest, rest_from, &FOCUS_SUBS),
-            "follow" => on_off_toggle_suggestions(rest, rest_from, &FOLLOW_SUBS),
-            "details" => on_off_toggle_suggestions(rest, rest_from, &DETAILS_SUBS),
-            "sidebar" => on_off_toggle_suggestions(rest, rest_from, &SIDEBAR_SUBS),
-            "help" => on_off_toggle_suggestions(rest, rest_from, &HELP_SUBS),
+            "fold" => on_off_toggle_suggestions(rest, rest_from, FOLD_SUBS),
+            "focus" => on_off_toggle_suggestions(rest, rest_from, FOCUS_SUBS),
+            "follow" => on_off_toggle_suggestions(rest, rest_from, FOLLOW_SUBS),
+            "details" => on_off_toggle_suggestions(rest, rest_from, DETAILS_SUBS),
+            "sidebar" => on_off_toggle_suggestions(rest, rest_from, SIDEBAR_SUBS),
+            "help" => on_off_toggle_suggestions(rest, rest_from, HELP_SUBS),
             "set" => set_key_suggestions(rest, rest_from),
             "config" => config_suggestions(rest, rest_from),
             "delete-filter" | "delete_filter" => {
@@ -283,7 +263,7 @@ fn filter_suggestions(rest: &str, rest_from: usize) -> Vec<Suggestion> {
 
 fn command_suggestions(prefix: &str, replace_from: usize) -> Vec<Suggestion> {
     let prefix_l = prefix.to_ascii_lowercase();
-    let mut items: Vec<Suggestion> = command::catalog()
+    let mut items: Vec<Suggestion> = command_catalog::catalog()
         .iter()
         .filter(|c| c.name.starts_with(&prefix_l))
         .map(|c| Suggestion {
@@ -295,7 +275,7 @@ fn command_suggestions(prefix: &str, replace_from: usize) -> Vec<Suggestion> {
         .collect();
 
     if items.is_empty() && !prefix_l.is_empty() {
-        items = command::catalog()
+        items = command_catalog::catalog()
             .iter()
             .filter(|c| c.name.contains(&prefix_l))
             .map(|c| Suggestion {
@@ -392,13 +372,13 @@ fn config_suggestions(rest: &str, rest_from: usize) -> Vec<Suggestion> {
 
 fn config_key_suggestions(prefix: &str, replace_from: usize) -> Vec<Suggestion> {
     let prefix_l = prefix.to_ascii_lowercase();
-    SET_KEYS
+    config_options::catalog()
         .iter()
-        .filter(|(k, _)| k.starts_with(&prefix_l))
-        .map(|(k, help)| Suggestion {
-            text: (*k).to_string(),
-            label: (*k).to_string(),
-            help: (*help).to_string(),
+        .filter(|option| option.name.starts_with(&prefix_l))
+        .map(|option| Suggestion {
+            text: option.name.to_string(),
+            label: option.name.to_string(),
+            help: option.help.to_string(),
             replace_from,
         })
         .collect()
@@ -413,41 +393,15 @@ fn set_key_suggestions(rest: &str, rest_from: usize) -> Vec<Suggestion> {
     let value = value_raw.trim_start();
     let value_from = rest_from + (rest.len() - value.len());
 
-    match key.to_ascii_lowercase().as_str() {
-        "theme" => value_suggestions(value, value_from, &Theme::list_names(), "theme"),
-        "follow"
-        | "wrap_details"
-        | "details_json_tree"
-        | "line_numbers"
-        | "relative_line_numbers"
-        | "scrollbar"
-        | "autosave"
-        | "sidebar"
-        | "session_filters"
-        | "session_stdin" => value_suggestions(value, value_from, &bool_opts(), "bool"),
-        "case_mode" => {
-            let opts = ["sensitive", "insensitive", "smart", "smartcase"]
-                .into_iter()
-                .map(str::to_string)
-                .collect::<Vec<_>>();
-            value_suggestions(value, value_from, &opts, "case")
-        }
-        "timestamp_format" => {
-            let presets = [
-                "%H:%M:%S".to_string(),
-                "%H:%M:%S%.3f".to_string(),
-                "%Y-%m-%d %H:%M:%S".to_string(),
-                "%Y-%m-%dT%H:%M:%SZ".to_string(),
-                "raw".to_string(),
-            ];
-            value_suggestions(value, value_from, &presets, "strftime")
-        }
-        _ => Vec::new(),
-    }
-}
-
-fn bool_opts() -> Vec<String> {
-    BOOLS.iter().map(|s| (*s).to_string()).collect()
+    let Some(option) = config_options::find(key) else {
+        return Vec::new();
+    };
+    value_suggestions(
+        value,
+        value_from,
+        &option.value_kind.suggestions(),
+        option.value_kind.suggestion_help(),
+    )
 }
 
 fn value_suggestions(
@@ -515,9 +469,11 @@ mod tests {
     fn completes_filter_prefix() {
         let items = command_suggestions("fil", 0);
         assert!(items.iter().any(|s| s.text == "filter"));
-        assert!(items.iter().all(|s| {
-            s.text != "filter-in" && s.text != "filter-out" && s.text != "filters"
-        }));
+        assert!(
+            items.iter().all(|s| {
+                s.text != "filter-in" && s.text != "filter-out" && s.text != "filters"
+            })
+        );
     }
 
     #[test]
@@ -525,11 +481,13 @@ mod tests {
         let mut items = command_suggestions("c", 0);
         sort_suggestions(&mut items);
         let texts: Vec<&str> = items.iter().map(|s| s.text.as_str()).collect();
-        assert!(texts.windows(2).all(|w| {
-            w[0].to_ascii_lowercase() <= w[1].to_ascii_lowercase()
-        }));
-        assert!(texts.iter().any(|t| *t == "copy"));
-        assert!(texts.iter().any(|t| *t == "config"));
+        assert!(
+            texts
+                .windows(2)
+                .all(|w| { w[0].to_ascii_lowercase() <= w[1].to_ascii_lowercase() })
+        );
+        assert!(texts.contains(&"copy"));
+        assert!(texts.contains(&"config"));
         let copy = texts.iter().position(|t| *t == "copy").unwrap();
         let config = texts.iter().position(|t| *t == "config").unwrap();
         let command_mode = texts.iter().position(|t| *t == "command-mode").unwrap();
@@ -552,9 +510,11 @@ mod tests {
         assert!(items.iter().any(|s| s.text == "hide"));
         assert!(items.iter().any(|s| s.text == "delete"));
         assert!(items.iter().any(|s| s.text == "config"));
-        assert!(items.iter().all(|s| {
-            s.text != "q" && s.text != "d" && s.text != "D" && s.text != "set"
-        }));
+        assert!(
+            items
+                .iter()
+                .all(|s| { s.text != "q" && s.text != "d" && s.text != "D" && s.text != "set" })
+        );
     }
 
     #[test]
@@ -607,5 +567,4 @@ mod tests {
         state.select_next();
         assert_eq!(state.selected, Some(0));
     }
-
 }

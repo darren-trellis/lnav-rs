@@ -63,22 +63,19 @@ pub fn entry_passes(filters: &[Filter], filtering_enabled: bool, entry: &LogEntr
         return true;
     }
 
-    let includes: Vec<&Filter> = filters
-        .iter()
-        .filter(|f| f.enabled && f.kind == FilterKind::Include)
-        .collect();
-    let excludes: Vec<&Filter> = filters
-        .iter()
-        .filter(|f| f.enabled && f.kind == FilterKind::Exclude)
-        .collect();
-
-    if !includes.is_empty() && !includes.iter().any(|f| f.matches(entry)) {
-        return false;
+    let mut has_include = false;
+    let mut matches_include = false;
+    for filter in filters.iter().filter(|filter| filter.enabled) {
+        match filter.kind {
+            FilterKind::Include => {
+                has_include = true;
+                matches_include |= filter.matches(entry);
+            }
+            FilterKind::Exclude if filter.matches(entry) => return false,
+            FilterKind::Exclude => {}
+        }
     }
-    if excludes.iter().any(|f| f.matches(entry)) {
-        return false;
-    }
-    true
+    !has_include || matches_include
 }
 
 pub fn build_visible(
@@ -90,9 +87,7 @@ pub fn build_visible(
     entries
         .iter()
         .enumerate()
-        .filter(|(i, e)| {
-            !hidden.contains(i) && entry_passes(filters, filtering_enabled, e)
-        })
+        .filter(|(i, e)| !hidden.contains(i) && entry_passes(filters, filtering_enabled, e))
         .map(|(i, _)| i)
         .collect()
 }
@@ -117,7 +112,8 @@ mod tests {
 
     #[test]
     fn filter_in_requires_match_when_present() {
-        let filters = vec![Filter::new(FilterKind::Include, "error", CaseMode::Insensitive).unwrap()];
+        let filters =
+            vec![Filter::new(FilterKind::Include, "error", CaseMode::Insensitive).unwrap()];
         assert!(!entry_passes(&filters, true, &entry("info ok")));
         assert!(entry_passes(&filters, true, &entry("got error here")));
         assert!(entry_passes(&filters, true, &entry("got ERROR here")));
@@ -125,7 +121,8 @@ mod tests {
 
     #[test]
     fn filter_out_hides_matches() {
-        let filters = vec![Filter::new(FilterKind::Exclude, "spam", CaseMode::Insensitive).unwrap()];
+        let filters =
+            vec![Filter::new(FilterKind::Exclude, "spam", CaseMode::Insensitive).unwrap()];
         assert!(!entry_passes(&filters, true, &entry("spam message")));
         assert!(entry_passes(&filters, true, &entry("real message")));
     }

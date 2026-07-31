@@ -63,11 +63,7 @@ fn update_depth(line: &str, depth: &mut i32, seen_open: &mut bool) {
                 *depth += 1;
                 *seen_open = true;
             }
-            '}' | ']' => {
-                if *seen_open {
-                    *depth -= 1;
-                }
-            }
+            '}' | ']' if *seen_open => *depth -= 1,
             _ => {}
         }
     }

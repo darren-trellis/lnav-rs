@@ -1,12 +1,22 @@
 mod json;
 mod logfmt;
 
-use crate::model::{LineFormat, LogEntry, LogLevel};
+use crate::model::{Field, LineFormat, LogEntry, LogLevel};
 use crate::timestamp;
+
+type ParsedLine = (LogLevel, Option<String>, Option<String>, Vec<Field>);
 
 pub fn parse_line(line_no: usize, raw: String) -> LogEntry {
     if let Some((level, timestamp, message, fields)) = json::parse_json_line(&raw) {
-        return make_entry(line_no, raw, LineFormat::Json, level, timestamp, message, fields);
+        return make_entry(
+            line_no,
+            raw,
+            LineFormat::Json,
+            level,
+            timestamp,
+            message,
+            fields,
+        );
     }
 
     if let Some((level, timestamp, message, fields)) = logfmt::parse_logfmt(&raw) {

@@ -56,10 +56,7 @@ impl Session {
         }
     }
 
-    pub fn into_filters(
-        self,
-        case_mode: crate::config::CaseMode,
-    ) -> Result<(Vec<Filter>, bool)> {
+    pub fn into_filters(self, case_mode: crate::config::CaseMode) -> Result<(Vec<Filter>, bool)> {
         let mut out = Vec::with_capacity(self.filters.len());
         for f in self.filters {
             let kind = match f.kind.as_str() {
@@ -108,8 +105,8 @@ pub fn load(source: &LogSource, config: &Config) -> Result<Option<Session>> {
     }
     let raw = fs::read_to_string(&path)
         .with_context(|| format!("failed to read session {}", path.display()))?;
-    let session: Session = toml::from_str(&raw)
-        .with_context(|| format!("invalid session {}", path.display()))?;
+    let session: Session =
+        toml::from_str(&raw).with_context(|| format!("invalid session {}", path.display()))?;
     Ok(Some(session))
 }
 

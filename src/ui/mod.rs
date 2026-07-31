@@ -5,10 +5,10 @@ mod status;
 mod suggest;
 mod theme_picker;
 
+use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::Style;
 use ratatui::widgets::{Scrollbar, ScrollbarOrientation, ScrollbarState};
-use ratatui::Frame;
 
 use crate::app::{App, InputMode};
 use crate::details;
@@ -46,7 +46,7 @@ pub(crate) fn draw_scrollbar(
 
 pub fn draw(frame: &mut Frame, app: &mut App) {
     let area = frame.area();
-    app.hit = crate::app::HitAreas::default();
+    app.pointer.hit = crate::app::HitAreas::default();
 
     let suggest_h = if app.input_mode == InputMode::Command && app.theme_picker.is_none() {
         suggest::desired_height(app, area.height.saturating_sub(4))
@@ -70,38 +70,41 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
     };
 
     let (main, sidebar_area) = if sidebar_w > 0 {
-        let split = Layout::horizontal([
-            Constraint::Min(20),
-            Constraint::Length(sidebar_w),
-        ])
-        .split(body);
+        let split =
+            Layout::horizontal([Constraint::Min(20), Constraint::Length(sidebar_w)]).split(body);
         (split[0], Some(split[1]))
     } else {
         (body, None)
     };
 
-    let overlay_height = if app.show_overlay && app.theme_picker.is_none() {
-        overlay_desired_height(app, main.height)
+    let detail_content = if app.details.visible && app.theme_picker.is_none() {
+        app.selected_entry()
+            .map(|entry| details::build_lines(entry, &app.theme, &app.config, &app.details.folded))
     } else {
-        0
+        None
     };
+    let overlay_height = detail_content.as_ref().map_or(0, |content| {
+        details::desired_height(content.len(), main.height, app.config.details_max_height)
+    });
 
     if overlay_height > 0 {
-        let split = Layout::vertical([
-            Constraint::Min(3),
-            Constraint::Length(overlay_height),
-        ])
-        .split(main);
+        let split =
+            Layout::vertical([Constraint::Min(3), Constraint::Length(overlay_height)]).split(main);
         list::draw(frame, app, split[0]);
-        overlay::draw(frame, app, split[1]);
+        overlay::draw(
+            frame,
+            app,
+            split[1],
+            detail_content.as_deref().unwrap_or_default(),
+        );
     } else {
         list::draw(frame, app, main);
     }
 
     if let Some(area) = sidebar_area {
         sidebar::draw(frame, app, area);
-    } else {
-        app.sidebar_focused = false;
+    } else if app.is_sidebar_focused() {
+        app.focus_list();
     }
 
     if suggest_h > 0 {
@@ -112,13 +115,4 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
     if app.theme_picker.is_some() {
         theme_picker::draw(frame, app, body);
     }
-}
-
-fn overlay_desired_height(app: &App, available: u16) -> u16 {
-    let Some(entry) = app.selected_entry() else {
-        return 0;
-    };
-    let content_lines =
-        details::build_lines(entry, &app.theme, &app.config, &app.overlay_folded).len();
-    details::desired_height(content_lines, available, app.config.details_max_height)
 }

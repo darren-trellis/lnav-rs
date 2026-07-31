@@ -60,7 +60,7 @@ pub enum FieldValue {
     Number(String),
     Bool(bool),
     Null,
-    Nested(String),
+    Nested(serde_json::Value),
 }
 
 impl FieldValue {
@@ -70,7 +70,9 @@ impl FieldValue {
             Self::Number(n) => n.clone(),
             Self::Bool(b) => b.to_string(),
             Self::Null => "null".into(),
-            Self::Nested(s) => s.clone(),
+            Self::Nested(value) => {
+                serde_json::to_string_pretty(value).unwrap_or_else(|_| value.to_string())
+            }
         }
     }
 }

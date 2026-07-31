@@ -2,10 +2,10 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};
 
-use crate::command;
+use crate::command_catalog;
 use crate::keys;
 use crate::theme::Theme;
 use crate::timestamp;
@@ -97,11 +97,17 @@ pub struct Column {
 pub struct ThemeConfig {
     #[serde(default = "default_theme")]
     pub name: String,
-    #[serde(default)]
+    #[serde(
+        default,
+        skip_serializing_if = "crate::theme::ColorOverrides::is_empty"
+    )]
     pub colors: crate::theme::ColorOverrides,
-    #[serde(default)]
+    #[serde(
+        default,
+        skip_serializing_if = "crate::theme::LevelOverrides::is_empty"
+    )]
     pub levels: crate::theme::LevelOverrides,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "crate::theme::UiOverrides::is_empty")]
     pub ui: crate::theme::UiOverrides,
 }
 
@@ -131,10 +137,6 @@ impl ThemeConfig {
             levels: self.levels.clone(),
             ui: self.ui.clone(),
         }
-    }
-
-    pub fn has_overrides(&self) -> bool {
-        !self.overrides().is_empty()
     }
 
     fn validate(&self) -> Result<()> {
@@ -280,6 +282,115 @@ pub struct Config {
     pub session_stdin: bool,
 }
 
+#[derive(Serialize)]
+struct PersistedConfig<'a> {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    follow: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    wrap_details: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    details_json_tree: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    details_max_height: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    details_tab_width: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    line_numbers: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    relative_line_numbers: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    scrollbar: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    autosave: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    sidebar: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    scroll_lines: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    timestamp_format: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    case_mode: Option<CaseMode>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    session_filters: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    session_stdin: Option<bool>,
+    theme: &'a ThemeConfig,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    columns: Vec<PersistedColumn<'a>>,
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    keys: BTreeMap<String, String>,
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    details_keys: BTreeMap<String, String>,
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    sidebar_keys: BTreeMap<String, String>,
+}
+
+#[derive(Serialize)]
+struct PersistedColumn<'a> {
+    source: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    width: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    align: Option<Align>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    padding: Option<Padding>,
+}
+
+impl<'a> PersistedConfig<'a> {
+    fn new(config: &'a Config) -> Self {
+        let defaults = Config::default();
+        let details_max_height = config.details_max_height.max(4);
+        let details_tab_width = config.details_tab_width.max(2);
+        let scroll_lines = config.scroll_lines.max(1);
+        let columns = if config.columns == defaults.columns {
+            Vec::new()
+        } else {
+            config
+                .columns
+                .iter()
+                .map(|column| PersistedColumn {
+                    source: &column.source,
+                    width: column.width,
+                    align: (column.align != Align::Left).then_some(column.align),
+                    padding: (!column.padding.is_zero()).then_some(column.padding),
+                })
+                .collect()
+        };
+
+        Self {
+            follow: (config.follow != defaults.follow).then_some(config.follow),
+            wrap_details: (config.wrap_details != defaults.wrap_details)
+                .then_some(config.wrap_details),
+            details_json_tree: (config.details_json_tree != defaults.details_json_tree)
+                .then_some(config.details_json_tree),
+            details_max_height: (details_max_height != defaults.details_max_height)
+                .then_some(details_max_height),
+            details_tab_width: (details_tab_width != defaults.details_tab_width)
+                .then_some(details_tab_width),
+            line_numbers: (config.line_numbers != defaults.line_numbers)
+                .then_some(config.line_numbers),
+            relative_line_numbers: (config.relative_line_numbers != defaults.relative_line_numbers)
+                .then_some(config.relative_line_numbers),
+            scrollbar: (config.scrollbar != defaults.scrollbar).then_some(config.scrollbar),
+            autosave: (config.autosave != defaults.autosave).then_some(config.autosave),
+            sidebar: (config.sidebar != defaults.sidebar).then_some(config.sidebar),
+            scroll_lines: (scroll_lines != defaults.scroll_lines).then_some(scroll_lines),
+            timestamp_format: (config.timestamp_format != defaults.timestamp_format)
+                .then_some(config.timestamp_format.as_str()),
+            case_mode: (config.case_mode != defaults.case_mode).then_some(config.case_mode),
+            session_filters: (config.session_filters != defaults.session_filters)
+                .then_some(config.session_filters),
+            session_stdin: (config.session_stdin != defaults.session_stdin)
+                .then_some(config.session_stdin),
+            theme: &config.theme,
+            columns,
+            keys: key_differences(&config.keys, &defaults.keys),
+            details_keys: key_differences(&config.details_keys, &defaults.details_keys),
+            sidebar_keys: key_differences(&config.sidebar_keys, &defaults.sidebar_keys),
+        }
+    }
+}
+
 fn default_theme() -> String {
     "catppuccin".into()
 }
@@ -356,10 +467,10 @@ impl Default for Config {
 
 impl Config {
     pub fn config_dir() -> PathBuf {
-        if let Ok(xdg) = std::env::var("XDG_CONFIG_HOME") {
-            if !xdg.is_empty() {
-                return PathBuf::from(xdg).join("lnav-rs");
-            }
+        if let Ok(xdg) = std::env::var("XDG_CONFIG_HOME")
+            && !xdg.is_empty()
+        {
+            return PathBuf::from(xdg).join("lnav-rs");
         }
         dirs_home()
             .map(|h| h.join(".config").join("lnav-rs"))
@@ -375,10 +486,10 @@ impl Config {
     }
 
     pub fn data_dir() -> PathBuf {
-        if let Ok(xdg) = std::env::var("XDG_DATA_HOME") {
-            if !xdg.is_empty() {
-                return PathBuf::from(xdg).join("lnav-rs");
-            }
+        if let Ok(xdg) = std::env::var("XDG_DATA_HOME")
+            && !xdg.is_empty()
+        {
+            return PathBuf::from(xdg).join("lnav-rs");
         }
         dirs_home()
             .map(|h| h.join(".local").join("share").join("lnav-rs"))
@@ -399,15 +510,19 @@ impl Config {
         }
         let raw = fs::read_to_string(path)
             .with_context(|| format!("failed to read config {}", path.display()))?;
-        let mut cfg: Self = toml::from_str(&raw)
-            .with_context(|| format!("invalid config {}", path.display()))?;
+        let mut cfg: Self =
+            toml::from_str(&raw).with_context(|| format!("invalid config {}", path.display()))?;
         cfg.validate()
             .with_context(|| format!("invalid config {}", path.display()))?;
         cfg.keys = keys::merge(keys::defaults(), std::mem::take(&mut cfg.keys));
-        cfg.details_keys =
-            keys::merge(keys::details_defaults(), std::mem::take(&mut cfg.details_keys));
-        cfg.sidebar_keys =
-            keys::merge(keys::sidebar_defaults(), std::mem::take(&mut cfg.sidebar_keys));
+        cfg.details_keys = keys::merge_overlay(
+            keys::details_defaults(),
+            std::mem::take(&mut cfg.details_keys),
+        );
+        cfg.sidebar_keys = keys::merge_overlay(
+            keys::sidebar_defaults(),
+            std::mem::take(&mut cfg.sidebar_keys),
+        );
         if cfg.columns.is_empty() {
             cfg.columns = default_columns();
         }
@@ -433,7 +548,7 @@ impl Config {
                 bail!("columns[{i}].source must not be empty");
             }
         }
-        let known: Vec<&str> = command::catalog().iter().map(|c| c.name).collect();
+        let known: Vec<&str> = command_catalog::catalog().iter().map(|c| c.name).collect();
         validate_key_map("keys", &self.keys, &known)?;
         validate_key_map("details_keys", &self.details_keys, &known)?;
         validate_key_map("sidebar_keys", &self.sidebar_keys, &known)?;
@@ -451,128 +566,22 @@ impl Config {
         }
         let _ = fs::create_dir_all(Self::themes_dir());
 
-        let defaults = Self::default();
-        let mut body = String::new();
-
-        // Root scalars must come before [theme.*] tables — TOML keeps assigning
-        // keys to the most recent table header until the next one.
-        if self.follow != defaults.follow {
-            body.push_str(&format!("follow = {}\n", self.follow));
-        }
-        if self.wrap_details != defaults.wrap_details {
-            body.push_str(&format!("wrap_details = {}\n", self.wrap_details));
-        }
-        if self.details_json_tree != defaults.details_json_tree {
-            body.push_str(&format!("details_json_tree = {}\n", self.details_json_tree));
-        }
-        if self.details_max_height != defaults.details_max_height {
-            body.push_str(&format!(
-                "details_max_height = {}\n",
-                self.details_max_height.max(4)
-            ));
-        }
-        if self.details_tab_width != defaults.details_tab_width {
-            body.push_str(&format!(
-                "details_tab_width = {}\n",
-                self.details_tab_width.max(2)
-            ));
-        }
-        if self.line_numbers != defaults.line_numbers {
-            body.push_str(&format!("line_numbers = {}\n", self.line_numbers));
-        }
-        if self.relative_line_numbers != defaults.relative_line_numbers {
-            body.push_str(&format!(
-                "relative_line_numbers = {}\n",
-                self.relative_line_numbers
-            ));
-        }
-        if self.scrollbar != defaults.scrollbar {
-            body.push_str(&format!("scrollbar = {}\n", self.scrollbar));
-        }
-        if self.autosave != defaults.autosave {
-            body.push_str(&format!("autosave = {}\n", self.autosave));
-        }
-        if self.sidebar != defaults.sidebar {
-            body.push_str(&format!("sidebar = {}\n", self.sidebar));
-        }
-        if self.scroll_lines.max(1) != defaults.scroll_lines {
-            body.push_str(&format!("scroll_lines = {}\n", self.scroll_lines.max(1)));
-        }
-        if self.timestamp_format != defaults.timestamp_format {
-            body.push_str(&format!("timestamp_format = {:?}\n", self.timestamp_format));
-        }
-        if self.case_mode != defaults.case_mode {
-            body.push_str(&format!("case_mode = {:?}\n", self.case_mode.as_str()));
-        }
-        if self.session_filters != defaults.session_filters {
-            body.push_str(&format!("session_filters = {}\n", self.session_filters));
-        }
-        if self.session_stdin != defaults.session_stdin {
-            body.push_str(&format!("session_stdin = {}\n", self.session_stdin));
-        }
-        if !body.is_empty() {
-            body.push('\n');
-        }
-
-        write_theme_config(&mut body, &self.theme);
-
-        if self.columns != defaults.columns {
-            for col in &self.columns {
-                body.push_str("[[columns]]\n");
-                body.push_str(&format!("source = {:?}\n", col.source));
-                if let Some(w) = col.width {
-                    body.push_str(&format!("width = {w}\n"));
-                }
-                match col.align {
-                    Align::Left => {}
-                    Align::Center => body.push_str("align = \"center\"\n"),
-                    Align::Right => body.push_str("align = \"right\"\n"),
-                }
-                if !col.padding.is_zero() {
-                    if col.padding.left == col.padding.right {
-                        body.push_str(&format!("padding = {}\n", col.padding.left));
-                    } else {
-                        body.push_str(&format!(
-                            "padding = {{ left = {}, right = {} }}\n",
-                            col.padding.left, col.padding.right
-                        ));
-                    }
-                }
-                body.push('\n');
-            }
-        }
-
-        write_key_section(&mut body, "keys", &self.keys, &keys::defaults());
-        write_key_section(
-            &mut body,
-            "details_keys",
-            &self.details_keys,
-            &keys::details_defaults(),
-        );
-        write_key_section(
-            &mut body,
-            "sidebar_keys",
-            &self.sidebar_keys,
-            &keys::sidebar_defaults(),
-        );
+        let body =
+            toml::to_string(&PersistedConfig::new(self)).context("failed to serialize config")?;
 
         fs::write(path, body).with_context(|| format!("failed to write {}", path.display()))?;
         Ok(path.to_path_buf())
     }
 }
 
-fn validate_key_map(
-    section: &str,
-    map: &BTreeMap<String, String>,
-    known: &[&str],
-) -> Result<()> {
+fn validate_key_map(section: &str, map: &BTreeMap<String, String>, known: &[&str]) -> Result<()> {
     for (key, cmd) in map {
         let cmd = cmd.trim();
         if cmd.is_empty() {
             continue;
         }
         let name = cmd.split_whitespace().next().unwrap_or(cmd);
-        if !command::is_known_command(name) {
+        if !command_catalog::is_known_command(name) {
             bail!(
                 "unknown command {cmd:?} for {section}.{key} (try: {})",
                 known.join(", ")
@@ -582,121 +591,22 @@ fn validate_key_map(
     Ok(())
 }
 
-fn write_key_section(
-    body: &mut String,
-    section: &str,
+fn key_differences(
     map: &BTreeMap<String, String>,
     defaults: &BTreeMap<String, String>,
-) {
-    let overrides: Vec<(&String, &String)> = map
-        .iter()
-        .filter(|(key, cmd)| defaults.get(*key) != Some(*cmd))
-        .collect();
-    let unbinds: Vec<&String> = defaults
-        .keys()
-        .filter(|key| !map.contains_key(*key))
-        .collect();
-    if overrides.is_empty() && unbinds.is_empty() {
-        return;
-    }
-    body.push_str(&format!("[{section}]\n"));
-    for (key, cmd) in overrides {
-        body.push_str(&format!("{} = {:?}\n", toml_key(key), cmd));
-    }
-    for key in unbinds {
-        body.push_str(&format!("{} = \"\"\n", toml_key(key)));
-    }
-    body.push('\n');
-}
-
-/// Quote key names that aren't bare TOML keys.
-fn toml_key(key: &str) -> String {
-    if key.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-') {
-        key.to_string()
-    } else {
-        format!("{key:?}")
-    }
-}
-
-fn write_opt(body: &mut String, key: &str, val: &Option<String>) {
-    if let Some(v) = val {
-        body.push_str(&format!("{key} = {v:?}\n"));
-    }
-}
-
-fn write_color_spec_opt(body: &mut String, key: &str, val: &Option<crate::theme::ColorSpec>) {
-    use crate::theme::{ColorSpec, ColorSpecFgBg};
-    match val {
-        None => {}
-        Some(ColorSpec::Fg(fg)) => {
-            body.push_str(&format!("{key} = {fg:?}\n"));
-        }
-        Some(ColorSpec::FgBg(ColorSpecFgBg { fg, bg: Some(bg) })) => {
-            body.push_str(&format!("{key} = {{ fg = {fg:?}, bg = {bg:?} }}\n"));
-        }
-        Some(ColorSpec::FgBg(ColorSpecFgBg { fg, bg: None })) => {
-            body.push_str(&format!("{key} = {{ fg = {fg:?} }}\n"));
+) -> BTreeMap<String, String> {
+    let mut differences = BTreeMap::new();
+    for (key, command) in map {
+        if defaults.get(key) != Some(command) {
+            differences.insert(key.clone(), command.clone());
         }
     }
-}
-
-fn write_theme_config(body: &mut String, theme: &ThemeConfig) {
-    body.push_str("[theme]\n");
-    body.push_str(&format!("name = {:?}\n\n", theme.name()));
-    if !theme.has_overrides() {
-        return;
-    }
-    let o = theme.overrides();
-    if !o.colors.is_empty() {
-        body.push_str("[theme.colors]\n");
-        write_opt(body, "background", &o.colors.background);
-        write_color_spec_opt(body, "foreground", &o.colors.foreground);
-        write_opt(body, "selection_bg", &o.colors.selection_bg);
-        write_opt(body, "selection_fg", &o.colors.selection_fg);
-        write_opt(body, "overlay_bg", &o.colors.overlay_bg);
-        write_opt(body, "status_bg", &o.colors.status_bg);
-        write_opt(body, "status_fg", &o.colors.status_fg);
-        write_color_spec_opt(body, "border", &o.colors.border);
-        write_color_spec_opt(body, "window_focus_border", &o.colors.window_focus_border);
-        write_color_spec_opt(body, "search_match", &o.colors.search_match);
-        write_color_spec_opt(body, "dim", &o.colors.dim);
-        body.push('\n');
-    }
-    if !o.levels.is_empty() {
-        body.push_str("[theme.levels]\n");
-        write_color_spec_opt(body, "trace", &o.levels.trace);
-        write_color_spec_opt(body, "debug", &o.levels.debug);
-        write_color_spec_opt(body, "info", &o.levels.info);
-        write_color_spec_opt(body, "warn", &o.levels.warn);
-        write_color_spec_opt(body, "error", &o.levels.error);
-        write_color_spec_opt(body, "fatal", &o.levels.fatal);
-        write_color_spec_opt(body, "unknown", &o.levels.unknown);
-        body.push('\n');
-    }
-    if !o.ui.is_empty() {
-        body.push_str("[theme.ui]\n");
-        write_color_spec_opt(body, "timestamp", &o.ui.timestamp);
-        write_color_spec_opt(body, "key", &o.ui.key);
-        write_color_spec_opt(body, "string", &o.ui.string);
-        write_color_spec_opt(body, "number", &o.ui.number);
-        write_color_spec_opt(body, "bool", &o.ui.bool_color);
-        write_color_spec_opt(body, "null", &o.ui.null);
-        write_color_spec_opt(body, "column_border", &o.ui.column_border);
-        if let Some(w) = o.ui.column_border_width {
-            body.push_str(&format!("column_border_width = {w}\n"));
+    for key in defaults.keys() {
+        if !map.contains_key(key) {
+            differences.insert(key.clone(), String::new());
         }
-        if let Some(p) = o.ui.column_border_padding {
-            if p.left == p.right {
-                body.push_str(&format!("column_border_padding = {}\n", p.left));
-            } else {
-                body.push_str(&format!(
-                    "column_border_padding = {{ left = {}, right = {} }}\n",
-                    p.left, p.right
-                ));
-            }
-        }
-        body.push('\n');
     }
+    differences
 }
 
 fn dirs_home() -> Option<PathBuf> {
@@ -842,15 +752,14 @@ mod tests {
 
     #[test]
     fn write_root_scalars_before_theme_tables_roundtrip() {
-        let dir = std::env::temp_dir().join(format!(
-            "lnav-rs-write-order-{}",
-            std::process::id()
-        ));
+        let dir = std::env::temp_dir().join(format!("lnav-rs-write-order-{}", std::process::id()));
         let _ = fs::create_dir_all(&dir);
         let path = dir.join("config.toml");
 
-        let mut cfg = Config::default();
-        cfg.line_numbers = true;
+        let mut cfg = Config {
+            line_numbers: true,
+            ..Config::default()
+        };
         cfg.theme.levels.info = Some(crate::theme::ColorSpec::Fg("#a6e3a1".into()));
         cfg.columns = vec![
             Column {
@@ -869,10 +778,10 @@ mod tests {
 
         cfg.write_to(&path).unwrap();
         let raw = fs::read_to_string(&path).unwrap();
-        let line_nums_pos = raw.find("line_numbers = true").expect("line_numbers in file");
-        let theme_levels_pos = raw
-            .find("[theme.levels]")
-            .expect("[theme.levels] in file");
+        let line_nums_pos = raw
+            .find("line_numbers = true")
+            .expect("line_numbers in file");
+        let theme_levels_pos = raw.find("[theme.levels]").expect("[theme.levels] in file");
         assert!(
             line_nums_pos < theme_levels_pos,
             "line_numbers must appear before [theme.levels]\n{raw}"
@@ -935,13 +844,7 @@ padding = { left = 1, right = 2 }
         let (cfg, _) = Config::load_from(&path).unwrap();
         assert_eq!(cfg.columns.len(), 2);
         assert_eq!(cfg.columns[0].padding, Padding::both(1));
-        assert_eq!(
-            cfg.columns[1].padding,
-            Padding {
-                left: 1,
-                right: 2
-            }
-        );
+        assert_eq!(cfg.columns[1].padding, Padding { left: 1, right: 2 });
         let _ = fs::remove_dir_all(&dir);
     }
 
@@ -950,11 +853,7 @@ padding = { left = 1, right = 2 }
         let dir = std::env::temp_dir().join(format!("lnav-rs-legacy-{}", std::process::id()));
         let _ = fs::create_dir_all(&dir);
         let path = dir.join("config.toml");
-        fs::write(
-            &path,
-            "line_format = \"{raw}\"\n[theme]\nname = \"nord\"\n",
-        )
-        .unwrap();
+        fs::write(&path, "line_format = \"{raw}\"\n[theme]\nname = \"nord\"\n").unwrap();
         assert!(Config::load_from(&path).is_err());
         let _ = fs::remove_dir_all(&dir);
     }
@@ -1040,8 +939,7 @@ timestamp = { fg = "#89b4fa", bg = "#11111b" }
                 bg: Some("#11111b".into()),
             }))
         );
-        let theme =
-            crate::theme::Theme::resolve_with_overrides(cfg.theme.name(), &o).unwrap();
+        let theme = crate::theme::Theme::resolve_with_overrides(cfg.theme.name(), &o).unwrap();
         let err = theme.level_color(crate::model::LogLevel::Error);
         assert_eq!(err.fg, ratatui::style::Color::Rgb(0x1e, 0x1e, 0x2e));
         assert_eq!(err.bg, Some(ratatui::style::Color::Rgb(0xf3, 0x8b, 0xa8)));

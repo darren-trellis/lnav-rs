@@ -1,6 +1,8 @@
 use crate::model::{Field, FieldValue, LogLevel};
 
-pub fn parse_logfmt(line: &str) -> Option<(LogLevel, Option<String>, Option<String>, Vec<Field>)> {
+use super::ParsedLine;
+
+pub fn parse_logfmt(line: &str) -> Option<ParsedLine> {
     let fields = tokenize(line)?;
     if fields.is_empty() {
         return None;
@@ -63,21 +65,29 @@ fn tokenize(input: &str) -> Option<Vec<(String, String)>> {
         let value = if i < bytes.len() && bytes[i] == b'"' {
             i += 1;
             let mut out = String::new();
+            let mut closed = false;
             while i < bytes.len() {
-                match bytes[i] {
-                    b'\\' if i + 1 < bytes.len() => {
-                        out.push(bytes[i + 1] as char);
-                        i += 2;
+                let ch = input[i..].chars().next()?;
+                match ch {
+                    '\\' => {
+                        i += ch.len_utf8();
+                        let escaped = input[i..].chars().next()?;
+                        out.push(escaped);
+                        i += escaped.len_utf8();
                     }
-                    b'"' => {
-                        i += 1;
+                    '"' => {
+                        i += ch.len_utf8();
+                        closed = true;
                         break;
                     }
-                    c => {
-                        out.push(c as char);
-                        i += 1;
+                    _ => {
+                        out.push(ch);
+                        i += ch.len_utf8();
                     }
                 }
+            }
+            if !closed || (i < bytes.len() && !bytes[i].is_ascii_whitespace()) {
+                return None;
             }
             out
         } else {

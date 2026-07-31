@@ -39,17 +39,14 @@ impl DetailLine {
     }
 
     pub fn plain_text(&self) -> String {
-        self.spans
-            .iter()
-            .map(|s| s.content.as_ref())
-            .collect()
+        self.spans.iter().map(|s| s.content.as_ref()).collect()
     }
 }
 
 fn field_copy_value(value: &FieldValue) -> String {
     match value {
         FieldValue::String(s) => s.clone(),
-        FieldValue::Nested(s) => s.clone(),
+        FieldValue::Nested(value) => json_copy_value(value),
         other => other.display(),
     }
 }
@@ -113,6 +110,12 @@ pub fn build_lines(
     }
 
     let tab = config.details_tab_width.max(2);
+    let context = TreeRenderContext {
+        theme,
+        json_tree: config.details_json_tree,
+        folded,
+        tab,
+    };
     let n = entry.fields.len();
     for (i, field) in entry.fields.iter().enumerate() {
         push_field(
@@ -122,10 +125,7 @@ pub fn build_lines(
             &[],
             "",
             i + 1 == n,
-            theme,
-            config.details_json_tree,
-            folded,
-            tab,
+            &context,
         );
     }
     lines
@@ -160,6 +160,13 @@ fn indent_guide(is_last: bool, width: usize) -> String {
     }
 }
 
+struct TreeRenderContext<'a> {
+    theme: &'a Theme,
+    json_tree: bool,
+    folded: &'a HashSet<String>,
+    tab: usize,
+}
+
 fn push_field(
     lines: &mut Vec<DetailLine>,
     key: &str,
@@ -167,11 +174,10 @@ fn push_field(
     parent: &[String],
     prefix: &str,
     is_last: bool,
-    theme: &Theme,
-    json_tree: bool,
-    folded: &HashSet<String>,
-    tab: usize,
+    context: &TreeRenderContext<'_>,
 ) {
+    let theme = context.theme;
+    let tab = context.tab;
     let surface = theme.overlay_bg;
     let branch = if prefix.is_empty() {
         String::new()
@@ -184,60 +190,60 @@ fn push_field(
     let mut path = parent.to_vec();
     path.push(key.to_string());
 
-    if json_tree {
-        if let FieldValue::Nested(raw) = value {
-            if let Ok(v) = serde_json::from_str::<Value>(raw) {
-                if (v.is_object() || v.is_array()) && json_empty_literal(&v).is_none() {
-                    let key_str = path_key(&path);
-                    let is_folded = folded.contains(&key_str);
-                    let mut spans = vec![
-                        Span::styled(
-                            format!("{prefix}{branch}"),
-                            theme.tone_style(theme.dim, surface),
-                        ),
-                        Span::styled(
-                            fold_marker(is_folded).to_string(),
-                            theme.tone_style(theme.dim, surface),
-                        ),
-                        Span::styled(key.to_string(), key_style),
-                    ];
-                    if v.is_array() {
-                        spans.push(Span::styled(
-                            format!(" [{}]", v.as_array().map(|a| a.len()).unwrap_or(0)),
-                            theme.tone_style(theme.dim, surface),
-                        ));
-                    }
-                    if is_folded {
-                        spans.push(Span::styled(
-                            " …".to_string(),
-                            theme.tone_style(theme.dim, surface),
-                        ));
-                    }
-                    lines.push(DetailLine {
-                        spans,
-                        path: path.clone(),
-                        foldable: true,
-                        copy_value: Some(json_copy_value(&v)),
-                    });
-                    if !is_folded {
-                        let child_prefix = if prefix.is_empty() {
-                            String::new()
-                        } else {
-                            format!("{prefix}{}", indent_guide(is_last, tab))
-                        };
-                        push_json_value(lines, &v, &path, &child_prefix, theme, folded, tab);
-                    }
-                    return;
-                }
-            }
+    if context.json_tree
+        && let FieldValue::Nested(value) = value
+        && (value.is_object() || value.is_array())
+        && json_empty_literal(value).is_none()
+    {
+        let key_str = path_key(&path);
+        let is_folded = context.folded.contains(&key_str);
+        let mut spans = vec![
+            Span::styled(
+                format!("{prefix}{branch}"),
+                theme.tone_style(theme.dim, surface),
+            ),
+            Span::styled(
+                fold_marker(is_folded).to_string(),
+                theme.tone_style(theme.dim, surface),
+            ),
+            Span::styled(key.to_string(), key_style),
+        ];
+        if value.is_array() {
+            spans.push(Span::styled(
+                format!(" [{}]", value.as_array().map(|a| a.len()).unwrap_or(0)),
+                theme.tone_style(theme.dim, surface),
+            ));
         }
+        if is_folded {
+            spans.push(Span::styled(
+                " …".to_string(),
+                theme.tone_style(theme.dim, surface),
+            ));
+        }
+        lines.push(DetailLine {
+            spans,
+            path: path.clone(),
+            foldable: true,
+            copy_value: Some(json_copy_value(value)),
+        });
+        if !is_folded {
+            let child_prefix = if prefix.is_empty() {
+                String::new()
+            } else {
+                format!("{prefix}{}", indent_guide(is_last, tab))
+            };
+            push_json_value(lines, value, &path, &child_prefix, context);
+        }
+        return;
     }
 
     let value_style = theme.field_value_style(value, surface);
     let copy_value = field_copy_value(value);
     let rendered = match value {
         FieldValue::String(s) => format!("\"{s}\""),
-        FieldValue::Nested(s) => s.clone(),
+        FieldValue::Nested(value) => {
+            serde_json::to_string_pretty(value).unwrap_or_else(|_| value.to_string())
+        }
         other => other.display(),
     };
 
@@ -297,26 +303,15 @@ fn push_json_value(
     value: &Value,
     parent: &[String],
     prefix: &str,
-    theme: &Theme,
-    folded: &HashSet<String>,
-    tab: usize,
+    context: &TreeRenderContext<'_>,
 ) {
+    let theme = context.theme;
     match value {
         Value::Object(map) => {
             let keys: Vec<&String> = map.keys().collect();
             for (i, key) in keys.iter().enumerate() {
                 let is_last = i + 1 == keys.len();
-                push_json_entry(
-                    lines,
-                    key,
-                    &map[*key],
-                    parent,
-                    prefix,
-                    is_last,
-                    theme,
-                    folded,
-                    tab,
-                );
+                push_json_entry(lines, key, &map[*key], parent, prefix, is_last, context);
             }
         }
         Value::Array(arr) => {
@@ -329,9 +324,7 @@ fn push_json_value(
                     parent,
                     prefix,
                     is_last,
-                    theme,
-                    folded,
-                    tab,
+                    context,
                 );
             }
         }
@@ -359,10 +352,10 @@ fn push_json_entry(
     parent: &[String],
     prefix: &str,
     is_last: bool,
-    theme: &Theme,
-    folded: &HashSet<String>,
-    tab: usize,
+    context: &TreeRenderContext<'_>,
 ) {
+    let theme = context.theme;
+    let tab = context.tab;
     let surface = theme.overlay_bg;
     let branch = branch_connector(is_last, tab);
     let key_style = theme
@@ -394,7 +387,7 @@ fn push_json_entry(
     match value {
         Value::Object(map) => {
             let key_str = path_key(&path);
-            let is_folded = folded.contains(&key_str);
+            let is_folded = context.folded.contains(&key_str);
             let mut spans = vec![
                 Span::styled(
                     format!("{prefix}{branch}"),
@@ -428,16 +421,14 @@ fn push_json_entry(
                         &path,
                         &child_prefix,
                         i + 1 == keys.len(),
-                        theme,
-                        folded,
-                        tab,
+                        context,
                     );
                 }
             }
         }
         Value::Array(arr) => {
             let key_str = path_key(&path);
-            let is_folded = folded.contains(&key_str);
+            let is_folded = context.folded.contains(&key_str);
             let mut spans = vec![
                 Span::styled(
                     format!("{prefix}{branch}"),
@@ -474,9 +465,7 @@ fn push_json_entry(
                         &path,
                         &child_prefix,
                         i + 1 == arr.len(),
-                        theme,
-                        folded,
-                        tab,
+                        context,
                     );
                 }
             }
@@ -511,9 +500,7 @@ fn json_value_to_field(value: &Value) -> FieldValue {
         Value::Bool(b) => FieldValue::Bool(*b),
         Value::Number(n) => FieldValue::Number(n.to_string()),
         Value::String(s) => FieldValue::String(s.clone()),
-        Value::Array(_) | Value::Object(_) => FieldValue::Nested(
-            serde_json::to_string(value).unwrap_or_else(|_| value.to_string()),
-        ),
+        Value::Array(_) | Value::Object(_) => FieldValue::Nested(value.clone()),
     }
 }
 
@@ -545,15 +532,20 @@ mod tests {
             message: None,
             fields: vec![Field {
                 key: "annotations".into(),
-                value: FieldValue::Nested(r#"{"url":"http://x","tags":["a","b"]}"#.into()),
+                value: FieldValue::Nested(serde_json::json!({
+                    "url": "http://x",
+                    "tags": ["a", "b"]
+                })),
             }],
         }
     }
 
     #[test]
     fn tree_expands_nested_object() {
-        let mut cfg = Config::default();
-        cfg.details_json_tree = true;
+        let cfg = Config {
+            details_json_tree: true,
+            ..Config::default()
+        };
         let lines = build_lines(&sample_entry(), &theme(), &cfg, &HashSet::new());
         let text: Vec<String> = lines.iter().map(|l| l.plain_text()).collect();
         assert!(text.iter().any(|t| t.contains("annotations")));
@@ -564,13 +556,18 @@ mod tests {
 
     #[test]
     fn folding_hides_children() {
-        let mut cfg = Config::default();
-        cfg.details_json_tree = true;
+        let cfg = Config {
+            details_json_tree: true,
+            ..Config::default()
+        };
         let mut folded = HashSet::new();
         folded.insert(path_key(&["annotations".into()]));
         let lines = build_lines(&sample_entry(), &theme(), &cfg, &folded);
         let text: Vec<String> = lines.iter().map(|l| l.plain_text()).collect();
-        assert!(text.iter().any(|t| t.contains("annotations") && t.contains('…')));
+        assert!(
+            text.iter()
+                .any(|t| t.contains("annotations") && t.contains('…'))
+        );
         assert!(!text.iter().any(|t| t.contains("url")));
         assert!(!text.iter().any(|t| t.contains("tags")));
     }
@@ -587,11 +584,13 @@ mod tests {
             message: None,
             fields: vec![Field {
                 key: "annotations".into(),
-                value: FieldValue::Nested("{\n  \"url\": \"http://x\"\n}".into()),
+                value: FieldValue::Nested(serde_json::json!({"url": "http://x"})),
             }],
         };
-        let mut cfg = Config::default();
-        cfg.details_json_tree = false;
+        let cfg = Config {
+            details_json_tree: false,
+            ..Config::default()
+        };
         let lines = build_lines(&entry, &theme(), &cfg, &HashSet::new());
         assert!(lines.len() >= 2);
     }
@@ -605,8 +604,10 @@ mod tests {
 
     #[test]
     fn copy_value_is_raw_field_value() {
-        let mut cfg = Config::default();
-        cfg.details_json_tree = true;
+        let cfg = Config {
+            details_json_tree: true,
+            ..Config::default()
+        };
         let lines = build_lines(&sample_entry(), &theme(), &cfg, &HashSet::new());
         let url = lines
             .iter()
@@ -617,10 +618,12 @@ mod tests {
             .iter()
             .find(|l| l.path == ["annotations".to_string()])
             .unwrap();
-        assert!(annotations
-            .copy_value
-            .as_ref()
-            .is_some_and(|v| v.contains("url") && v.contains("tags")));
+        assert!(
+            annotations
+                .copy_value
+                .as_ref()
+                .is_some_and(|v| v.contains("url") && v.contains("tags"))
+        );
     }
 
     #[test]
@@ -636,39 +639,53 @@ mod tests {
             fields: vec![
                 Field {
                     key: "empty_obj".into(),
-                    value: FieldValue::Nested("{}".into()),
+                    value: FieldValue::Nested(serde_json::json!({})),
                 },
                 Field {
                     key: "empty_arr".into(),
-                    value: FieldValue::Nested("[]".into()),
+                    value: FieldValue::Nested(serde_json::json!([])),
                 },
                 Field {
                     key: "nested".into(),
-                    value: FieldValue::Nested(r#"{"a":{},"b":[]}"#.into()),
+                    value: FieldValue::Nested(serde_json::json!({"a": {}, "b": []})),
                 },
             ],
         };
-        let mut cfg = Config::default();
-        cfg.details_json_tree = true;
+        let cfg = Config {
+            details_json_tree: true,
+            ..Config::default()
+        };
         let lines = build_lines(&entry, &theme(), &cfg, &HashSet::new());
         let text: Vec<String> = lines.iter().map(|l| l.plain_text()).collect();
-        assert!(text.iter().any(|t| t.contains("empty_obj") && t.contains("{}")));
-        assert!(text.iter().any(|t| t.contains("empty_arr") && t.contains("[]")));
+        assert!(
+            text.iter()
+                .any(|t| t.contains("empty_obj") && t.contains("{}"))
+        );
+        assert!(
+            text.iter()
+                .any(|t| t.contains("empty_arr") && t.contains("[]"))
+        );
         assert!(text.iter().any(|t| t.contains("a: ") && t.contains("{}")));
         assert!(text.iter().any(|t| t.contains("b: ") && t.contains("[]")));
-        assert!(!lines.iter().any(|l| {
-            l.path.last().map(|s| s.as_str()) == Some("empty_obj") && l.foldable
-        }));
-        assert!(!lines
-            .iter()
-            .any(|l| l.path.last().map(|s| s.as_str()) == Some("a") && l.foldable));
+        assert!(
+            !lines
+                .iter()
+                .any(|l| { l.path.last().map(|s| s.as_str()) == Some("empty_obj") && l.foldable })
+        );
+        assert!(
+            !lines
+                .iter()
+                .any(|l| l.path.last().map(|s| s.as_str()) == Some("a") && l.foldable)
+        );
     }
 
     #[test]
     fn tab_width_changes_indent() {
-        let mut cfg = Config::default();
-        cfg.details_json_tree = true;
-        cfg.details_tab_width = 2;
+        let cfg = Config {
+            details_json_tree: true,
+            details_tab_width: 2,
+            ..Config::default()
+        };
         let lines = build_lines(&sample_entry(), &theme(), &cfg, &HashSet::new());
         let nested = lines
             .iter()

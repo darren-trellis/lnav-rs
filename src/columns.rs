@@ -48,10 +48,7 @@ pub fn measure_widths(
     rows: &[(&LogEntry, usize)],
     timestamp_format: &str,
 ) -> Vec<usize> {
-    let mut widths: Vec<usize> = columns
-        .iter()
-        .map(|c| c.width.unwrap_or(0))
-        .collect();
+    let mut widths: Vec<usize> = columns.iter().map(|c| c.width.unwrap_or(0)).collect();
 
     for (entry, view_line) in rows {
         let opts = FormatOptions {
@@ -69,8 +66,8 @@ pub fn measure_widths(
     widths
 }
 
-/// Render a log line from configured columns into styled segments.
-pub fn render_segments(
+#[cfg(test)]
+fn render_segments(
     columns: &[Column],
     entry: &LogEntry,
     opts: &FormatOptions<'_>,
@@ -99,7 +96,8 @@ pub fn render_segments_sized(
     out
 }
 
-pub fn render(
+#[cfg(test)]
+fn render(
     columns: &[Column],
     entry: &LogEntry,
     opts: &FormatOptions<'_>,
@@ -150,21 +148,14 @@ fn render_column(
     Segment { kind, text }
 }
 
-fn column_value(
-    source: &str,
-    entry: &LogEntry,
-    opts: &FormatOptions<'_>,
-) -> (SegmentKind, String) {
+fn column_value(source: &str, entry: &LogEntry, opts: &FormatOptions<'_>) -> (SegmentKind, String) {
     match source {
         "level" => (SegmentKind::Level, entry.level.as_str().to_string()),
         "timestamp" | "time" | "ts" => (
             SegmentKind::Timestamp,
             format_timestamp(entry, opts.timestamp_format),
         ),
-        "message" | "msg" => (
-            SegmentKind::Message,
-            entry.summary_message().to_string(),
-        ),
+        "message" | "msg" => (SegmentKind::Message, entry.summary_message().to_string()),
         "raw" => (SegmentKind::Raw, entry.raw.clone()),
         "line" => (SegmentKind::LineNo, opts.view_line.to_string()),
         "format" => {
@@ -191,7 +182,7 @@ fn fit_width(value: &str, width: Option<usize>, align: Align) -> String {
         return value.to_string();
     }
     if vw > width {
-        return truncate_width(value, width);
+        return crate::text::truncate_width(value, width);
     }
     let pad = width - vw;
     match align {
@@ -205,30 +196,6 @@ fn fit_width(value: &str, width: Option<usize>, align: Align) -> String {
         }
         Align::Right => format!("{}{value}", " ".repeat(pad)),
     }
-}
-
-fn truncate_width(s: &str, max: usize) -> String {
-    if max == 0 {
-        return String::new();
-    }
-    if UnicodeWidthStr::width(s) <= max {
-        return s.to_string();
-    }
-    if max == 1 {
-        return "…".into();
-    }
-    let mut out = String::new();
-    let mut w = 0;
-    for ch in s.chars() {
-        let cw = UnicodeWidthStr::width(ch.to_string().as_str());
-        if w + cw + 1 > max {
-            break;
-        }
-        out.push(ch);
-        w += cw;
-    }
-    out.push('…');
-    out
 }
 
 /// Resolve a field path like `code` or `annotations.url` (and `items.0.id`).
@@ -248,15 +215,19 @@ fn lookup_field(entry: &LogEntry, path: &str) -> String {
         return field.value.display();
     }
 
-    let nested = match &field.value {
-        FieldValue::Nested(s) => s.as_str(),
-        FieldValue::String(s) => s.as_str(),
+    let parsed;
+    let root = match &field.value {
+        FieldValue::Nested(value) => value,
+        FieldValue::String(value) => {
+            let Ok(value) = serde_json::from_str::<Value>(value) else {
+                return String::new();
+            };
+            parsed = value;
+            &parsed
+        }
         _ => return String::new(),
     };
-    let Ok(root) = serde_json::from_str::<Value>(nested) else {
-        return String::new();
-    };
-    dig_json(&root, &rest).unwrap_or_default()
+    dig_json(root, &rest).unwrap_or_default()
 }
 
 fn dig_json(root: &Value, path: &[&str]) -> Option<String> {
@@ -319,10 +290,10 @@ mod tests {
                 },
                 Field {
                     key: "annotations".into(),
-                    value: FieldValue::Nested(
-                        r#"{"url":"https://example.com/x","items":[{"id":"a"},{"id":"b"}]}"#
-                            .into(),
-                    ),
+                    value: FieldValue::Nested(serde_json::json!({
+                        "url": "https://example.com/x",
+                        "items": [{"id": "a"}, {"id": "b"}]
+                    })),
                 },
             ],
         }
@@ -500,10 +471,7 @@ mod tests {
             &opts,
             ColumnBorderStyle {
                 width: 1,
-                padding: crate::config::Padding {
-                    left: 2,
-                    right: 1,
-                },
+                padding: crate::config::Padding { left: 2, right: 1 },
             },
         );
         assert_eq!(asymmetric[1].text, "  │ ");

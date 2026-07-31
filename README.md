@@ -105,7 +105,7 @@ In `/` mode, **Up/Down** recall search history (shared for list and details sear
 | `:clear-hidden` | Restore lines hidden with `d` |
 | `:theme` | Show current theme |
 | `:theme list` | List available themes |
-| `:theme set` | Open theme picker (preview on hover / ↑↓) |
+| `:theme set` | Open theme picker (preview on hover / configured navigation keys) |
 | `:theme set NAME` | Switch theme |
 | `:config set theme NAME` | Set theme |
 | `:config set follow on\|off\|toggle` | Enable/disable/toggle live follow |
@@ -138,20 +138,6 @@ In `/` mode, **Up/Down** recall search history (shared for list and details sear
 Default path: `~/.config/lnav-rs/config.toml`
 
 ```toml
-[theme]
-name = "catppuccin"
-# [theme.colors]
-# background = "#11111b"
-# dim = { fg = "#6c7086", bg = "#313244" }
-# [theme.levels]
-# error = { fg = "#1e1e2e", bg = "#f38ba8" }
-# [theme.ui]
-# timestamp = { fg = "#89b4fa", bg = "#11111b" }
-# column_border = { fg = "#585b70", bg = "#1e1e2e" }
-# column_border_width = 1
-# column_border_padding = 1
-# column_border_padding = { left = 1, right = 2 }
-
 follow = true
 wrap_details = true
 details_json_tree = true
@@ -167,6 +153,20 @@ timestamp_format = "%H:%M:%S"
 case_mode = "smart"   # or "sensitive" | "insensitive"
 session_filters = true
 session_stdin = true
+
+[theme]
+name = "catppuccin"
+# [theme.colors]
+# background = "#11111b"
+# dim = { fg = "#6c7086", bg = "#313244" }
+# [theme.levels]
+# error = { fg = "#1e1e2e", bg = "#f38ba8" }
+# [theme.ui]
+# timestamp = { fg = "#89b4fa", bg = "#11111b" }
+# column_border = { fg = "#585b70", bg = "#1e1e2e" }
+# column_border_width = 1
+# column_border_padding = 1
+# column_border_padding = { left = 1, right = 2 }
 
 [[columns]]
 source = "level"
@@ -214,7 +214,7 @@ Filters persist under `~/.local/share/lnav-rs/sessions/` (one file per log path 
 
 `[theme]` selects the theme (`name`) and optional `[theme.colors]` / `[theme.levels]` / `[theme.ui]` patches (same keys as `themes/*.toml`). Text colors (`foreground`, `border`, `window_focus_border`, `search_match`, `dim`, levels, and `[ui]` color keys) accept a hex string (fg only) or `{ fg = "...", bg = "..." }`. Surface keys (`background`, `overlay_bg`, `selection_*`, `status_*`) stay plain color strings. Focused chrome: `window_focus_border` is the border of the focused pane (list or details); unfocused panes use `border`. List column separators: `ui.column_border` (color), `ui.column_border_width` (`0` = space between columns; `N` draws `N`× `│`), and `ui.column_border_padding` (`1` or `{ left, right }`, like column `padding`). Unknown keys, invalid colors, unknown theme names, and unknown keybinding commands are rejected.
 
-`[keys]` overrides defaults (merged). Use `key = ""` to unbind. Special key names: `enter`, `esc`, `up`, `down`, `home`, `end`, `pagedown`, `pageup`, `space`, `C-c`. `[details_keys]` overrides `[keys]` while the details overlay is focused (default: `space = "fold toggle"`). `[sidebar_keys]` overrides `[keys]` while the filters sidebar is focused (default: `d = "delete-filter"`).
+`[keys]` overrides defaults (merged). Use `key = ""` to unbind. Special key names: `enter`, `esc`, `up`, `down`, `home`, `end`, `pagedown`, `pageup`, `space`, `C-c`. `[details_keys]` overrides `[keys]` while the details overlay is focused (default: `space = "fold toggle"`). `[sidebar_keys]` overrides `[keys]` while the filters sidebar is focused (default: `d = "delete-filter"`). An empty binding in either contextual section blocks fallback to the same key in `[keys]`.
 
 Create one with:
 
@@ -243,16 +243,21 @@ Built-in: `catppuccin` (default), `dracula`, `github-dark`, `github-light`, `got
 
 ```
 src/
-  app.rs          # state + keybindings
+  app.rs, app/    # state coordinator + focused input/mouse/operator/search modules
   columns.rs      # list column rendering
   command.rs      # : command mode
+  command_catalog.rs
+                  # command metadata shared by config and completion
   config.rs       # config.toml load/save
+  config_options.rs
+                  # :config option metadata and behavior
   details.rs      # details overlay content (JSON tree)
   history.rs      # : / history (commands + searches)
   model.rs        # log entries / fields
   parse/          # json + logfmt
   session.rs      # per-source filter persistence
   tail.rs         # file read + live watch
+  text.rs         # shared display-width text helpers
   theme.rs        # theme loader
   ui/             # ratatui views
 themes/           # built-in TOML themes

@@ -1,8 +1,8 @@
+use ratatui::Frame;
 use ratatui::layout::{Constraint, Flex, Layout, Rect};
 use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Clear, Paragraph};
-use ratatui::Frame;
 use unicode_width::UnicodeWidthStr;
 
 use crate::app::App;
@@ -11,7 +11,7 @@ pub fn desired_size(app: &App) -> (u16, u16) {
     let Some(picker) = &app.theme_picker else {
         return (0, 0);
     };
-    let rows = picker.names.len().min(12).max(1) as u16;
+    let rows = picker.names.len().clamp(1, 12) as u16;
     let width = picker
         .names
         .iter()
@@ -71,8 +71,7 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
     let theme = &app.theme;
     let row_w = inner.width as usize;
     let mut lines = Vec::new();
-    for idx in start..end {
-        let name = &names[idx];
+    for (idx, name) in names.iter().enumerate().take(end).skip(start) {
         let is_sel = idx == selected;
         let is_current = name == &committed;
         let marker = if is_sel { "▸ " } else { "  " };

@@ -1,18 +1,21 @@
 mod app;
+mod columns;
 mod command;
+mod command_catalog;
 mod completion;
 mod config;
+mod config_options;
 mod details;
 mod filter;
 mod highlight;
 mod history;
 mod keys;
-mod columns;
 mod model;
 mod object_span;
 mod parse;
 mod session;
 mod tail;
+mod text;
 mod theme;
 mod timestamp;
 mod tty;
@@ -22,7 +25,7 @@ use std::io::IsTerminal;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use clap::Parser;
 
 use crate::app::App;
@@ -104,10 +107,7 @@ fn run() -> Result<()> {
     })();
     ratatui::restore();
     // Theme picker enables mouse capture; ensure it is always cleared on exit.
-    let _ = crossterm::execute!(
-        std::io::stdout(),
-        crossterm::event::DisableMouseCapture
-    );
+    let _ = crossterm::execute!(std::io::stdout(), crossterm::event::DisableMouseCapture);
     result
 }
 

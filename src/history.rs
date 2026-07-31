@@ -148,9 +148,7 @@ impl History {
 
     /// Move toward newer entries / restore the staged live buffer.
     pub fn down(&mut self) -> Option<String> {
-        let Some(i) = self.cursor else {
-            return None;
-        };
+        let i = self.cursor?;
         if i + 1 < self.entries.len() {
             let idx = i + 1;
             self.cursor = Some(idx);

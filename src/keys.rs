@@ -66,6 +66,38 @@ pub fn merge(
     base
 }
 
+pub fn merge_overlay(
+    mut base: BTreeMap<String, String>,
+    overrides: BTreeMap<String, String>,
+) -> BTreeMap<String, String> {
+    base.extend(overrides);
+    base
+}
+
+pub fn binding_for_command<'a>(
+    base: &'a BTreeMap<String, String>,
+    overlay: Option<&'a BTreeMap<String, String>>,
+    command: &str,
+) -> Option<&'a str> {
+    let mut best = None;
+    if let Some(overlay) = overlay {
+        for (key, bound) in overlay {
+            if bound == command && best.is_none_or(|current: &str| key.len() < current.len()) {
+                best = Some(key.as_str());
+            }
+        }
+    }
+    for (key, bound) in base {
+        if overlay.is_some_and(|overlay| overlay.contains_key(key)) {
+            continue;
+        }
+        if bound == command && best.is_none_or(|current: &str| key.len() < current.len()) {
+            best = Some(key.as_str());
+        }
+    }
+    best
+}
+
 /// Encode a key event as a config key name.
 pub fn encode(key: KeyEvent) -> Option<String> {
     let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
@@ -126,7 +158,10 @@ mod tests {
         assert_eq!(defaults().get("d").map(String::as_str), Some("hide"));
         assert_eq!(defaults().get("D").map(String::as_str), Some("delete"));
         assert_eq!(defaults().get("q").map(String::as_str), Some("quit"));
-        assert_eq!(defaults().get("s").map(String::as_str), Some("sidebar toggle"));
+        assert_eq!(
+            defaults().get("s").map(String::as_str),
+            Some("sidebar toggle")
+        );
         assert_eq!(
             sidebar_defaults().get("d").map(String::as_str),
             Some("delete-filter")

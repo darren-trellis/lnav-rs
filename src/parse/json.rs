@@ -2,9 +2,9 @@ use serde_json::Value;
 
 use crate::model::{Field, FieldValue, LogLevel};
 
-pub fn parse_json_line(
-    line: &str,
-) -> Option<(LogLevel, Option<String>, Option<String>, Vec<Field>)> {
+use super::ParsedLine;
+
+pub fn parse_json_line(line: &str) -> Option<ParsedLine> {
     let trimmed = line.trim();
     if !(trimmed.starts_with('{') && trimmed.ends_with('}')) {
         return None;
@@ -46,7 +46,7 @@ pub fn parse_json_line(
 
 fn level_from_number(n: u64) -> LogLevel {
     match n {
-        10 | 0..=9 => LogLevel::Trace,
+        0..=10 => LogLevel::Trace,
         20 => LogLevel::Debug,
         30 => LogLevel::Info,
         40 => LogLevel::Warn,
@@ -69,9 +69,7 @@ fn json_to_field(value: &Value) -> FieldValue {
         Value::Bool(b) => FieldValue::Bool(*b),
         Value::Number(n) => FieldValue::Number(n.to_string()),
         Value::String(s) => FieldValue::String(s.clone()),
-        Value::Array(_) | Value::Object(_) => FieldValue::Nested(
-            serde_json::to_string_pretty(value).unwrap_or_else(|_| value.to_string()),
-        ),
+        Value::Array(_) | Value::Object(_) => FieldValue::Nested(value.clone()),
     }
 }
 

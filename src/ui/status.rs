@@ -1,19 +1,23 @@
+use ratatui::Frame;
 use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::Paragraph;
-use ratatui::Frame;
 use unicode_width::UnicodeWidthStr;
 
 use crate::app::{App, InputMode, PendingOp};
 
 pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
-    app.hit.status = area;
+    app.pointer.hit.status = area;
     let theme = &app.theme;
     let visible = app.visible_len();
     let total = app.source.len();
-    let pos = if visible == 0 { 0 } else { app.selected + 1 };
-    let follow = if app.follow { "FOLLOW" } else { "PAUSED" };
+    let pos = if visible == 0 {
+        0
+    } else {
+        app.view.selected + 1
+    };
+    let follow = if app.view.follow { "FOLLOW" } else { "PAUSED" };
     let filter_tag = if !app.filters.is_empty() {
         if app.filtering_enabled {
             format!("  F{}", app.filters.len())
@@ -25,7 +29,10 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
     };
 
     let right = if visible == total {
-        format!("{pos}/{total}  {follow}{filter_tag}  {}  lnav-rs", app.theme.name)
+        format!(
+            "{pos}/{total}  {follow}{filter_tag}  {}  lnav-rs",
+            app.theme.name
+        )
     } else {
         format!(
             "{pos}/{visible} ({total})  {follow}{filter_tag}  {}  lnav-rs",
@@ -42,31 +49,32 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
 
     let spans = match app.input_mode {
         InputMode::Search => {
-            let query = format!("/{}", app.search_query);
+            let query = format!("/{}", app.search.query);
             cursor_col = Some(UnicodeWidthStr::width(query.as_str()) as u16);
-            let scope = if app.search_in_overlay { " details" } else { "" };
-            let suffix = if app.search_query.is_empty() {
-                if app.search_in_overlay {
+            let scope = if app.search.in_details {
+                " details"
+            } else {
+                ""
+            };
+            let suffix = if app.search.query.is_empty() {
+                if app.search.in_details {
                     "  details".into()
                 } else {
                     String::new()
                 }
-            } else if app.search_error.is_some() {
+            } else if app.search.error.is_some() {
                 "  invalid regex".into()
-            } else if app.search_matches.is_empty() {
+            } else if app.search.matches.is_empty() {
                 format!("  no matches{scope}")
             } else {
-                let n = app.search_matches.len();
-                let cur = app.search_cursor.map(|c| c + 1).unwrap_or(1).min(n);
+                let n = app.search.matches.len();
+                let cur = app.search.cursor.map(|c| c + 1).unwrap_or(1).min(n);
                 format!("  {cur}/{n}{scope}")
             };
-            vec![
-                Span::styled(query, style),
-                Span::styled(suffix, style),
-            ]
+            vec![Span::styled(query, style), Span::styled(suffix, style)]
         }
         InputMode::Command => {
-            let typed = format!(":{}", app.command_buffer);
+            let typed = format!(":{}", app.command_line.buffer);
             cursor_col = Some(UnicodeWidthStr::width(typed.as_str()) as u16);
             command_spans(app, style)
         }
@@ -117,10 +125,7 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
     line_spans.push(Span::styled(" ".repeat(pad), style));
     line_spans.push(Span::styled(right, style));
 
-    frame.render_widget(
-        Paragraph::new(Line::from(line_spans)).style(style),
-        area,
-    );
+    frame.render_widget(Paragraph::new(Line::from(line_spans)).style(style), area);
 
     if let Some(col) = cursor_col {
         let max_x = area.width.saturating_sub(1);
@@ -131,21 +136,21 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
 
 fn command_spans<'a>(app: &'a App, style: Style) -> Vec<Span<'a>> {
     let theme = &app.theme;
-    let mut spans = vec![Span::styled(format!(":{}", app.command_buffer), style)];
+    let mut spans = vec![Span::styled(format!(":{}", app.command_line.buffer), style)];
 
     // Ghost text: remaining suffix of the selected completion.
-    if let Some(sel) = app.completions.selected() {
-        if sel.replace_from <= app.command_buffer.len() {
-            let typed = &app.command_buffer[sel.replace_from..];
-            if sel.text.starts_with(typed) && sel.text.len() > typed.len() {
-                let ghost = sel.text[typed.len()..].to_string();
-                spans.push(Span::styled(
-                    ghost,
-                    theme
-                        .tone_style(theme.dim, theme.status_bg)
-                        .add_modifier(Modifier::DIM),
-                ));
-            }
+    if let Some(sel) = app.command_line.completions.selected()
+        && sel.replace_from <= app.command_line.buffer.len()
+    {
+        let typed = &app.command_line.buffer[sel.replace_from..];
+        if sel.text.starts_with(typed) && sel.text.len() > typed.len() {
+            let ghost = sel.text[typed.len()..].to_string();
+            spans.push(Span::styled(
+                ghost,
+                theme
+                    .tone_style(theme.dim, theme.status_bg)
+                    .add_modifier(Modifier::DIM),
+            ));
         }
     }
 

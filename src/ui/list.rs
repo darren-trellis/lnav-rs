@@ -1,14 +1,15 @@
+use ratatui::Frame;
 use ratatui::layout::Rect;
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph};
-use ratatui::Frame;
 use unicode_width::UnicodeWidthStr;
 
 use crate::app::App;
 use crate::columns::{self, Segment, SegmentKind};
 use crate::highlight;
 use crate::model::LogEntry;
+use crate::text;
 use crate::theme::{Theme, Tone};
 
 pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
@@ -23,7 +24,7 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
     };
     let block = {
         let theme = &app.theme;
-        let list_focused = !app.overlay_focused && !app.sidebar_focused;
+        let list_focused = app.is_list_focused();
         let border_tone = if list_focused {
             theme.window_focus_border
         } else {
@@ -47,12 +48,12 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
     let inner = block.inner(area);
     frame.render_widget(block, area);
     let (content, bar_area) = super::split_scrollbar(inner, app.config.scrollbar);
-    app.hit.list_inner = content;
-    app.hit.list_scrollbar = bar_area.unwrap_or_default();
+    app.pointer.hit.list_inner = content;
+    app.pointer.hit.list_scrollbar = bar_area.unwrap_or_default();
     let viewport = content.height as usize;
     app.ensure_visible(viewport);
 
-    if app.visible.is_empty() {
+    if app.view.visible.is_empty() {
         let theme = &app.theme;
         let msg = if app.source.len() == 0 {
             " waiting for log lines… "
@@ -68,15 +69,22 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
         return;
     }
 
-    let end = (app.scroll + viewport).min(app.visible.len());
-    let mut lines = Vec::with_capacity(end - app.scroll);
+    let end = (app.view.scroll + viewport).min(app.view.visible.len());
+    let mut lines = Vec::with_capacity(end - app.view.scroll);
 
     let show_nums = app.config.line_numbers || app.config.relative_line_numbers;
     let line_no_width = if show_nums {
-        let abs_w = app.visible.len().max(1).to_string().len();
+        let abs_w = app.view.visible.len().max(1).to_string().len();
         let rel_w = app
+            .view
             .selected
-            .max(app.visible.len().saturating_sub(1).saturating_sub(app.selected))
+            .max(
+                app.view
+                    .visible
+                    .len()
+                    .saturating_sub(1)
+                    .saturating_sub(app.view.selected),
+            )
             .max(1)
             .to_string()
             .len();
@@ -92,35 +100,35 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
     };
 
     let ts_fmt = app.config.timestamp_format.as_str();
-    let measure_rows: Vec<(&crate::model::LogEntry, usize)> = (app.scroll..end)
+    let measure_rows: Vec<(&crate::model::LogEntry, usize)> = (app.view.scroll..end)
         .map(|vis_idx| {
-            let src = app.visible[vis_idx];
+            let src = app.view.visible[vis_idx];
             (&app.source.entries()[src], vis_idx + 1)
         })
         .collect();
     let col_widths = columns::measure_widths(&app.config.columns, &measure_rows, ts_fmt);
 
-    for vis_idx in app.scroll..end {
-        let src = app.visible[vis_idx];
+    for vis_idx in app.view.scroll..end {
+        let src = app.view.visible[vis_idx];
         let entry = &app.source.entries()[src];
         // When details is focused, the highlight lives in the overlay.
-        let selected =
-            vis_idx == app.selected && !app.overlay_focused && !app.sidebar_focused;
+        let selected = vis_idx == app.view.selected && app.is_list_focused();
         let gutter_num = line_number_label(app, vis_idx);
         lines.push(render_line(
             app,
             entry,
-            vis_idx + 1,
-            &col_widths,
-            gutter_num.as_deref(),
-            line_no_width,
-            selected,
-            content.width as usize,
+            LineRenderOptions {
+                view_line: vis_idx + 1,
+                col_widths: &col_widths,
+                gutter_num: gutter_num.as_deref(),
+                line_no_width,
+                selected,
+                width: content.width as usize,
+            },
         ));
     }
 
-    let paragraph =
-        Paragraph::new(lines).style(Style::default().bg(app.theme.background));
+    let paragraph = Paragraph::new(lines).style(Style::default().bg(app.theme.background));
     frame.render_widget(paragraph, content);
 
     if let Some(bar) = bar_area {
@@ -128,8 +136,8 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
         super::draw_scrollbar(
             frame,
             bar,
-            app.visible.len(),
-            app.scroll,
+            app.view.visible.len(),
+            app.view.scroll,
             viewport,
             theme.tone_fg_style(theme.window_focus_border),
             theme.tone_fg_style(theme.dim),
@@ -143,13 +151,13 @@ fn line_number_label(app: &App, vis_idx: usize) -> Option<String> {
     if !abs && !rel {
         return None;
     }
-    let selected = vis_idx == app.selected;
+    let selected = vis_idx == app.view.selected;
     let text = if rel && !(abs && selected) {
         // Pure relative, or hybrid on non-current lines.
         if selected && !abs {
             "0".into()
         } else {
-            vis_idx.abs_diff(app.selected).to_string()
+            vis_idx.abs_diff(app.view.selected).to_string()
         }
     } else {
         (vis_idx + 1).to_string()
@@ -157,16 +165,24 @@ fn line_number_label(app: &App, vis_idx: usize) -> Option<String> {
     Some(text)
 }
 
-fn render_line<'a>(
-    app: &'a App,
-    entry: &'a LogEntry,
+struct LineRenderOptions<'a> {
     view_line: usize,
-    col_widths: &[usize],
-    gutter_num: Option<&str>,
+    col_widths: &'a [usize],
+    gutter_num: Option<&'a str>,
     line_no_width: usize,
     selected: bool,
     width: usize,
-) -> Line<'a> {
+}
+
+fn render_line<'a>(app: &'a App, entry: &'a LogEntry, options: LineRenderOptions<'_>) -> Line<'a> {
+    let LineRenderOptions {
+        view_line,
+        col_widths,
+        gutter_num,
+        line_no_width,
+        selected,
+        width,
+    } = options;
     let theme = &app.theme;
     let gutter = if selected { "▌" } else { " " };
 
@@ -204,13 +220,13 @@ fn render_line<'a>(
         spans.push(Span::styled(num, num_style));
     }
 
-    let search = app.search_regex.as_ref();
+    let search = app.search.regex.as_ref();
     for segment in segments {
         if used >= width {
             break;
         }
         let budget = width - used;
-        let text = truncate(&segment.text, budget);
+        let text = text::truncate_width(&segment.text, budget);
         let text_w = UnicodeWidthStr::width(text.as_str());
         if text.is_empty() && !segment.text.is_empty() {
             break;
@@ -218,7 +234,7 @@ fn render_line<'a>(
         let base = segment_style(theme, entry, &segment, selected);
         let match_style = theme.search_highlight_style(row_bg(theme, selected));
         // Only highlight list text when search targets the list (not details).
-        let re = if app.search_in_overlay { None } else { search };
+        let re = if app.search.in_details { None } else { search };
         highlight::push_highlighted(&mut spans, text, base, match_style, re);
         used += text_w;
     }
@@ -244,12 +260,7 @@ fn row_bg(theme: &Theme, selected: bool) -> Color {
     }
 }
 
-fn segment_style(
-    theme: &Theme,
-    entry: &LogEntry,
-    segment: &Segment,
-    selected: bool,
-) -> Style {
+fn segment_style(theme: &Theme, entry: &LogEntry, segment: &Segment, selected: bool) -> Style {
     let row_bg = row_bg(theme, selected);
 
     if segment.kind == SegmentKind::Level {
@@ -284,13 +295,7 @@ fn segment_style(
     apply_tone(theme, tone, selected, row_bg, false)
 }
 
-fn apply_tone(
-    theme: &Theme,
-    tone: Tone,
-    selected: bool,
-    row_bg: Color,
-    bold: bool,
-) -> Style {
+fn apply_tone(theme: &Theme, tone: Tone, selected: bool, row_bg: Color, bold: bool) -> Style {
     if let Some(bg) = tone.bg {
         let mut style = Style::default().fg(tone.fg).bg(bg);
         if bold {
@@ -307,25 +312,3 @@ fn apply_tone(
     }
     style
 }
-
-fn truncate(s: &str, max: usize) -> String {
-    if max == 0 {
-        return String::new();
-    }
-    if UnicodeWidthStr::width(s) <= max {
-        return s.to_string();
-    }
-    let mut out = String::new();
-    let mut w = 0;
-    for ch in s.chars() {
-        let cw = UnicodeWidthStr::width(ch.to_string().as_str());
-        if w + cw + 1 > max {
-            break;
-        }
-        out.push(ch);
-        w += cw;
-    }
-    out.push('…');
-    out
-}
-
