@@ -44,16 +44,21 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
         InputMode::Search => {
             let query = format!("/{}", app.search_query);
             cursor_col = Some(UnicodeWidthStr::width(query.as_str()) as u16);
+            let scope = if app.search_in_overlay { " details" } else { "" };
             let suffix = if app.search_query.is_empty() {
-                String::new()
+                if app.search_in_overlay {
+                    "  details".into()
+                } else {
+                    String::new()
+                }
             } else if app.search_error.is_some() {
                 "  invalid regex".into()
             } else if app.search_matches.is_empty() {
-                "  no matches".into()
+                format!("  no matches{scope}")
             } else {
                 let n = app.search_matches.len();
                 let cur = app.search_cursor.map(|c| c + 1).unwrap_or(1).min(n);
-                format!("  {cur}/{n}")
+                format!("  {cur}/{n}{scope}")
             };
             vec![
                 Span::styled(query, style),

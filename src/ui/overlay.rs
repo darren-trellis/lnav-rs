@@ -5,7 +5,8 @@ use ratatui::widgets::{Block, Borders, Paragraph, Wrap};
 use ratatui::Frame;
 
 use crate::app::App;
-use crate::details;
+use crate::details::{self, DetailLine};
+use crate::highlight;
 use crate::model::LineFormat;
 
 pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
@@ -18,10 +19,24 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
     let content_len = content.len();
     let focused = app.overlay_focused;
     let wrap = app.config.wrap_details;
+    let search_in_overlay = app.search_in_overlay;
+    let search_regex = if search_in_overlay {
+        app.search_regex.clone()
+    } else {
+        None
+    };
+    let current_match = if search_in_overlay {
+        app.search_cursor
+            .and_then(|c| app.search_matches.get(c).copied())
+    } else {
+        None
+    };
     let theme_border = app.theme.border.fg;
-    let theme_match = app.theme.search_match.fg;
+    let match_fg = app.theme.search_match.fg;
+    let match_bg = app.theme.search_match.bg;
     let overlay_bg = app.theme.overlay_bg;
     let foreground = app.theme.foreground.fg;
+    let fg_tone = app.theme.foreground;
 
     app.overlay_content_len = content_len;
 
@@ -49,14 +64,14 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
         }
     };
     let hint = if focused {
-        " j/k scroll · Esc close "
+        " j/k scroll · / search · Esc close "
     } else {
         " Enter focus · Esc close "
     };
 
     let border = if focused {
         Style::default()
-            .fg(theme_match)
+            .fg(match_fg)
             .add_modifier(Modifier::BOLD)
     } else {
         Style::default().fg(theme_border)
@@ -79,7 +94,30 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
     }
     let scroll = app.overlay_scroll;
 
-    let lines: Vec<Line> = content.into_iter().map(|l| l.to_line()).collect();
+    let match_style = Style::default()
+        .fg(match_fg)
+        .bg(match_bg.unwrap_or(overlay_bg))
+        .add_modifier(Modifier::BOLD);
+    let current_style = Style::default()
+        .fg(overlay_bg)
+        .bg(match_fg)
+        .add_modifier(Modifier::BOLD);
+    let base_style = Style::default().fg(fg_tone.fg).bg(overlay_bg);
+
+    let lines: Vec<Line> = content
+        .into_iter()
+        .enumerate()
+        .map(|(i, line)| {
+            render_detail_line(
+                &line,
+                search_regex.as_ref(),
+                base_style,
+                match_style,
+                current_match == Some(i),
+                current_style,
+            )
+        })
+        .collect();
     let mut paragraph = Paragraph::new(lines)
         .style(Style::default().bg(overlay_bg))
         .scroll((scroll as u16, 0));
@@ -87,4 +125,26 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
         paragraph = paragraph.wrap(Wrap { trim: false });
     }
     frame.render_widget(paragraph, inner);
+}
+
+fn render_detail_line(
+    line: &DetailLine,
+    regex: Option<&regex::Regex>,
+    base_style: Style,
+    match_style: Style,
+    is_current: bool,
+    current_style: Style,
+) -> Line<'static> {
+    let text = line.plain_text();
+    let Some(re) = regex else {
+        return line.to_line();
+    };
+    if !re.is_match(&text) {
+        return line.to_line();
+    }
+    let base = if is_current { current_style } else { base_style };
+    let hi = if is_current { current_style } else { match_style };
+    let mut spans = Vec::new();
+    highlight::push_highlighted(&mut spans, text, base, hi, Some(re));
+    Line::from(spans)
 }

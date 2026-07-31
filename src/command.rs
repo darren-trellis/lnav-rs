@@ -212,8 +212,14 @@ fn execute_inner(app: &mut App, raw: &str, invoke: Invoke) {
         }
         "search" => {
             app.cancel_pending_op();
+            let in_details = app.overlay_focused && app.show_overlay;
             app.input_mode = InputMode::Search;
             app.clear_search();
+            app.search_in_overlay = in_details;
+            // Keep details focused while searching inside it.
+            if in_details {
+                app.overlay_focused = true;
+            }
             app.status_message = None;
         }
         "command-mode" => {

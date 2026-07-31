@@ -14,6 +14,7 @@ use regex::Regex;
 use crate::command;
 use crate::completion::{self, CompletionState};
 use crate::config::Config;
+use crate::details;
 use crate::filter::{self, Filter};
 use crate::keys;
 use crate::model::LogEntry;
@@ -106,6 +107,8 @@ pub struct App {
     pub completions: CompletionState,
     pub search_matches: Vec<usize>,
     pub search_cursor: Option<usize>,
+    /// When true, `/` search targets the focused details overlay.
+    pub search_in_overlay: bool,
     pub status_message: Option<String>,
     pub should_quit: bool,
 }
@@ -167,6 +170,7 @@ impl App {
             completions: CompletionState::default(),
             search_matches: Vec::new(),
             search_cursor: None,
+            search_in_overlay: false,
             status_message,
             should_quit: false,
         };
@@ -607,7 +611,11 @@ impl App {
                 } else {
                     let n = self.search_matches.len();
                     let cur = self.search_cursor.unwrap_or(0).min(n - 1) + 1;
-                    self.status_message = Some(format!("{cur}/{n} matches"));
+                    self.status_message = Some(if self.search_in_overlay {
+                        format!("{cur}/{n} in details")
+                    } else {
+                        format!("{cur}/{n} matches")
+                    });
                 }
             }
             KeyCode::Backspace => {
@@ -629,14 +637,24 @@ impl App {
             self.search_cursor = None;
             return;
         }
-        let cursor = self
-            .search_matches
-            .iter()
-            .position(|&m| m >= self.selected)
-            .unwrap_or(0);
+        let cursor = if self.search_in_overlay {
+            self.search_matches
+                .iter()
+                .position(|&m| m >= self.overlay_scroll)
+                .unwrap_or(0)
+        } else {
+            self.search_matches
+                .iter()
+                .position(|&m| m >= self.selected)
+                .unwrap_or(0)
+        };
         self.search_cursor = Some(cursor);
         self.follow = false;
-        self.jump_to(self.search_matches[cursor]);
+        if self.search_in_overlay {
+            self.ensure_overlay_match_visible();
+        } else {
+            self.jump_to(self.search_matches[cursor]);
+        }
     }
 
     fn handle_command_key(&mut self, key: KeyEvent) {
@@ -758,8 +776,9 @@ impl App {
                     .saturating_sub(self.overlay_inner_height.max(1));
                 true
             }
-            // Let search/command/quit still work by unfocusing first.
-            KeyCode::Char('/') | KeyCode::Char(':') | KeyCode::Char('q') => {
+            // Search stays in the overlay; : and q leave focus first.
+            KeyCode::Char('/') => false,
+            KeyCode::Char(':') | KeyCode::Char('q') => {
                 self.overlay_focused = false;
                 false
             }
@@ -789,6 +808,12 @@ impl App {
         self.show_overlay = false;
         self.overlay_focused = false;
         self.overlay_scroll = 0;
+        if self.search_in_overlay {
+            self.search_in_overlay = false;
+            if !self.search_query.is_empty() {
+                self.run_search();
+            }
+        }
     }
 
     pub fn scroll_overlay(&mut self, delta: isize) {
@@ -800,6 +825,21 @@ impl App {
             .saturating_sub(self.overlay_inner_height.max(1));
         let next = (self.overlay_scroll as isize + delta).clamp(0, max as isize);
         self.overlay_scroll = next as usize;
+    }
+
+    fn ensure_overlay_match_visible(&mut self) {
+        let Some(idx) = self
+            .search_cursor
+            .and_then(|c| self.search_matches.get(c).copied())
+        else {
+            return;
+        };
+        let view = self.overlay_inner_height.max(1);
+        if idx < self.overlay_scroll {
+            self.overlay_scroll = idx;
+        } else if idx >= self.overlay_scroll + view {
+            self.overlay_scroll = idx + 1 - view;
+        }
     }
 
     /// Consume the typed count prefix, or `1` if none.
@@ -984,6 +1024,7 @@ impl App {
         self.search_error = None;
         self.search_matches.clear();
         self.search_cursor = None;
+        self.search_in_overlay = false;
     }
 
     /// Recompile filters/search after `case_mode` changes. Returns an error message if a filter fails.
@@ -1020,13 +1061,26 @@ impl App {
             }
         };
         self.search_error = None;
-        self.search_matches = self
-            .visible
-            .iter()
-            .enumerate()
-            .filter(|&(_, src)| regex.is_match(&self.source.entries()[*src].raw))
-            .map(|(vis, _)| vis)
-            .collect();
+        if self.search_in_overlay {
+            self.search_matches = if let Some(entry) = self.selected_entry() {
+                details::build_lines(entry, &self.theme, &self.config)
+                    .into_iter()
+                    .enumerate()
+                    .filter(|(_, line)| regex.is_match(&line.plain_text()))
+                    .map(|(i, _)| i)
+                    .collect()
+            } else {
+                Vec::new()
+            };
+        } else {
+            self.search_matches = self
+                .visible
+                .iter()
+                .enumerate()
+                .filter(|&(_, src)| regex.is_match(&self.source.entries()[*src].raw))
+                .map(|(vis, _)| vis)
+                .collect();
+        }
         self.search_regex = Some(regex);
     }
 
@@ -1046,8 +1100,13 @@ impl App {
         let next = (cur + dir).rem_euclid(len) as usize;
         self.search_cursor = Some(next);
         self.follow = false;
-        self.jump_to(self.search_matches[next]);
-        self.status_message = Some(format!("{}/{} matches", next + 1, len));
+        if self.search_in_overlay {
+            self.ensure_overlay_match_visible();
+            self.status_message = Some(format!("{}/{} in details", next + 1, len));
+        } else {
+            self.jump_to(self.search_matches[next]);
+            self.status_message = Some(format!("{}/{} matches", next + 1, len));
+        }
     }
 
     pub(crate) fn cycle_theme(&mut self) {

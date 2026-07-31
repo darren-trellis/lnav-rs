@@ -4,6 +4,7 @@ mod completion;
 mod config;
 mod details;
 mod filter;
+mod highlight;
 mod keys;
 mod columns;
 mod model;

@@ -22,6 +22,13 @@ impl DetailLine {
     pub fn to_line(&self) -> Line<'static> {
         Line::from(self.spans.clone())
     }
+
+    pub fn plain_text(&self) -> String {
+        self.spans
+            .iter()
+            .map(|s| s.content.as_ref())
+            .collect()
+    }
 }
 
 /// Build the full details content for an entry (header + fields).
