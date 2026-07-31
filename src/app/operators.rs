@@ -187,8 +187,16 @@ impl App {
     }
 
     pub(crate) fn hide_current(&mut self) {
+        if self.view.visible.is_empty() {
+            self.pending_op = None;
+            self.count = None;
+            return;
+        }
+        let count = self.take_count();
         let at = self.view.selected;
-        self.apply_op_visible_range(PendingOp::Hide, at, at);
+        let end = (at + count - 1).min(self.view.visible.len().saturating_sub(1));
+        self.pending_op = None;
+        self.apply_op_visible_range(PendingOp::Hide, at, end);
     }
 
     pub(crate) fn delete_current(&mut self) {

@@ -389,6 +389,7 @@ fn hide_command(app: &mut App, rest: &str, invoke: Invoke) {
             Invoke::Key => app.start_or_repeat_op(PendingOp::Hide),
             Invoke::Line => app.hide_current(),
         },
+        "line" => app.hide_current(),
         "clear" => {
             app.cancel_pending_op();
             let n = app.view.hidden.len();
@@ -398,7 +399,7 @@ fn hide_command(app: &mut App, rest: &str, invoke: Invoke) {
         }
         other => {
             app.status_message =
-                Some(format!("usage: :hide | :hide clear  (unknown: {other})"));
+                Some(format!("usage: :hide | :hide line | :hide clear  (unknown: {other})"));
         }
     }
 }

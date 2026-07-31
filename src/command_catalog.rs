@@ -31,7 +31,7 @@ const COMMANDS: &[CommandInfo] = &[
     },
     CommandInfo {
         name: "hide",
-        help: "hide line(s): dd or d{{motion}} | clear",
+        help: "hide line(s): dd or d{{motion}} | line | clear",
     },
     CommandInfo {
         name: "delete",

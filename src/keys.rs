@@ -7,7 +7,8 @@ use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 /// Key names:
 /// - single chars keep case: `q`, `d`, `D`
 /// - specials: `enter`, `esc`, `up`, `down`, `left`, `right`,
-///   `home`, `end`, `pagedown`, `pageup`, `tab`, `backtab`, `space`
+///   `home`, `end`, `pagedown`, `pageup`, `tab`, `backtab`, `space`,
+///   `backspace`
 /// - modifiers: `C-c`, `C-d` (control + key)
 pub fn defaults() -> BTreeMap<String, String> {
     BTreeMap::from([
@@ -35,6 +36,7 @@ pub fn defaults() -> BTreeMap<String, String> {
         ("f".into(), "follow toggle".into()),
         ("t".into(), "theme cycle".into()),
         ("d".into(), "hide".into()),
+        ("backspace".into(), "hide line".into()),
         ("D".into(), "delete".into()),
         ("?".into(), "help".into()),
         ("s".into(), "view sidebar toggle".into()),
@@ -161,6 +163,10 @@ mod tests {
         assert_eq!(
             defaults().get("s").map(String::as_str),
             Some("view sidebar toggle")
+        );
+        assert_eq!(
+            defaults().get("backspace").map(String::as_str),
+            Some("hide line")
         );
         assert_eq!(
             sidebar_defaults().get("d").map(String::as_str),

@@ -217,7 +217,10 @@ const HELP_SUBS: &[(&str, &str)] = &[
 
 const SEARCH_SUBS: &[(&str, &str)] = &[("clear", "clear search highlights")];
 
-const HIDE_SUBS: &[(&str, &str)] = &[("clear", "restore lines hidden with hide")];
+const HIDE_SUBS: &[(&str, &str)] = &[
+    ("line", "hide current line(s) immediately"),
+    ("clear", "restore lines hidden with hide"),
+];
 
 fn on_off_toggle_suggestions(
     rest: &str,
