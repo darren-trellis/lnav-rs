@@ -1,10 +1,22 @@
-use std::path::PathBuf;
-use std::time::Duration;
+use std::collections::HashSet;
+use std::io::stdout;
+use std::time::{Duration, Instant};
 
 use anyhow::Result;
-use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+use crossterm::event::{
+    self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEvent, KeyEventKind,
+    KeyModifiers, MouseButton, MouseEvent, MouseEventKind,
+};
+use crossterm::execute;
+use ratatui::layout::Rect;
 
+use crate::command;
+use crate::completion::{self, CompletionState};
+use crate::config::Config;
+use crate::filter::{self, Filter};
+use crate::keys;
 use crate::model::LogEntry;
+use crate::object_span;
 use crate::tail::LogSource;
 use crate::theme::Theme;
 use crate::ui;
@@ -13,18 +25,75 @@ use crate::ui;
 pub enum InputMode {
     Normal,
     Search,
+    Command,
+}
+
+/// Vim-style operator waiting for a motion (`d` / `D`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PendingOp {
+    Hide,
+    Delete,
+}
+
+/// Interactive theme selector opened by `:theme set`.
+#[derive(Debug, Clone)]
+pub struct ThemePicker {
+    pub names: Vec<String>,
+    pub selected: usize,
+    /// Committed theme name to restore on cancel.
+    pub previous_name: String,
+    /// Full popup rect from the last draw.
+    pub popup_area: Rect,
+    /// List inner area from the last draw (for mouse hit-testing).
+    pub list_area: Rect,
+    /// First visible name index in `list_area`.
+    pub list_start: usize,
+}
+
+/// Widget rects from the last frame, used for mouse hit-testing.
+#[derive(Debug, Default, Clone, Copy)]
+pub struct HitAreas {
+    pub list_inner: Rect,
+    pub overlay: Rect,
+    pub suggest_inner: Rect,
+    pub suggest_start: usize,
+    pub status: Rect,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct LastClick {
+    at: Instant,
+    vis_idx: usize,
 }
 
 pub struct App {
     pub source: LogSource,
+    pub config: Config,
     pub theme: Theme,
     pub theme_index: usize,
+    pub filters: Vec<Filter>,
+    pub filtering_enabled: bool,
+    /// Source indices hidden with `d` (session-only).
+    pub hidden: HashSet<usize>,
+    /// Source indices currently visible after filters.
+    pub visible: Vec<usize>,
+    /// Index into `visible`.
     pub selected: usize,
     pub scroll: usize,
     pub follow: bool,
     pub show_overlay: bool,
     pub input_mode: InputMode,
+    pub pending_op: Option<PendingOp>,
+    /// Visible-row anchor when the pending operator was started.
+    pub op_anchor: usize,
+    /// Vim-style count prefix being typed (`5` in `5j`).
+    pub count: Option<usize>,
+    pub theme_picker: Option<ThemePicker>,
+    pub hit: HitAreas,
+    last_click: Option<LastClick>,
     pub search_query: String,
+    pub command_buffer: String,
+    pub completions: CompletionState,
     pub search_matches: Vec<usize>,
     pub search_cursor: Option<usize>,
     pub status_message: Option<String>,
@@ -32,45 +101,115 @@ pub struct App {
 }
 
 impl App {
-    pub fn new(path: PathBuf, theme_name: &str) -> Result<Self> {
-        let source = LogSource::open(&path)?;
-        let themes = Theme::available();
-        let theme_index = themes
+    pub fn new(source: LogSource, config: Config) -> Result<Self> {
+        let overrides = config.theme.overrides();
+        let theme = Theme::resolve_with_overrides(config.theme.name(), &overrides)?;
+        let names = Theme::list_names();
+        let theme_index = names
             .iter()
-            .position(|t| *t == theme_name || (*t == "catppuccin" && theme_name == "default"))
+            .position(|t| t == config.theme.name() || t == &theme.name)
             .unwrap_or(0);
-        let theme = Theme::builtin(themes[theme_index])?;
 
         let mut app = Self {
             source,
+            follow: config.follow,
+            config,
             theme,
             theme_index,
+            filters: Vec::new(),
+            filtering_enabled: true,
+            hidden: HashSet::new(),
+            visible: Vec::new(),
             selected: 0,
             scroll: 0,
-            follow: true,
             show_overlay: false,
             input_mode: InputMode::Normal,
+            pending_op: None,
+            op_anchor: 0,
+            count: None,
+            theme_picker: None,
+            hit: HitAreas::default(),
+            last_click: None,
             search_query: String::new(),
+            command_buffer: String::new(),
+            completions: CompletionState::default(),
             search_matches: Vec::new(),
             search_cursor: None,
             status_message: None,
             should_quit: false,
         };
-        if app.source.len() > 0 {
-            app.selected = app.source.len() - 1;
+        app.rebuild_visible(None);
+        if app.follow && !app.visible.is_empty() {
+            app.selected = app.visible.len() - 1;
         }
         Ok(app)
     }
 
     pub fn selected_entry(&self) -> Option<&LogEntry> {
-        self.source.entries().get(self.selected)
+        let src = *self.visible.get(self.selected)?;
+        self.source.entries().get(src)
+    }
+
+    pub fn visible_len(&self) -> usize {
+        self.visible.len()
+    }
+
+    pub fn hidden_count(&self) -> usize {
+        self.source.len().saturating_sub(self.visible.len())
+    }
+
+    pub fn jump_to_public(&mut self, visible_idx: usize) {
+        self.jump_to(visible_idx);
+    }
+
+    pub fn rebuild_visible(&mut self, prefer_source_idx: Option<usize>) {
+        let prefer = prefer_source_idx.or_else(|| {
+            self.visible
+                .get(self.selected)
+                .copied()
+        });
+        self.visible = filter::build_visible(
+            self.source.entries(),
+            &self.filters,
+            self.filtering_enabled,
+            &self.hidden,
+        );
+
+        if self.visible.is_empty() {
+            self.selected = 0;
+            self.scroll = 0;
+            return;
+        }
+
+        if let Some(src) = prefer {
+            if let Some(pos) = self.visible.iter().position(|&i| i == src) {
+                self.selected = pos;
+                return;
+            }
+        }
+        self.selected = self.selected.min(self.visible.len() - 1);
     }
 
     pub fn run(&mut self, terminal: &mut ratatui::DefaultTerminal) -> Result<()> {
+        let _ = execute!(stdout(), EnableMouseCapture);
+        let result = self.run_loop(terminal);
+        let _ = execute!(stdout(), DisableMouseCapture);
+        self.close_theme_picker(false);
+        result
+    }
+
+    fn run_loop(&mut self, terminal: &mut ratatui::DefaultTerminal) -> Result<()> {
         loop {
             let added = self.source.refresh().unwrap_or(0);
-            if added > 0 && self.follow {
-                self.selected = self.source.len().saturating_sub(1);
+            if added > 0 {
+                let prefer = self.visible.get(self.selected).copied();
+                self.rebuild_visible(prefer);
+                if self.follow && !self.visible.is_empty() {
+                    self.selected = self.visible.len() - 1;
+                }
+                if !self.search_query.is_empty() {
+                    self.run_search();
+                }
             }
 
             terminal.draw(|frame| ui::draw(frame, self))?;
@@ -84,6 +223,7 @@ impl App {
                     Event::Key(key) if key.kind == KeyEventKind::Press => {
                         self.handle_key(key);
                     }
+                    Event::Mouse(mouse) => self.handle_mouse(mouse),
                     Event::Resize(_, _) => {}
                     _ => {}
                 }
@@ -92,10 +232,308 @@ impl App {
         Ok(())
     }
 
+    fn handle_mouse(&mut self, mouse: MouseEvent) {
+        if self.theme_picker.is_some() {
+            self.handle_theme_picker_mouse(mouse);
+            return;
+        }
+
+        match mouse.kind {
+            MouseEventKind::ScrollUp => {
+                self.cancel_pending_op();
+                if self.input_mode == InputMode::Command && !self.completions.items.is_empty() {
+                    self.completions.select_prev();
+                } else {
+                    let n = self.config.scroll_lines.max(1) as isize;
+                    self.with_motion(|a| a.move_selection(-n));
+                }
+            }
+            MouseEventKind::ScrollDown => {
+                self.cancel_pending_op();
+                if self.input_mode == InputMode::Command && !self.completions.items.is_empty() {
+                    self.completions.select_next();
+                } else {
+                    let n = self.config.scroll_lines.max(1) as isize;
+                    self.with_motion(|a| a.move_selection(n));
+                }
+            }
+            MouseEventKind::Down(MouseButton::Left) => self.handle_left_click(mouse.column, mouse.row),
+            MouseEventKind::Moved
+                if self.input_mode == InputMode::Command
+                    && contains(self.hit.suggest_inner, mouse.column, mouse.row) =>
+            {
+                if let Some(idx) = self.suggest_index_at(mouse.column, mouse.row) {
+                    self.completions.selected = idx;
+                }
+            }
+            _ => {}
+        }
+    }
+
+    fn handle_left_click(&mut self, col: u16, row: u16) {
+        if contains(self.hit.suggest_inner, col, row) {
+            if let Some(idx) = self.suggest_index_at(col, row) {
+                self.completions.selected = idx;
+                completion::apply_selected(self);
+            }
+            return;
+        }
+
+        if contains(self.hit.overlay, col, row) {
+            // Clicking the details panel closes it.
+            self.show_overlay = false;
+            return;
+        }
+
+        if contains(self.hit.list_inner, col, row) {
+            self.click_list_row(col, row);
+            return;
+        }
+
+        if contains(self.hit.status, col, row) {
+            match self.input_mode {
+                InputMode::Search | InputMode::Command => {}
+                InputMode::Normal => {
+                    self.input_mode = InputMode::Command;
+                    self.command_buffer.clear();
+                    self.status_message = None;
+                    completion::refresh(self);
+                }
+            }
+        }
+    }
+
+    fn click_list_row(&mut self, _col: u16, row: u16) {
+        let area = self.hit.list_inner;
+        if area.height == 0 || self.visible.is_empty() {
+            return;
+        }
+        let row_off = (row - area.y) as usize;
+        let vis_idx = self.scroll + row_off;
+        if vis_idx >= self.visible.len() {
+            return;
+        }
+
+        // Leave search/command editing when interacting with the list.
+        if self.input_mode != InputMode::Normal {
+            self.input_mode = InputMode::Normal;
+            self.command_buffer.clear();
+            self.completions.clear();
+        }
+
+        let double = self
+            .last_click
+            .map(|c| {
+                c.vis_idx == vis_idx && c.at.elapsed() < Duration::from_millis(400)
+            })
+            .unwrap_or(false);
+
+        if let Some(op) = self.pending_op.take() {
+            let start = self.op_anchor;
+            self.follow = false;
+            self.selected = vis_idx;
+            self.apply_op_visible_range(op, start, vis_idx);
+            self.last_click = Some(LastClick {
+                at: Instant::now(),
+                vis_idx,
+            });
+            return;
+        }
+
+        self.follow = false;
+        self.selected = vis_idx;
+        if double {
+            self.show_overlay = !self.show_overlay;
+            self.last_click = None;
+        } else {
+            self.last_click = Some(LastClick {
+                at: Instant::now(),
+                vis_idx,
+            });
+        }
+    }
+
+    fn suggest_index_at(&self, col: u16, row: u16) -> Option<usize> {
+        let area = self.hit.suggest_inner;
+        if !contains(area, col, row) || area.height == 0 {
+            return None;
+        }
+        let idx = self.hit.suggest_start + (row - area.y) as usize;
+        if idx < self.completions.items.len() {
+            Some(idx)
+        } else {
+            None
+        }
+    }
+
     fn handle_key(&mut self, key: KeyEvent) {
+        if self.theme_picker.is_some() {
+            self.handle_theme_picker_key(key);
+            return;
+        }
         match self.input_mode {
             InputMode::Search => self.handle_search_key(key),
+            InputMode::Command => self.handle_command_key(key),
             InputMode::Normal => self.handle_normal_key(key),
+        }
+    }
+
+    fn handle_theme_picker_key(&mut self, key: KeyEvent) {
+        match key.code {
+            KeyCode::Esc | KeyCode::Char('q') => self.close_theme_picker(false),
+            KeyCode::Enter => self.close_theme_picker(true),
+            KeyCode::Up | KeyCode::Char('k') => self.theme_picker_move(-1),
+            KeyCode::Down | KeyCode::Char('j') => self.theme_picker_move(1),
+            KeyCode::Home | KeyCode::Char('g') => self.theme_picker_select(0),
+            KeyCode::End | KeyCode::Char('G') => {
+                if let Some(picker) = &self.theme_picker {
+                    let last = picker.names.len().saturating_sub(1);
+                    self.theme_picker_select(last);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    fn handle_theme_picker_mouse(&mut self, mouse: MouseEvent) {
+        let Some(picker) = &self.theme_picker else {
+            return;
+        };
+        let popup = picker.popup_area;
+        let area = picker.list_area;
+        let col = mouse.column;
+        let row = mouse.row;
+
+        match mouse.kind {
+            MouseEventKind::ScrollUp => self.theme_picker_move(-1),
+            MouseEventKind::ScrollDown => self.theme_picker_move(1),
+            MouseEventKind::Moved => {
+                if contains(area, col, row) {
+                    let idx = picker.list_start + (row - area.y) as usize;
+                    if idx < picker.names.len() {
+                        self.theme_picker_select(idx);
+                    }
+                }
+            }
+            MouseEventKind::Down(MouseButton::Left) => {
+                if contains(area, col, row) {
+                    let idx = picker.list_start + (row - area.y) as usize;
+                    if idx < picker.names.len() {
+                        self.theme_picker_select(idx);
+                        self.close_theme_picker(true);
+                    }
+                } else if !contains(popup, col, row) {
+                    self.close_theme_picker(false);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    pub(crate) fn open_theme_picker(&mut self) {
+        self.cancel_pending_op();
+        let names = Theme::list_names();
+        if names.is_empty() {
+            self.status_message = Some("no themes available".into());
+            return;
+        }
+        let previous_name = self.config.theme.name().to_string();
+        let selected = names
+            .iter()
+            .position(|n| n == &previous_name || n == &self.theme.name)
+            .unwrap_or(0);
+        self.theme_picker = Some(ThemePicker {
+            names,
+            selected,
+            previous_name,
+            popup_area: Rect::default(),
+            list_area: Rect::default(),
+            list_start: 0,
+        });
+        self.input_mode = InputMode::Normal;
+        self.command_buffer.clear();
+        self.completions.clear();
+        self.preview_theme_at_selection();
+        self.status_message = Some("theme picker · click/Enter to set · Esc to cancel".into());
+    }
+
+    fn theme_picker_move(&mut self, delta: isize) {
+        let Some(picker) = &self.theme_picker else {
+            return;
+        };
+        let len = picker.names.len() as isize;
+        if len == 0 {
+            return;
+        }
+        let next = (picker.selected as isize + delta).rem_euclid(len) as usize;
+        self.theme_picker_select(next);
+    }
+
+    fn theme_picker_select(&mut self, idx: usize) {
+        {
+            let Some(picker) = &mut self.theme_picker else {
+                return;
+            };
+            if idx >= picker.names.len() || idx == picker.selected {
+                return;
+            }
+            picker.selected = idx;
+        }
+        self.preview_theme_at_selection();
+    }
+
+    fn preview_theme_at_selection(&mut self) {
+        let Some(name) = self
+            .theme_picker
+            .as_ref()
+            .and_then(|p| p.names.get(p.selected).cloned())
+        else {
+            return;
+        };
+        let overrides = self.config.theme.overrides();
+        if let Ok(theme) = Theme::resolve_with_overrides(&name, &overrides) {
+            self.theme = theme;
+            self.status_message = Some(format!("preview: {name}"));
+        }
+    }
+
+    /// Confirm (`true`) keeps the previewed theme; cancel restores the previous one.
+    pub(crate) fn close_theme_picker(&mut self, confirm: bool) {
+        let Some(picker) = self.theme_picker.take() else {
+            return;
+        };
+        if confirm {
+            if let Some(name) = picker.names.get(picker.selected) {
+                self.commit_theme(name);
+                return;
+            }
+        }
+        let overrides = self.config.theme.overrides();
+        if let Ok(theme) =
+            Theme::resolve_with_overrides(&picker.previous_name, &overrides)
+        {
+            self.theme = theme;
+            self.theme_index = Theme::list_names()
+                .iter()
+                .position(|t| t == &picker.previous_name)
+                .unwrap_or(self.theme_index);
+        }
+        self.status_message = Some(format!("theme: {}", self.config.theme.name()));
+    }
+
+    pub(crate) fn commit_theme(&mut self, name: &str) {
+        let overrides = self.config.theme.overrides();
+        match Theme::resolve_with_overrides(name, &overrides) {
+            Ok(theme) => {
+                self.config.theme.set_name(name);
+                self.theme_index = Theme::list_names()
+                    .iter()
+                    .position(|t| t == name || t == &theme.name)
+                    .unwrap_or(self.theme_index);
+                self.status_message = Some(format!("theme: {}", theme.name));
+                self.theme = theme;
+            }
+            Err(err) => self.status_message = Some(format!("error: {err:#}")),
         }
     }
 
@@ -107,122 +545,311 @@ impl App {
             }
             KeyCode::Enter => {
                 self.input_mode = InputMode::Normal;
-                self.run_search();
-                if let Some(idx) = self.search_matches.first().copied() {
-                    self.jump_to(idx);
-                    self.search_cursor = Some(0);
-                    self.status_message = Some(format!(
-                        "{}/{} matches",
-                        1,
-                        self.search_matches.len()
-                    ));
+                if self.search_matches.is_empty() {
+                    self.status_message = if self.search_query.is_empty() {
+                        None
+                    } else {
+                        Some("no matches".into())
+                    };
                 } else {
-                    self.status_message = Some("no matches".into());
+                    let n = self.search_matches.len();
+                    let cur = self.search_cursor.unwrap_or(0).min(n - 1) + 1;
+                    self.status_message = Some(format!("{cur}/{n} matches"));
                 }
             }
             KeyCode::Backspace => {
                 self.search_query.pop();
+                self.refresh_search_live();
             }
             KeyCode::Char(c) => {
                 self.search_query.push(c);
+                self.refresh_search_live();
+            }
+            _ => {}
+        }
+    }
+
+    /// Update match highlights as the query changes (incremental search).
+    fn refresh_search_live(&mut self) {
+        self.run_search();
+        if self.search_matches.is_empty() {
+            self.search_cursor = None;
+            return;
+        }
+        let cursor = self
+            .search_matches
+            .iter()
+            .position(|&m| m >= self.selected)
+            .unwrap_or(0);
+        self.search_cursor = Some(cursor);
+        self.follow = false;
+        self.jump_to(self.search_matches[cursor]);
+    }
+
+    fn handle_command_key(&mut self, key: KeyEvent) {
+        match key.code {
+            KeyCode::Esc => {
+                self.input_mode = InputMode::Normal;
+                self.command_buffer.clear();
+                self.completions.clear();
+                self.status_message = None;
+            }
+            KeyCode::Enter => {
+                let cmd = std::mem::take(&mut self.command_buffer);
+                self.completions.clear();
+                self.input_mode = InputMode::Normal;
+                command::execute(self, &cmd);
+            }
+            KeyCode::Tab => {
+                if key.modifiers.contains(KeyModifiers::SHIFT) {
+                    self.completions.select_prev();
+                    completion::apply_selected(self);
+                } else {
+                    completion::tab_complete(self);
+                }
+            }
+            KeyCode::BackTab => {
+                self.completions.select_prev();
+                completion::apply_selected(self);
+            }
+            KeyCode::Down => {
+                self.completions.select_next();
+            }
+            KeyCode::Up => {
+                self.completions.select_prev();
+            }
+            KeyCode::Backspace => {
+                if self.command_buffer.is_empty() {
+                    self.input_mode = InputMode::Normal;
+                    self.completions.clear();
+                    self.status_message = None;
+                } else {
+                    self.command_buffer.pop();
+                    completion::refresh(self);
+                }
+            }
+            KeyCode::Char(c) => {
+                self.command_buffer.push(c);
+                completion::refresh(self);
             }
             _ => {}
         }
     }
 
     fn handle_normal_key(&mut self, key: KeyEvent) {
-        if key.modifiers.contains(KeyModifiers::CONTROL) {
-            if key.code == KeyCode::Char('c') {
-                self.should_quit = true;
-            }
+        // Vim-style count prefix: `5j`, `3dd`, `10G`, …
+        if key.modifiers.is_empty()
+            && let KeyCode::Char(c) = key.code
+            && c.is_ascii_digit()
+            && (c != '0' || self.count.is_some())
+        {
+            let digit = (c as u8 - b'0') as usize;
+            self.count = Some(self.count.unwrap_or(0).saturating_mul(10).saturating_add(digit));
             return;
         }
 
-        match key.code {
-            KeyCode::Char('q') => self.should_quit = true,
-            KeyCode::Char('j') | KeyCode::Down => self.move_selection(1),
-            KeyCode::Char('k') | KeyCode::Up => self.move_selection(-1),
-            KeyCode::PageDown | KeyCode::Char(' ') => self.move_selection(20),
-            KeyCode::PageUp => self.move_selection(-20),
-            KeyCode::Home | KeyCode::Char('g') => {
-                self.follow = false;
-                self.jump_to(0);
-            }
-            KeyCode::End | KeyCode::Char('G') => {
-                self.follow = true;
-                if self.source.len() > 0 {
-                    self.jump_to(self.source.len() - 1);
-                }
-            }
-            KeyCode::Enter => {
-                if self.selected_entry().is_some() {
-                    self.show_overlay = !self.show_overlay;
-                }
-            }
-            KeyCode::Esc => {
-                if self.show_overlay {
-                    self.show_overlay = false;
-                }
-            }
-            KeyCode::Char('/') => {
-                self.input_mode = InputMode::Search;
-                self.search_query.clear();
-                self.status_message = Some("search: ".into());
-            }
-            KeyCode::Char('n') => self.next_match(1),
-            KeyCode::Char('N') => self.next_match(-1),
-            KeyCode::Char('f') => {
-                self.follow = !self.follow;
-                if self.follow && self.source.len() > 0 {
-                    self.jump_to(self.source.len() - 1);
-                }
-                self.status_message = Some(if self.follow {
-                    "follow: on".into()
-                } else {
-                    "follow: off".into()
-                });
-            }
-            KeyCode::Char('t') => self.cycle_theme(),
-            KeyCode::Char('?') => {
-                self.status_message = Some(
-                    "j/k move · Enter details · / search · n/N next · f follow · t theme · q quit"
-                        .into(),
-                );
-            }
-            _ => {}
+        let Some(spec) = keys::encode(key) else {
+            return;
+        };
+        let Some(cmd) = self.config.keys.get(&spec).cloned() else {
+            // Unbound key clears a half-typed count.
+            self.count = None;
+            return;
+        };
+        if cmd.is_empty() {
+            self.count = None;
+            return;
+        }
+        command::execute_from_key(self, &cmd);
+    }
+
+    /// Consume the typed count prefix, or `1` if none.
+    pub(crate) fn take_count(&mut self) -> usize {
+        self.count.take().unwrap_or(1).max(1)
+    }
+
+    /// Consume the typed count prefix if present.
+    pub(crate) fn take_count_opt(&mut self) -> Option<usize> {
+        self.count.take().filter(|&n| n > 0)
+    }
+
+    pub(crate) fn cancel_pending_op(&mut self) {
+        self.count = None;
+        if self.pending_op.take().is_some() {
+            self.status_message = None;
         }
     }
 
-    fn move_selection(&mut self, delta: isize) {
-        if self.source.len() == 0 {
+    /// Start a vim-style operator, or complete `dd` / `DD` if the same op is pending.
+    pub(crate) fn start_or_repeat_op(&mut self, op: PendingOp) {
+        if self.visible.is_empty() {
+            self.pending_op = None;
+            self.count = None;
+            return;
+        }
+        if self.pending_op == Some(op) {
+            // dd / DD — optional count: `5dd` affects 5 lines.
+            let n = self.take_count();
+            let at = self.selected;
+            let end = (at + n - 1).min(self.visible.len().saturating_sub(1));
+            self.pending_op = None;
+            self.apply_op_visible_range(op, at, end);
+            return;
+        }
+        // Keep count for the following motion (`5dj`) or second `d` (`5dd`).
+        self.pending_op = Some(op);
+        self.op_anchor = self.selected;
+        self.status_message = None;
+    }
+
+    /// Run a motion; if an operator is pending, apply it to the anchor…cursor range.
+    pub(crate) fn with_motion<F>(&mut self, motion: F)
+    where
+        F: FnOnce(&mut Self),
+    {
+        if let Some(op) = self.pending_op {
+            let start = self.op_anchor;
+            motion(self);
+            let end = self.selected;
+            self.pending_op = None;
+            self.count = None;
+            self.apply_op_visible_range(op, start, end);
+        } else {
+            motion(self);
+        }
+    }
+
+    pub(crate) fn apply_op_visible_range(&mut self, op: PendingOp, from: usize, to: usize) {
+        if self.visible.is_empty() {
+            return;
+        }
+        let lo = from.min(to).min(self.visible.len() - 1);
+        let hi = from.max(to).min(self.visible.len() - 1);
+        let mut indices = HashSet::new();
+        for vis in lo..=hi {
+            let Some(&src) = self.visible.get(vis) else {
+                continue;
+            };
+            for i in object_span::object_span(self.source.entries(), src) {
+                indices.insert(i);
+            }
+        }
+        let mut indices: Vec<usize> = indices.into_iter().collect();
+        indices.sort_unstable();
+        if indices.is_empty() {
+            return;
+        }
+
+        self.follow = false;
+        match op {
+            PendingOp::Hide => {
+                let n = indices.len();
+                for i in indices {
+                    self.hidden.insert(i);
+                }
+                self.rebuild_visible(None);
+                self.selected = if self.visible.is_empty() {
+                    0
+                } else {
+                    lo.min(self.visible.len() - 1)
+                };
+                if self.visible.is_empty() {
+                    self.show_overlay = false;
+                }
+                if !self.search_query.is_empty() {
+                    self.run_search();
+                }
+                self.status_message = Some(format!(
+                    "hidden {n} line{}  (:clear-hidden to restore)",
+                    if n == 1 { "" } else { "s" }
+                ));
+            }
+            PendingOp::Delete => {
+                if !self.source.is_file() {
+                    self.status_message = Some("cannot delete from stdin".into());
+                    return;
+                }
+                match self.source.delete_entries(&indices) {
+                    Ok(removed) => {
+                        self.hidden.clear();
+                        self.rebuild_visible(None);
+                        self.selected = if self.visible.is_empty() {
+                            0
+                        } else {
+                            lo.min(self.visible.len() - 1)
+                        };
+                        if self.visible.is_empty() {
+                            self.show_overlay = false;
+                        }
+                        if !self.search_query.is_empty() {
+                            self.run_search();
+                        }
+                        self.status_message = Some(format!(
+                            "deleted {removed} line{} from {}",
+                            if removed == 1 { "" } else { "s" },
+                            self.source
+                                .path()
+                                .map(|p| p.display().to_string())
+                                .unwrap_or_default()
+                        ));
+                    }
+                    Err(err) => {
+                        self.status_message = Some(format!("delete failed: {err:#}"));
+                    }
+                }
+            }
+        }
+    }
+
+    pub(crate) fn hide_current(&mut self) {
+        let at = self.selected;
+        self.apply_op_visible_range(PendingOp::Hide, at, at);
+    }
+
+    pub(crate) fn delete_current(&mut self) {
+        let at = self.selected;
+        self.apply_op_visible_range(PendingOp::Delete, at, at);
+    }
+
+    pub(crate) fn move_selection(&mut self, delta: isize) {
+        if self.visible.is_empty() {
             return;
         }
         self.follow = false;
         let next = (self.selected as isize + delta)
-            .clamp(0, self.source.len() as isize - 1) as usize;
+            .clamp(0, self.visible.len() as isize - 1) as usize;
         self.selected = next;
     }
 
     fn jump_to(&mut self, idx: usize) {
-        if self.source.len() == 0 {
+        if self.visible.is_empty() {
             return;
         }
-        self.selected = idx.min(self.source.len() - 1);
+        self.selected = idx.min(self.visible.len() - 1);
     }
 
-    fn run_search(&mut self) {
+    pub fn run_search(&mut self) {
+        if self.search_query.is_empty() {
+            self.search_matches.clear();
+            self.search_cursor = None;
+            return;
+        }
         let q = self.search_query.to_ascii_lowercase();
         self.search_matches = self
-            .source
-            .entries()
+            .visible
             .iter()
             .enumerate()
-            .filter(|(_, e)| e.raw.to_ascii_lowercase().contains(&q))
-            .map(|(i, _)| i)
+            .filter(|&(_, src)| {
+                self.source.entries()[*src]
+                    .raw
+                    .to_ascii_lowercase()
+                    .contains(&q)
+            })
+            .map(|(vis, _)| vis)
             .collect();
     }
 
-    fn next_match(&mut self, dir: isize) {
+    pub(crate) fn next_match(&mut self, dir: isize) {
         if self.search_matches.is_empty() {
             if !self.search_query.is_empty() {
                 self.run_search();
@@ -242,17 +869,21 @@ impl App {
         self.status_message = Some(format!("{}/{} matches", next + 1, len));
     }
 
-    fn cycle_theme(&mut self) {
-        let themes = Theme::available();
-        self.theme_index = (self.theme_index + 1) % themes.len();
-        if let Ok(theme) = Theme::builtin(themes[self.theme_index]) {
-            self.status_message = Some(format!("theme: {}", theme.name));
-            self.theme = theme;
+    pub(crate) fn cycle_theme(&mut self) {
+        if self.theme_picker.is_some() {
+            return;
         }
+        let themes = Theme::list_names();
+        if themes.is_empty() {
+            return;
+        }
+        self.theme_index = (self.theme_index + 1) % themes.len();
+        let name = themes[self.theme_index].clone();
+        self.commit_theme(&name);
     }
 
     pub fn ensure_visible(&mut self, viewport_height: usize) {
-        if viewport_height == 0 || self.source.len() == 0 {
+        if viewport_height == 0 || self.visible.is_empty() {
             return;
         }
         if self.selected < self.scroll {
@@ -261,4 +892,13 @@ impl App {
             self.scroll = self.selected + 1 - viewport_height;
         }
     }
+}
+
+fn contains(area: Rect, col: u16, row: u16) -> bool {
+    area.width > 0
+        && area.height > 0
+        && col >= area.x
+        && col < area.x.saturating_add(area.width)
+        && row >= area.y
+        && row < area.y.saturating_add(area.height)
 }
