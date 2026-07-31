@@ -53,7 +53,10 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
     let viewport = content.height as usize;
     app.ensure_visible(viewport, app.config.scroll_moves_selection);
 
-    if app.view.visible.is_empty() {
+    let (pin_rows, sep_rows, body_h) = app.list_band_layout(viewport);
+    app.pointer.hit.list_pin_rows = pin_rows;
+
+    if app.display_len() == 0 {
         let theme = &app.theme;
         let msg = if app.source.len() == 0 {
             " waiting for log lines… "
@@ -69,19 +72,18 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
         return;
     }
 
-    let end = (app.view.scroll + viewport).min(app.view.visible.len());
-    let mut lines = Vec::with_capacity(end - app.view.scroll);
+    let body_end = (app.view.scroll + body_h).min(app.view.visible.len());
+    let mut lines =
+        Vec::with_capacity(pin_rows + sep_rows + body_end.saturating_sub(app.view.scroll));
 
     let show_nums = app.config.line_numbers || app.config.relative_line_numbers;
     let line_no_width = if show_nums {
-        let abs_w = app.view.visible.len().max(1).to_string().len();
+        let abs_w = app.display_len().max(1).to_string().len();
         let rel_w = app
             .view
             .selected
             .max(
-                app.view
-                    .visible
-                    .len()
+                app.display_len()
                     .saturating_sub(1)
                     .saturating_sub(app.view.selected),
             )
@@ -100,29 +102,73 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
     };
 
     let ts_fmt = app.config.timestamp_format.as_str();
-    let measure_rows: Vec<(&crate::model::LogEntry, usize)> = (app.view.scroll..end)
-        .map(|vis_idx| {
-            let src = app.view.visible[vis_idx];
-            (&app.source.entries()[src], vis_idx + 1)
-        })
-        .collect();
+    let mut measure_rows: Vec<(&crate::model::LogEntry, usize)> = Vec::new();
+    for display in 0..pin_rows {
+        let src = app.view.pinned[display];
+        measure_rows.push((&app.source.entries()[src], display + 1));
+    }
+    for body_idx in app.view.scroll..body_end {
+        let display = app.pin_count() + body_idx;
+        let src = app.view.visible[body_idx];
+        measure_rows.push((&app.source.entries()[src], display + 1));
+    }
     let col_widths = columns::measure_widths(&app.config.columns, &measure_rows, ts_fmt);
 
-    for vis_idx in app.view.scroll..end {
-        let src = app.view.visible[vis_idx];
+    for display in 0..pin_rows {
+        let src = app.view.pinned[display];
         let entry = &app.source.entries()[src];
-        // When details is focused, the highlight lives in the overlay.
-        let selected = vis_idx == app.view.selected && app.is_list_focused();
-        let gutter_num = line_number_label(app, vis_idx);
+        let selected = display == app.view.selected && app.is_list_focused();
+        let gutter_num = line_number_label(app, display);
         lines.push(render_line(
             app,
             entry,
             LineRenderOptions {
-                view_line: vis_idx + 1,
+                view_line: display + 1,
                 col_widths: &col_widths,
                 gutter_num: gutter_num.as_deref(),
                 line_no_width,
                 selected,
+                pinned: app.is_display_pinned(display),
+                width: content.width as usize,
+            },
+        ));
+    }
+    if sep_rows > 0 {
+        let theme = &app.theme;
+        let width = content.width as usize;
+        let label = " pinned ";
+        let rule = if width <= label.len() {
+            "─".repeat(width)
+        } else {
+            let side = (width - label.len()) / 2;
+            format!(
+                "{}{}{}",
+                "─".repeat(side),
+                label,
+                "─".repeat(width - side - label.len())
+            )
+        };
+        lines.push(Line::from(Span::styled(
+            rule,
+            theme.tone_style(theme.dim, theme.background),
+        )));
+    }
+    for body_idx in app.view.scroll..body_end {
+        let display = app.pin_count() + body_idx;
+        let src = app.view.visible[body_idx];
+        let entry = &app.source.entries()[src];
+        let selected = display == app.view.selected && app.is_list_focused();
+        let gutter_num = line_number_label(app, display);
+        lines.push(render_line(
+            app,
+            entry,
+            LineRenderOptions {
+                view_line: display + 1,
+                col_widths: &col_widths,
+                gutter_num: gutter_num.as_deref(),
+                line_no_width,
+                selected,
+                pinned: app.is_display_pinned(display),
                 width: content.width as usize,
             },
         ));
@@ -138,29 +184,29 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
             bar,
             app.view.visible.len(),
             app.view.scroll,
-            viewport,
+            body_h.max(1),
             theme.tone_fg_style(theme.window_focus_border),
             theme.tone_fg_style(theme.dim),
         );
     }
 }
 
-fn line_number_label(app: &App, vis_idx: usize) -> Option<String> {
+fn line_number_label(app: &App, display: usize) -> Option<String> {
     let abs = app.config.line_numbers;
     let rel = app.config.relative_line_numbers;
     if !abs && !rel {
         return None;
     }
-    let selected = vis_idx == app.view.selected;
+    let selected = display == app.view.selected;
     let text = if rel && !(abs && selected) {
         // Pure relative, or hybrid on non-current lines.
         if selected && !abs {
             "0".into()
         } else {
-            vis_idx.abs_diff(app.view.selected).to_string()
+            display.abs_diff(app.view.selected).to_string()
         }
     } else {
-        (vis_idx + 1).to_string()
+        (display + 1).to_string()
     };
     Some(text)
 }
@@ -171,6 +217,7 @@ struct LineRenderOptions<'a> {
     gutter_num: Option<&'a str>,
     line_no_width: usize,
     selected: bool,
+    pinned: bool,
     width: usize,
 }
 
@@ -181,10 +228,17 @@ fn render_line<'a>(app: &'a App, entry: &'a LogEntry, options: LineRenderOptions
         gutter_num,
         line_no_width,
         selected,
+        pinned,
         width,
     } = options;
     let theme = &app.theme;
-    let gutter = if selected { "▌" } else { " " };
+    let gutter = if selected {
+        "▌"
+    } else if pinned {
+        "▀"
+    } else {
+        " "
+    };
 
     let segments = columns::render_segments_sized(
         &app.config.columns,

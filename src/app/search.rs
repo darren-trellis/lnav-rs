@@ -156,8 +156,8 @@ impl App {
     pub fn set_follow(&mut self, enabled: bool) {
         self.view.follow = enabled;
         self.config.follow = enabled;
-        if enabled && !self.view.visible.is_empty() {
-            self.jump_to(self.view.visible.len() - 1);
+        if enabled && self.display_len() > 0 {
+            self.jump_to(self.display_len() - 1);
         }
         self.status_message = Some(if enabled {
             "follow: on".into()
@@ -212,12 +212,12 @@ impl App {
     }
 
     pub(crate) fn move_selection(&mut self, delta: isize) {
-        if self.view.visible.is_empty() {
+        if self.display_len() == 0 {
             return;
         }
         self.view.follow = false;
         let next = (self.view.selected as isize + delta)
-            .clamp(0, self.view.visible.len() as isize - 1) as usize;
+            .clamp(0, self.display_len() as isize - 1) as usize;
         if next != self.view.selected {
             self.reset_overlay_for_selection_change();
         }
@@ -226,10 +226,10 @@ impl App {
     }
 
     pub(crate) fn jump_to(&mut self, idx: usize) {
-        if self.view.visible.is_empty() {
+        if self.display_len() == 0 {
             return;
         }
-        let next = idx.min(self.view.visible.len() - 1);
+        let next = idx.min(self.display_len() - 1);
         if next != self.view.selected {
             self.reset_overlay_for_selection_change();
         }
@@ -243,7 +243,9 @@ impl App {
         }
         self.view.follow = false;
         let viewport = self.pointer.hit.list_inner.height.max(1) as usize;
-        let max_scroll = self.view.visible.len().saturating_sub(viewport);
+        let (_, _, body_h) = self.list_band_layout(viewport);
+        let body_h = body_h.max(1);
+        let max_scroll = self.view.visible.len().saturating_sub(body_h);
         let next = (self.view.scroll as isize + delta).clamp(0, max_scroll as isize) as usize;
         self.view.scroll = next;
     }
@@ -309,14 +311,19 @@ impl App {
                 Vec::new()
             };
         } else {
-            self.search.matches = self
-                .view
-                .visible
-                .iter()
-                .enumerate()
-                .filter(|&(_, source)| regex.is_match(&self.source.entries()[*source].raw))
-                .map(|(visible, _)| visible)
-                .collect();
+            let mut matches = Vec::new();
+            for (display, &source) in self.view.pinned.iter().enumerate() {
+                if regex.is_match(&self.source.entries()[source].raw) {
+                    matches.push(display);
+                }
+            }
+            let pin_count = self.view.pinned.len();
+            for (body, &source) in self.view.visible.iter().enumerate() {
+                if regex.is_match(&self.source.entries()[source].raw) {
+                    matches.push(pin_count + body);
+                }
+            }
+            self.search.matches = matches;
         }
         self.search.regex = Some(regex);
     }
@@ -347,17 +354,24 @@ impl App {
     }
 
     pub fn ensure_visible(&mut self, viewport_height: usize, follow_selection: bool) {
-        if viewport_height == 0 || self.view.visible.is_empty() {
+        if viewport_height == 0 || self.display_len() == 0 {
+            self.view.scroll = 0;
             return;
         }
-        if follow_selection {
-            if self.view.selected < self.view.scroll {
-                self.view.scroll = self.view.selected;
-            } else if self.view.selected >= self.view.scroll + viewport_height {
-                self.view.scroll = self.view.selected + 1 - viewport_height;
+        let (_, _, body_h) = self.list_band_layout(viewport_height);
+        if body_h == 0 || self.view.visible.is_empty() {
+            self.view.scroll = 0;
+            return;
+        }
+        if follow_selection && self.view.selected >= self.pin_count() {
+            let body_sel = self.view.selected - self.pin_count();
+            if body_sel < self.view.scroll {
+                self.view.scroll = body_sel;
+            } else if body_sel >= self.view.scroll + body_h {
+                self.view.scroll = body_sel + 1 - body_h;
             }
         }
-        let max_scroll = self.view.visible.len().saturating_sub(viewport_height);
+        let max_scroll = self.view.visible.len().saturating_sub(body_h);
         if self.view.scroll > max_scroll {
             self.view.scroll = max_scroll;
         }

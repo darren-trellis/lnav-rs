@@ -75,6 +75,7 @@ fn execute_inner(app: &mut App, raw: &str, invoke: Invoke) {
             follow_command(app, rest);
         }
         "hide" => hide_command(app, rest, invoke),
+        "pin" => pin_command(app, rest),
         "delete" => match invoke {
             Invoke::Key => app.start_or_repeat_op(PendingOp::Delete),
             Invoke::Line => app.delete_current(),
@@ -153,8 +154,8 @@ fn navigate_list(app: &mut App, navigation: Navigation) {
         }
         Navigation::Bottom(None) => {
             app.view.follow = true;
-            if !app.view.visible.is_empty() {
-                app.jump_to(app.view.visible.len() - 1);
+            if app.display_len() > 0 {
+                app.jump_to(app.display_len() - 1);
             }
         }
     });
@@ -199,8 +200,8 @@ fn add_filter(app: &mut App, kind: FilterKind, pattern: &str) {
             app.filters.push(filter);
             app.filtering_enabled = true;
             app.rebuild_visible(None);
-            if app.view.follow && !app.view.visible.is_empty() {
-                app.view.selected = app.view.visible.len() - 1;
+            if app.view.follow && app.display_len() > 0 {
+                app.view.selected = app.display_len() - 1;
             }
             app.persist_session();
             app.status_message = Some(format!(
@@ -346,7 +347,10 @@ fn help_command(app: &mut App, rest: &str) {
     }
     if sub.is_empty() {
         app.status_message =
-            Some(":theme [list|set] · d/D: dd/DD · dj/dG · :hide/:delete · :hide clear".into());
+            Some(
+                ":theme [list|set] · d/D: dd/DD · p: pin · :hide/:pin/:delete · :hide/:pin clear"
+                    .into(),
+            );
     } else {
         app.status_message =
             Some("usage: :help  (or focus details, then :help [on|off|toggle])".into());
@@ -400,6 +404,21 @@ fn hide_command(app: &mut App, rest: &str, invoke: Invoke) {
         other => {
             app.status_message =
                 Some(format!("usage: :hide | :hide line | :hide clear  (unknown: {other})"));
+        }
+    }
+}
+
+fn pin_command(app: &mut App, rest: &str) {
+    let (sub, _) = split_cmd(rest);
+    match sub.to_ascii_lowercase().as_str() {
+        "" | "line" => app.pin_current(),
+        "clear" => {
+            app.cancel_pending_op();
+            app.clear_pins();
+        }
+        other => {
+            app.status_message =
+                Some(format!("usage: :pin | :pin line | :pin clear  (unknown: {other})"));
         }
     }
 }
@@ -622,13 +641,13 @@ fn save_config(app: &mut App) -> anyhow::Result<std::path::PathBuf> {
 }
 
 fn goto_line(app: &mut App, n: usize) {
-    if n == 0 || app.view.visible.is_empty() {
+    if n == 0 || app.display_len() == 0 {
         app.status_message = Some("no such line".into());
         return;
     }
     let vis = n - 1;
-    if vis >= app.view.visible.len() {
-        app.status_message = Some(format!("no such line (1–{})", app.view.visible.len()));
+    if vis >= app.display_len() {
+        app.status_message = Some(format!("no such line (1–{})", app.display_len()));
         return;
     }
     app.view.follow = false;

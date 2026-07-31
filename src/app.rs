@@ -74,6 +74,8 @@ pub struct ThemePicker {
 pub(crate) struct HitAreas {
     pub(crate) list_inner: Rect,
     pub(crate) list_scrollbar: Rect,
+    /// Number of sticky pinned rows currently drawn at the top of the list.
+    pub(crate) list_pin_rows: usize,
     pub(crate) overlay: Rect,
     pub(crate) overlay_scrollbar: Rect,
     pub(crate) sidebar_inner: Rect,
@@ -96,8 +98,13 @@ enum ScrollbarDrag {
 
 pub(crate) struct ViewState {
     pub(crate) hidden: HashSet<usize>,
+    /// Source indices kept sticky at the top of the list (pin order).
+    pub(crate) pinned: Vec<usize>,
+    /// Scrollable body source indices (excludes pinned).
     pub(crate) visible: Vec<usize>,
+    /// Cursor into `pinned ++ visible` (display index).
     pub(crate) selected: usize,
+    /// Scroll offset into `visible` (body only).
     pub(crate) scroll: usize,
     pub(crate) follow: bool,
 }
@@ -191,6 +198,7 @@ impl App {
             source,
             view: ViewState {
                 hidden: HashSet::new(),
+                pinned: Vec::new(),
                 visible: Vec::new(),
                 selected: 0,
                 scroll: 0,
@@ -241,8 +249,8 @@ impl App {
             should_quit: false,
         };
         app.rebuild_visible(None);
-        if app.view.follow && !app.view.visible.is_empty() {
-            app.view.selected = app.view.visible.len() - 1;
+        if app.view.follow && app.display_len() > 0 {
+            app.view.selected = app.display_len() - 1;
         }
         Ok(app)
     }
@@ -253,16 +261,76 @@ impl App {
     }
 
     pub fn selected_entry(&self) -> Option<&LogEntry> {
-        let src = *self.view.visible.get(self.view.selected)?;
+        let src = self.source_at_display(self.view.selected)?;
         self.source.entries().get(src)
     }
 
+    pub fn pin_count(&self) -> usize {
+        self.view.pinned.len()
+    }
+
+    pub fn display_len(&self) -> usize {
+        self.view.pinned.len() + self.view.visible.len()
+    }
+
     pub fn visible_len(&self) -> usize {
-        self.view.visible.len()
+        self.display_len()
     }
 
     pub fn hidden_count(&self) -> usize {
-        self.source.len().saturating_sub(self.view.visible.len())
+        self.source
+            .len()
+            .saturating_sub(self.view.visible.len() + self.view.pinned.len())
+    }
+
+    pub fn source_at_display(&self, display: usize) -> Option<usize> {
+        let pin_count = self.view.pinned.len();
+        if display < pin_count {
+            self.view.pinned.get(display).copied()
+        } else {
+            self.view.visible.get(display - pin_count).copied()
+        }
+    }
+
+    pub fn display_of_source(&self, source: usize) -> Option<usize> {
+        if let Some(index) = self.view.pinned.iter().position(|&pinned| pinned == source) {
+            return Some(index);
+        }
+        self.view
+            .visible
+            .iter()
+            .position(|&visible| visible == source)
+            .map(|index| self.view.pinned.len() + index)
+    }
+
+    pub fn is_display_pinned(&self, display: usize) -> bool {
+        display < self.view.pinned.len()
+    }
+
+    /// Layout of the sticky pin band + scrollable body for a viewport height.
+    /// Returns `(pin_rows, separator_rows, body_height)`.
+    pub fn list_band_layout(&self, viewport: usize) -> (usize, usize, usize) {
+        if viewport == 0 {
+            return (0, 0, 0);
+        }
+        let pins = self.pin_count();
+        if pins == 0 {
+            return (0, 0, viewport);
+        }
+        if self.view.visible.is_empty() {
+            return (pins.min(viewport), 0, 0);
+        }
+        let mut pin_rows = pins.min(viewport.saturating_sub(1));
+        let rem = viewport.saturating_sub(pin_rows);
+        if pin_rows > 0 && rem >= 2 {
+            (pin_rows, 1, rem - 1)
+        } else if pin_rows > 0 && rem == 1 {
+            // Prefer a body row over a separator when the viewport is tight.
+            (pin_rows, 0, 1)
+        } else {
+            pin_rows = pins.min(viewport);
+            (pin_rows, 0, viewport.saturating_sub(pin_rows))
+        }
     }
 
     pub fn focus(&self) -> Focus {
@@ -296,28 +364,33 @@ impl App {
     }
 
     pub fn rebuild_visible(&mut self, prefer_source_idx: Option<usize>) {
-        let prefer =
-            prefer_source_idx.or_else(|| self.view.visible.get(self.view.selected).copied());
+        let prefer = prefer_source_idx.or_else(|| self.source_at_display(self.view.selected));
+        let entry_count = self.source.len();
+        self.view.pinned.retain(|&index| index < entry_count);
+        let pinned: HashSet<usize> = self.view.pinned.iter().copied().collect();
         self.view.visible = filter::build_visible(
             self.source.entries(),
             &self.filters,
             self.filtering_enabled,
             &self.view.hidden,
-        );
+        )
+        .into_iter()
+        .filter(|index| !pinned.contains(index))
+        .collect();
 
-        if self.view.visible.is_empty() {
+        if self.display_len() == 0 {
             self.view.selected = 0;
             self.view.scroll = 0;
             return;
         }
 
         if let Some(src) = prefer
-            && let Some(pos) = self.view.visible.iter().position(|&i| i == src)
+            && let Some(pos) = self.display_of_source(src)
         {
             self.view.selected = pos;
             return;
         }
-        self.view.selected = self.view.selected.min(self.view.visible.len() - 1);
+        self.view.selected = self.view.selected.min(self.display_len() - 1);
     }
 
     pub fn run(&mut self, terminal: &mut ratatui::DefaultTerminal) -> Result<()> {
@@ -335,18 +408,19 @@ impl App {
                     let reset = outcome.reset();
                     let prefer = if reset {
                         self.view.hidden.clear();
+                        self.view.pinned.clear();
                         self.view.selected = 0;
                         self.view.scroll = 0;
                         self.reset_overlay_for_selection_change();
                         None
                     } else {
-                        self.view.visible.get(self.view.selected).copied()
+                        self.source_at_display(self.view.selected)
                     };
                     self.rebuild_visible(prefer);
-                    if self.view.follow && !self.view.visible.is_empty() {
-                        self.view.selected = self.view.visible.len() - 1;
+                    if self.view.follow && self.display_len() > 0 {
+                        self.view.selected = self.display_len() - 1;
                     }
-                    if self.view.visible.is_empty() {
+                    if self.display_len() == 0 {
                         self.close_details();
                     }
                     if !self.search.query.is_empty() {

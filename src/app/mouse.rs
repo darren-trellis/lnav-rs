@@ -148,19 +148,21 @@ impl App {
         if viewport == 0 || bar.height == 0 || self.view.visible.is_empty() {
             return;
         }
-        let new_scroll = scroll_index_at(bar, row, self.view.visible.len(), viewport);
-        let max_scroll = self.view.visible.len().saturating_sub(viewport);
+        let (_, _, body_h) = self.list_band_layout(viewport);
+        let body_h = body_h.max(1);
+        let new_scroll = scroll_index_at(bar, row, self.view.visible.len(), body_h);
+        let max_scroll = self.view.visible.len().saturating_sub(body_h);
         let new_scroll = new_scroll.min(max_scroll);
         self.view.follow = false;
         self.focus_list();
-        if self.config.scroll_moves_selection {
-            let offset = self
-                .view
-                .selected
+        if self.config.scroll_moves_selection && self.view.selected >= self.pin_count() {
+            let body_sel = self.view.selected - self.pin_count();
+            let offset = body_sel
                 .saturating_sub(self.view.scroll)
-                .min(viewport.saturating_sub(1));
+                .min(body_h.saturating_sub(1));
             self.view.scroll = new_scroll;
-            let new_selected = (new_scroll + offset).min(self.view.visible.len() - 1);
+            let new_selected =
+                self.pin_count() + (new_scroll + offset).min(self.view.visible.len() - 1);
             if new_selected != self.view.selected {
                 self.reset_overlay_for_selection_change();
                 self.view.selected = new_selected;
@@ -244,12 +246,25 @@ impl App {
 
     fn click_list_row(&mut self, row: u16) {
         let area = self.pointer.hit.list_inner;
-        if area.height == 0 || self.view.visible.is_empty() {
+        if area.height == 0 || self.display_len() == 0 {
             return;
         }
         let row_off = (row - area.y) as usize;
-        let vis_idx = self.view.scroll + row_off;
-        if vis_idx >= self.view.visible.len() {
+        let pin_rows = self.pointer.hit.list_pin_rows;
+        let (_, sep_rows, _) = self.list_band_layout(area.height as usize);
+        let display = if row_off < pin_rows {
+            row_off
+        } else if row_off < pin_rows + sep_rows {
+            return;
+        } else {
+            let body_row = row_off - pin_rows - sep_rows;
+            let body_idx = self.view.scroll + body_row;
+            if body_idx >= self.view.visible.len() {
+                return;
+            }
+            self.pin_count() + body_idx
+        };
+        if display >= self.display_len() {
             return;
         }
 
@@ -259,30 +274,30 @@ impl App {
         let double = self
             .pointer
             .last_click
-            .map(|c| c.vis_idx == vis_idx && c.at.elapsed() < Duration::from_millis(400))
+            .map(|c| c.vis_idx == display && c.at.elapsed() < Duration::from_millis(400))
             .unwrap_or(false);
 
         if let Some(op) = self.pending_op.take() {
             let start = self.op_anchor;
             self.view.follow = false;
-            self.view.selected = vis_idx;
-            self.apply_op_visible_range(op, start, vis_idx);
+            self.view.selected = display;
+            self.apply_op_display_range(op, start, display);
             self.pointer.last_click = Some(LastClick {
                 at: Instant::now(),
-                vis_idx,
+                vis_idx: display,
             });
             return;
         }
 
         self.view.follow = false;
-        self.view.selected = vis_idx;
+        self.view.selected = display;
         if double {
             self.toggle_details();
             self.pointer.last_click = None;
         } else {
             self.pointer.last_click = Some(LastClick {
                 at: Instant::now(),
-                vis_idx,
+                vis_idx: display,
             });
         }
     }

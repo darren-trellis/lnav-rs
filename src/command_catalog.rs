@@ -34,6 +34,10 @@ const COMMANDS: &[CommandInfo] = &[
         help: "hide line(s): dd or d{{motion}} | line | clear",
     },
     CommandInfo {
+        name: "pin",
+        help: "pin line(s) sticky at top | line | clear",
+    },
+    CommandInfo {
         name: "delete",
         help: "delete line(s): DD or D{{motion}}",
     },

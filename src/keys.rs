@@ -38,6 +38,7 @@ pub fn defaults() -> BTreeMap<String, String> {
         ("d".into(), "hide".into()),
         ("backspace".into(), "hide line".into()),
         ("D".into(), "delete".into()),
+        ("p".into(), "pin line".into()),
         ("?".into(), "help".into()),
         ("s".into(), "view sidebar toggle".into()),
     ])
@@ -171,6 +172,7 @@ mod tests {
             defaults().get("backspace").map(String::as_str),
             Some("hide line")
         );
+        assert_eq!(defaults().get("p").map(String::as_str), Some("pin line"));
         assert_eq!(
             sidebar_defaults().get("d").map(String::as_str),
             Some("filter delete")

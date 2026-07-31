@@ -145,6 +145,7 @@ fn suggestions_for(buffer: &str, app: &App) -> Vec<Suggestion> {
             "view" => view_suggestions(rest, rest_from),
             "search" => on_off_toggle_suggestions(rest, rest_from, SEARCH_SUBS),
             "hide" => on_off_toggle_suggestions(rest, rest_from, HIDE_SUBS),
+            "pin" => on_off_toggle_suggestions(rest, rest_from, PIN_SUBS),
             "help" => on_off_toggle_suggestions(rest, rest_from, HELP_SUBS),
             "config" => config_suggestions(rest, rest_from),
             _ => Vec::new(),
@@ -220,6 +221,11 @@ const SEARCH_SUBS: &[(&str, &str)] = &[("clear", "clear search highlights")];
 const HIDE_SUBS: &[(&str, &str)] = &[
     ("line", "hide current line(s) immediately"),
     ("clear", "restore lines hidden with hide"),
+];
+
+const PIN_SUBS: &[(&str, &str)] = &[
+    ("line", "pin/unpin current line(s)"),
+    ("clear", "unpin all sticky lines"),
 ];
 
 fn on_off_toggle_suggestions(

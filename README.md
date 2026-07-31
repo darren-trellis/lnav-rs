@@ -40,7 +40,7 @@ lnav-rs - < app.jsonl
 ### Keys
 
 Keys are commands, configured under `[keys]` in the config (defaults below).
-`:` completion lists **commands** (`quit`, `hide`, `delete`, …) — not key aliases like `q`/`d`/`D`.
+`:` completion lists **commands** (`quit`, `hide`, `pin`, `delete`, …) — not key aliases like `q`/`d`/`p`/`D`.
 
 | Key | Command |
 |-----|---------|
@@ -63,6 +63,7 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 | `t` | `theme cycle` |
 | `d` | `hide` operator — `dd` current, `dj`/`dG`/… range; in sidebar `dd` deletes filter |
 | `Backspace` | `hide line` (same as `dd`; accepts a count); in sidebar `filter delete line` |
+| `p` | `pin line` — toggle sticky pin at top of list (accepts a count) |
 | `D` | `delete` operator — `DD` current, `Dj`/`DG`/… range (in-place; safe with `tee -a`) |
 | `?` | `help` (status cheat sheet; `help toggle` details key hints when focused) |
 | `q` | `quit` |
@@ -105,6 +106,8 @@ In `/` mode, **Up/Down** recall search history (shared for list and details sear
 | `:copy` | Copy focused details value to the clipboard |
 | `:hide line` | Hide current line(s) immediately (same as `dd`) |
 | `:hide clear` | Restore lines hidden with `d` |
+| `:pin` / `:pin line` | Pin/unpin current line(s) sticky at the top of the list |
+| `:pin clear` | Unpin all sticky lines |
 | `:theme` | Show current theme |
 | `:theme list` | List available themes |
 | `:theme set` | Open theme picker (preview on hover / configured navigation keys) |
@@ -132,6 +135,7 @@ In `/` mode, **Up/Down** recall search history (shared for list and details sear
 | `:config` / `:config path` | Show config path |
 | `:config init` | Create config from current settings |
 | `:hide` | Hide current line / JSON object (immediate) |
+| `:pin` | Pin/unpin current line / JSON object (sticky at top) |
 | `:delete` | Delete current line / JSON object from file (immediate) |
 | `:search clear` | Clear search highlights |
 | `:N` | Jump to view line `N` |
