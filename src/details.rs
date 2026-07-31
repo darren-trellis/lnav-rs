@@ -79,6 +79,7 @@ pub fn build_lines(
         return lines;
     }
 
+    let tab = config.details_tab_width.max(2);
     let n = entry.fields.len();
     for (i, field) in entry.fields.iter().enumerate() {
         push_field(
@@ -91,6 +92,7 @@ pub fn build_lines(
             theme,
             config.details_json_tree,
             folded,
+            tab,
         );
     }
     lines
@@ -98,6 +100,31 @@ pub fn build_lines(
 
 fn fold_marker(folded: bool) -> &'static str {
     if folded { "▸ " } else { "▾ " }
+}
+
+/// Branch connector for one tree level, e.g. width 4 → `├── ` / `└── `.
+fn branch_connector(is_last: bool, width: usize) -> String {
+    let w = width.max(2);
+    let mut s = String::with_capacity(w);
+    s.push(if is_last { '└' } else { '├' });
+    for _ in 0..w.saturating_sub(2) {
+        s.push('─');
+    }
+    s.push(' ');
+    s
+}
+
+/// Indent guide under a parent, e.g. width 4 → `│   ` or `    `.
+fn indent_guide(is_last: bool, width: usize) -> String {
+    let w = width.max(2);
+    if is_last {
+        " ".repeat(w)
+    } else {
+        let mut s = String::with_capacity(w);
+        s.push('│');
+        s.push_str(&" ".repeat(w - 1));
+        s
+    }
 }
 
 fn push_field(
@@ -110,14 +137,13 @@ fn push_field(
     theme: &Theme,
     json_tree: bool,
     folded: &HashSet<String>,
+    tab: usize,
 ) {
     let surface = theme.overlay_bg;
     let branch = if prefix.is_empty() {
         String::new()
-    } else if is_last {
-        "└── ".into()
     } else {
-        "├── ".into()
+        branch_connector(is_last, tab)
     };
     let key_style = theme
         .tone_style(theme.key, surface)
@@ -162,12 +188,10 @@ fn push_field(
                     if !is_folded {
                         let child_prefix = if prefix.is_empty() {
                             String::new()
-                        } else if is_last {
-                            format!("{prefix}    ")
                         } else {
-                            format!("{prefix}│   ")
+                            format!("{prefix}{}", indent_guide(is_last, tab))
                         };
-                        push_json_value(lines, &v, &path, &child_prefix, theme, folded);
+                        push_json_value(lines, &v, &path, &child_prefix, theme, folded, tab);
                     }
                     return;
                 }
@@ -232,13 +256,24 @@ fn push_json_value(
     prefix: &str,
     theme: &Theme,
     folded: &HashSet<String>,
+    tab: usize,
 ) {
     match value {
         Value::Object(map) => {
             let keys: Vec<&String> = map.keys().collect();
             for (i, key) in keys.iter().enumerate() {
                 let is_last = i + 1 == keys.len();
-                push_json_entry(lines, key, &map[*key], parent, prefix, is_last, theme, folded);
+                push_json_entry(
+                    lines,
+                    key,
+                    &map[*key],
+                    parent,
+                    prefix,
+                    is_last,
+                    theme,
+                    folded,
+                    tab,
+                );
             }
         }
         Value::Array(arr) => {
@@ -253,6 +288,7 @@ fn push_json_value(
                     is_last,
                     theme,
                     folded,
+                    tab,
                 );
             }
         }
@@ -279,17 +315,14 @@ fn push_json_entry(
     is_last: bool,
     theme: &Theme,
     folded: &HashSet<String>,
+    tab: usize,
 ) {
     let surface = theme.overlay_bg;
-    let branch = if is_last { "└── " } else { "├── " };
+    let branch = branch_connector(is_last, tab);
     let key_style = theme
         .tone_style(theme.key, surface)
         .add_modifier(Modifier::BOLD);
-    let child_prefix = if is_last {
-        format!("{prefix}    ")
-    } else {
-        format!("{prefix}│   ")
-    };
+    let child_prefix = format!("{prefix}{}", indent_guide(is_last, tab));
     let mut path = parent.to_vec();
     path.push(key.to_string());
 
@@ -331,6 +364,7 @@ fn push_json_entry(
                         i + 1 == keys.len(),
                         theme,
                         folded,
+                        tab,
                     );
                 }
             }
@@ -375,6 +409,7 @@ fn push_json_entry(
                         i + 1 == arr.len(),
                         theme,
                         folded,
+                        tab,
                     );
                 }
             }
@@ -498,5 +533,20 @@ mod tests {
         assert_eq!(desired_height(100, 50, 10), 10);
         assert_eq!(desired_height(2, 50, 24), 4);
         assert!(desired_height(20, 10, 24) <= 7);
+    }
+
+    #[test]
+    fn tab_width_changes_indent() {
+        let mut cfg = Config::default();
+        cfg.details_json_tree = true;
+        cfg.details_tab_width = 2;
+        let lines = build_lines(&sample_entry(), &theme(), &cfg, &HashSet::new());
+        let nested = lines
+            .iter()
+            .map(|l| l.plain_text())
+            .find(|t| t.contains("url"))
+            .unwrap();
+        assert!(nested.contains("├ ") || nested.contains("└ "));
+        assert!(!nested.contains("├── "));
     }
 }

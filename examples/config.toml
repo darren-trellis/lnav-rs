@@ -1,6 +1,7 @@
 line_numbers = true
 # details_json_tree = true
 # details_max_height = 24
+# details_tab_width = 4
 # case_mode = "insensitive"
 # session_filters = true
 # session_stdin = true

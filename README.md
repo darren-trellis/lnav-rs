@@ -98,6 +98,7 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 | `:set wrap_details on\|off` | Wrap overlay text |
 | `:set details_json_tree on\|off` | Tree-view nested JSON in details (default on) |
 | `:set details_max_height N` | Max details overlay height in rows (default 24) |
+| `:set details_tab_width N` | Details tree indent width (default 4, min 2) |
 | `:set line_numbers on\|off` | Show absolute view line numbers |
 | `:set relative_line_numbers on\|off` | Show relative line numbers (vim-style) |
 | `:set scroll_lines N` | Mouse wheel step (default 1) |
@@ -133,6 +134,7 @@ follow = true
 wrap_details = true
 details_json_tree = true
 details_max_height = 24
+details_tab_width = 4
 line_numbers = false
 relative_line_numbers = false
 scroll_lines = 1
@@ -170,7 +172,7 @@ D = "delete"
 
 `case_mode` controls `/` search and `:filter` matching: `smart` / `smartcase` (default; insensitive unless the pattern has an uppercase letter), `insensitive`, or `sensitive`.
 
-Details: `Enter` opens and focuses the overlay — the selection highlight moves into details (`j`/`k` move the cursor; Esc closes). `Tab` runs `fold toggle` on the tree item under the cursor (`:fold on|off|toggle`; rebind with `tab = "fold toggle"`). With details focused, `/` searches inside the overlay (`n`/`N` cycle matches). Nested JSON fields render as a tree when `details_json_tree` is on. Overlay height grows with content up to `details_max_height` (and screen space).
+Details: `Enter` opens and focuses the overlay — the selection highlight moves into details (`j`/`k` move the cursor; Esc closes). `Tab` runs `fold toggle` on the tree item under the cursor (`:fold on|off|toggle`; rebind with `tab = "fold toggle"`). With details focused, `/` searches inside the overlay (`n`/`N` cycle matches). Nested JSON fields render as a tree when `details_json_tree` is on (`details_tab_width` sets indent per level). Overlay height grows with content up to `details_max_height` (and screen space).
 
 Filters persist under `~/.local/share/lnav-rs/sessions/` (one file per log path hash; stdin uses `stdin.toml`). `session_filters` / `session_stdin` control that (both default on). Turn `session_stdin` off if you don’t want every pipe to share one filter set.
 

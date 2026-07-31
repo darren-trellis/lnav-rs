@@ -54,6 +54,7 @@ const SET_KEYS: &[(&str, &str)] = &[
     ("wrap_details", "on|off"),
     ("details_json_tree", "on|off"),
     ("details_max_height", "max overlay rows"),
+    ("details_tab_width", "tree indent columns"),
     ("line_numbers", "on|off"),
     ("relative_line_numbers", "on|off"),
     ("scroll_lines", "mouse wheel step"),

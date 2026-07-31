@@ -548,7 +548,7 @@ fn set_option(app: &mut App, rest: &str) {
     let (key, value) = split_cmd(rest);
     if key.is_empty() {
         app.status_message = Some(
-            "usage: :set theme|follow|wrap_details|details_json_tree|details_max_height|line_numbers|relative_line_numbers|scroll_lines|timestamp_format|case_mode|session_filters|session_stdin VALUE"
+            "usage: :set theme|follow|wrap_details|details_json_tree|details_max_height|details_tab_width|line_numbers|relative_line_numbers|scroll_lines|timestamp_format|case_mode|session_filters|session_stdin VALUE"
                 .into(),
         );
         return;
@@ -591,6 +591,25 @@ fn set_option(app: &mut App, rest: &str) {
                 _ => {
                     app.status_message =
                         Some("usage: :set details_max_height N (N >= 4)".into());
+                }
+            }
+        }
+        "details_tab_width" => {
+            if value.is_empty() {
+                app.status_message = Some(format!(
+                    "details_tab_width={}",
+                    app.config.details_tab_width.max(2)
+                ));
+                return;
+            }
+            match value.parse::<usize>() {
+                Ok(n) if n >= 2 => {
+                    app.config.details_tab_width = n;
+                    app.status_message = Some(format!("details_tab_width={n}"));
+                }
+                _ => {
+                    app.status_message =
+                        Some("usage: :set details_tab_width N (N >= 2)".into());
                 }
             }
         }

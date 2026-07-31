@@ -218,6 +218,10 @@ pub struct Config {
     #[serde(default = "default_details_max_height")]
     pub details_max_height: usize,
 
+    /// Indent width (columns) per nesting level in the details JSON tree.
+    #[serde(default = "default_details_tab_width")]
+    pub details_tab_width: usize,
+
     /// Show 1-based view line numbers in the list (not file line numbers).
     #[serde(default)]
     pub line_numbers: bool,
@@ -272,6 +276,10 @@ fn default_details_max_height() -> usize {
     24
 }
 
+fn default_details_tab_width() -> usize {
+    4
+}
+
 fn default_timestamp_format() -> String {
     timestamp::DEFAULT_FORMAT.into()
 }
@@ -307,6 +315,7 @@ impl Default for Config {
             wrap_details: true,
             details_json_tree: true,
             details_max_height: default_details_max_height(),
+            details_tab_width: default_details_tab_width(),
             line_numbers: false,
             relative_line_numbers: false,
             scroll_lines: default_scroll_lines(),
@@ -383,6 +392,9 @@ impl Config {
         if self.details_max_height < 4 {
             bail!("details_max_height must be >= 4");
         }
+        if self.details_tab_width < 2 {
+            bail!("details_tab_width must be >= 2");
+        }
         if self.timestamp_format.trim().is_empty() {
             bail!("timestamp_format must not be empty");
         }
@@ -441,6 +453,12 @@ impl Config {
             body.push_str(&format!(
                 "details_max_height = {}\n",
                 self.details_max_height.max(4)
+            ));
+        }
+        if self.details_tab_width != defaults.details_tab_width {
+            body.push_str(&format!(
+                "details_tab_width = {}\n",
+                self.details_tab_width.max(2)
             ));
         }
         if self.line_numbers != defaults.line_numbers {
@@ -720,6 +738,7 @@ mod tests {
         assert!(!raw.contains("wrap_details = "));
         assert!(!raw.contains("details_json_tree = "));
         assert!(!raw.contains("details_max_height = "));
+        assert!(!raw.contains("details_tab_width = "));
         assert!(!raw.contains("line_numbers = "));
         assert!(!raw.contains("session_filters = "));
         assert!(!raw.contains("session_stdin = "));
