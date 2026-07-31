@@ -325,7 +325,7 @@ fn contains(area: Rect, col: u16, row: u16) -> bool {
         && row < area.y.saturating_add(area.height)
 }
 
-fn scroll_index_at(bar: Rect, row: u16, content_len: usize, viewport: usize) -> usize {
+pub fn scroll_index_at(bar: Rect, row: u16, content_len: usize, viewport: usize) -> usize {
     let max_scroll = content_len.saturating_sub(viewport);
     if max_scroll == 0 || bar.height <= 1 {
         return 0;
@@ -333,17 +333,4 @@ fn scroll_index_at(bar: Rect, row: u16, content_len: usize, viewport: usize) -> 
     let y = row.saturating_sub(bar.y) as usize;
     let y = y.min(bar.height as usize - 1);
     (y * max_scroll) / (bar.height as usize - 1)
-}
-
-#[cfg(test)]
-mod scrollbar_tests {
-    use super::*;
-
-    #[test]
-    fn scroll_index_maps_track_ends() {
-        let bar = Rect::new(10, 5, 1, 11);
-        assert_eq!(scroll_index_at(bar, 5, 100, 10), 0);
-        assert_eq!(scroll_index_at(bar, 15, 100, 10), 90);
-        assert_eq!(scroll_index_at(bar, 10, 100, 10), 45);
-    }
 }

@@ -1,5 +1,5 @@
-mod json;
-mod logfmt;
+pub mod json;
+pub mod logfmt;
 
 use crate::model::{Field, LineFormat, LogEntry, LogLevel};
 use crate::timestamp;
@@ -73,38 +73,4 @@ fn detect_plain_level(line: &str) -> LogLevel {
         }
     }
     LogLevel::Unknown
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::model::LineFormat;
-
-    #[test]
-    fn parses_sample_jsonl() {
-        let raw = include_str!("../../examples/sample.jsonl");
-        let entries: Vec<_> = raw
-            .lines()
-            .enumerate()
-            .map(|(i, line)| parse_line(i + 1, line.to_string()))
-            .collect();
-        assert_eq!(entries.len(), 7);
-        assert!(entries.iter().all(|e| e.format == LineFormat::Json));
-        assert_eq!(entries[4].level, LogLevel::Error);
-        assert!(entries[4].fields.iter().any(|f| f.key == "service"));
-        assert!(entries[0].timestamp_parsed.is_some());
-    }
-
-    #[test]
-    fn parses_sample_logfmt() {
-        let raw = include_str!("../../examples/sample.logfmt");
-        let entries: Vec<_> = raw
-            .lines()
-            .enumerate()
-            .map(|(i, line)| parse_line(i + 1, line.to_string()))
-            .collect();
-        assert_eq!(entries.len(), 6);
-        assert!(entries.iter().all(|e| e.format == LineFormat::Logfmt));
-        assert_eq!(entries[4].level, LogLevel::Error);
-    }
 }

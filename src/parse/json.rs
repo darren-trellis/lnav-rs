@@ -72,20 +72,3 @@ fn json_to_field(value: &Value) -> FieldValue {
         Value::Array(_) | Value::Object(_) => FieldValue::Nested(value.clone()),
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn parses_json_line() {
-        let (level, ts, msg, fields) = parse_json_line(
-            r#"{"level":"error","msg":"boom","time":"2024-01-01T00:00:00Z","code":500}"#,
-        )
-        .unwrap();
-        assert_eq!(level, LogLevel::Error);
-        assert_eq!(ts.as_deref(), Some("2024-01-01T00:00:00Z"));
-        assert_eq!(msg.as_deref(), Some("boom"));
-        assert_eq!(fields.len(), 4);
-    }
-}

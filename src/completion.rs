@@ -155,7 +155,7 @@ fn suggestions_for(buffer: &str, app: &App) -> Vec<Suggestion> {
     items
 }
 
-fn sort_suggestions(items: &mut [Suggestion]) {
+pub fn sort_suggestions(items: &mut [Suggestion]) {
     items.sort_by(|a, b| {
         a.text
             .to_ascii_lowercase()
@@ -262,7 +262,7 @@ fn view_suggestions(rest: &str, rest_from: usize) -> Vec<Suggestion> {
     }
 }
 
-fn filter_suggestions(rest: &str, rest_from: usize, filter_count: usize) -> Vec<Suggestion> {
+pub fn filter_suggestions(rest: &str, rest_from: usize, filter_count: usize) -> Vec<Suggestion> {
     if !rest.contains(char::is_whitespace) {
         let prefix = rest.to_ascii_lowercase();
         return FILTER_SUBS
@@ -302,7 +302,7 @@ fn filter_suggestions(rest: &str, rest_from: usize, filter_count: usize) -> Vec<
     }
 }
 
-fn command_suggestions(prefix: &str, replace_from: usize) -> Vec<Suggestion> {
+pub fn command_suggestions(prefix: &str, replace_from: usize) -> Vec<Suggestion> {
     let prefix_l = prefix.to_ascii_lowercase();
     let mut items: Vec<Suggestion> = command_catalog::catalog()
         .iter()
@@ -382,7 +382,7 @@ const CONFIG_SUBS: &[(&str, &str)] = &[
     ("save", "save config to disk"),
 ];
 
-fn config_suggestions(rest: &str, rest_from: usize) -> Vec<Suggestion> {
+pub fn config_suggestions(rest: &str, rest_from: usize) -> Vec<Suggestion> {
     if !rest.contains(char::is_whitespace) {
         let prefix = rest.to_ascii_lowercase();
         return CONFIG_SUBS
@@ -485,8 +485,7 @@ fn split_once_ws(s: &str) -> (&str, &str) {
     }
 }
 
-#[cfg(test)]
-fn common_prefix<'a>(mut iter: impl Iterator<Item = &'a str>) -> Option<String> {
+pub fn common_prefix<'a>(mut iter: impl Iterator<Item = &'a str>) -> Option<String> {
     let mut prefix = iter.next()?.to_string();
     for s in iter {
         while !s.starts_with(&prefix) {
@@ -500,123 +499,5 @@ fn common_prefix<'a>(mut iter: impl Iterator<Item = &'a str>) -> Option<String> 
         None
     } else {
         Some(prefix)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn completes_filter_prefix() {
-        let items = command_suggestions("fil", 0);
-        assert!(items.iter().any(|s| s.text == "filter"));
-        assert!(
-            items.iter().all(|s| {
-                s.text != "filter-in" && s.text != "filter-out" && s.text != "filters"
-            })
-        );
-    }
-
-    #[test]
-    fn suggestions_sorted_alphanumerically() {
-        let mut items = command_suggestions("c", 0);
-        sort_suggestions(&mut items);
-        let texts: Vec<&str> = items.iter().map(|s| s.text.as_str()).collect();
-        assert!(
-            texts
-                .windows(2)
-                .all(|w| { w[0].to_ascii_lowercase() <= w[1].to_ascii_lowercase() })
-        );
-        assert!(texts.contains(&"copy"));
-        assert!(texts.contains(&"config"));
-        let copy = texts.iter().position(|t| *t == "copy").unwrap();
-        let config = texts.iter().position(|t| *t == "config").unwrap();
-        assert!(config < copy);
-    }
-
-    #[test]
-    fn completes_filter_subcommands() {
-        let items = filter_suggestions("", 0, 0);
-        assert!(items.iter().any(|s| s.text == "list"));
-        assert!(items.iter().any(|s| s.text == "in"));
-        assert!(items.iter().any(|s| s.text == "out"));
-        assert!(items.iter().any(|s| s.text == "toggle"));
-        assert!(items.iter().any(|s| s.text == "clear"));
-        assert!(items.iter().any(|s| s.text == "delete"));
-    }
-
-    #[test]
-    fn does_not_suggest_keybinding_only_commands() {
-        let items = command_suggestions("", 0);
-        assert!(items.iter().any(|s| s.text == "quit"));
-        assert!(items.iter().any(|s| s.text == "hide"));
-        assert!(items.iter().any(|s| s.text == "delete"));
-        assert!(items.iter().any(|s| s.text == "config"));
-        assert!(items.iter().all(|s| {
-            !matches!(
-                s.text.as_str(),
-                "nav"
-                    | "page"
-                    | "match"
-                    | "focus"
-                    | "search"
-                    | "command-mode"
-                    | "q"
-                    | "d"
-                    | "D"
-            )
-        }));
-    }
-
-    #[test]
-    fn completes_config_set_get() {
-        let items = config_suggestions("", 0);
-        assert!(items.iter().any(|s| s.text == "set"));
-        assert!(items.iter().any(|s| s.text == "get"));
-        let keys = config_suggestions("get ", 4);
-        assert!(keys.iter().any(|s| s.text == "follow"));
-    }
-
-    #[test]
-    fn common_prefix_works() {
-        assert_eq!(
-            common_prefix(["filter", "follow", "fold"].into_iter()).as_deref(),
-            Some("f")
-        );
-        assert_eq!(
-            common_prefix(["list", "in", "out"].into_iter()).as_deref(),
-            None
-        );
-        assert_eq!(
-            common_prefix(["filter-in", "filter-out"].into_iter()).as_deref(),
-            Some("filter-")
-        );
-    }
-
-    #[test]
-    fn selection_starts_unselected_and_cycles() {
-        let mut state = CompletionState::default();
-        assert!(state.selected.is_none());
-        state.items = vec![
-            Suggestion {
-                text: "a".into(),
-                label: "a".into(),
-                help: String::new(),
-                replace_from: 0,
-            },
-            Suggestion {
-                text: "b".into(),
-                label: "b".into(),
-                help: String::new(),
-                replace_from: 0,
-            },
-        ];
-        state.select_next();
-        assert_eq!(state.selected, Some(0));
-        state.select_next();
-        assert_eq!(state.selected, Some(1));
-        state.select_next();
-        assert_eq!(state.selected, Some(0));
     }
 }

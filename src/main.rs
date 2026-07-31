@@ -1,26 +1,3 @@
-mod app;
-mod columns;
-mod command;
-mod command_catalog;
-mod completion;
-mod config;
-mod config_options;
-mod details;
-mod filter;
-mod highlight;
-mod history;
-mod keys;
-mod model;
-mod object_span;
-mod parse;
-mod session;
-mod tail;
-mod text;
-mod theme;
-mod timestamp;
-mod tty;
-mod ui;
-
 use std::io::IsTerminal;
 use std::path::PathBuf;
 use std::process::ExitCode;
@@ -28,10 +5,11 @@ use std::process::ExitCode;
 use anyhow::{Result, bail};
 use clap::Parser;
 
-use crate::app::App;
-use crate::config::Config;
-use crate::tail::LogSource;
-use crate::theme::Theme;
+use lnav_rs::app::App;
+use lnav_rs::config::Config;
+use lnav_rs::tail::LogSource;
+use lnav_rs::theme::Theme;
+use lnav_rs::tty;
 
 #[derive(Debug, Parser)]
 #[command(

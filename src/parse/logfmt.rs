@@ -115,19 +115,3 @@ fn looks_like_key(key: &str) -> bool {
     }
     chars.all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '.' || c == '-' || c == '@')
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn parses_basic_logfmt() {
-        let (level, ts, msg, fields) =
-            parse_logfmt(r#"time=2024-01-01T00:00:00Z level=info msg="hello world" user=ada"#)
-                .unwrap();
-        assert_eq!(level, LogLevel::Info);
-        assert_eq!(ts.as_deref(), Some("2024-01-01T00:00:00Z"));
-        assert_eq!(msg.as_deref(), Some("hello world"));
-        assert_eq!(fields.len(), 4);
-    }
-}

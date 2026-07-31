@@ -20,7 +20,7 @@ use crate::theme::Theme;
 use crate::ui;
 
 mod input;
-mod mouse;
+pub mod mouse;
 mod operators;
 mod search;
 
