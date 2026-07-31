@@ -272,46 +272,59 @@ impl Config {
         }
         let _ = fs::create_dir_all(Self::themes_dir());
 
+        let defaults = Self::default();
         let mut body = String::new();
         write_theme_config(&mut body, &self.theme);
 
-        body.push_str(&format!(
-            "follow = {}\n\
-             wrap_details = {}\n\
-             line_numbers = {}\n\
-             relative_line_numbers = {}\n\
-             scroll_lines = {}\n\
-             timestamp_format = {:?}\n\n",
-            self.follow,
-            self.wrap_details,
-            self.line_numbers,
-            self.relative_line_numbers,
-            self.scroll_lines.max(1),
-            self.timestamp_format,
-        ));
-
-        for col in &self.columns {
-            body.push_str("[[columns]]\n");
-            body.push_str(&format!("source = {:?}\n", col.source));
-            if let Some(w) = col.width {
-                body.push_str(&format!("width = {w}\n"));
-            }
-            match col.align {
-                Align::Left => {}
-                Align::Center => body.push_str("align = \"center\"\n"),
-                Align::Right => body.push_str("align = \"right\"\n"),
-            }
+        if self.follow != defaults.follow {
+            body.push_str(&format!("follow = {}\n", self.follow));
+        }
+        if self.wrap_details != defaults.wrap_details {
+            body.push_str(&format!("wrap_details = {}\n", self.wrap_details));
+        }
+        if self.line_numbers != defaults.line_numbers {
+            body.push_str(&format!("line_numbers = {}\n", self.line_numbers));
+        }
+        if self.relative_line_numbers != defaults.relative_line_numbers {
+            body.push_str(&format!(
+                "relative_line_numbers = {}\n",
+                self.relative_line_numbers
+            ));
+        }
+        if self.scroll_lines.max(1) != defaults.scroll_lines {
+            body.push_str(&format!("scroll_lines = {}\n", self.scroll_lines.max(1)));
+        }
+        if self.timestamp_format != defaults.timestamp_format {
+            body.push_str(&format!("timestamp_format = {:?}\n", self.timestamp_format));
+        }
+        if body.ends_with('\n') && !body.ends_with("\n\n") {
             body.push('\n');
         }
 
-        let defaults = keys::defaults();
+        if self.columns != defaults.columns {
+            for col in &self.columns {
+                body.push_str("[[columns]]\n");
+                body.push_str(&format!("source = {:?}\n", col.source));
+                if let Some(w) = col.width {
+                    body.push_str(&format!("width = {w}\n"));
+                }
+                match col.align {
+                    Align::Left => {}
+                    Align::Center => body.push_str("align = \"center\"\n"),
+                    Align::Right => body.push_str("align = \"right\"\n"),
+                }
+                body.push('\n');
+            }
+        }
+
+        let key_defaults = keys::defaults();
         let key_overrides: Vec<(&String, &String)> = self
             .keys
             .iter()
-            .filter(|(key, cmd)| defaults.get(*key) != Some(*cmd))
+            .filter(|(key, cmd)| key_defaults.get(*key) != Some(*cmd))
             .collect();
         // Also emit explicit unbinds: default keys missing from merged map.
-        let unbinds: Vec<&String> = defaults
+        let unbinds: Vec<&String> = key_defaults
             .keys()
             .filter(|key| !self.keys.contains_key(*key))
             .collect();
@@ -521,6 +534,11 @@ mod tests {
         Config::default().write_to(&path).unwrap();
         let raw = fs::read_to_string(&path).unwrap();
         assert!(!raw.contains("[keys]"));
+        assert!(!raw.contains("follow = "));
+        assert!(!raw.contains("wrap_details = "));
+        assert!(!raw.contains("line_numbers = "));
+        assert!(!raw.contains("[[columns]]"));
+        assert!(raw.contains("[theme]"));
         let _ = fs::remove_dir_all(&dir);
     }
 

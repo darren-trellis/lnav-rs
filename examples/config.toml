@@ -4,12 +4,7 @@ name = "catppuccin"
 # [theme.levels]
 # error = { fg = "#1e1e2e", bg = "#f38ba8" }
 
-follow = true
-wrap_details = true
-line_numbers = false
-relative_line_numbers = false
-scroll_lines = 1
-timestamp_format = "%H:%M:%S"
+line_numbers = true
 
 [[columns]]
 source = "level"
@@ -24,7 +19,3 @@ source = "message"
 
 [[columns]]
 source = "annotations.url"
-
-# Only list key overrides; omitted keys keep defaults.
-# [keys]
-# q = "quit"
