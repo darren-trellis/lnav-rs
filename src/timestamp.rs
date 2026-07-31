@@ -1,0 +1,105 @@
+use chrono::{DateTime, Local, NaiveDateTime, TimeZone, Utc};
+
+/// Parse a log timestamp into UTC.
+///
+/// Accepts RFC3339 / ISO-8601, common naive formats, and unix seconds/millis.
+pub fn parse(raw: &str) -> Option<DateTime<Utc>> {
+    let s = raw.trim();
+    if s.is_empty() {
+        return None;
+    }
+
+    if let Ok(dt) = DateTime::parse_from_rfc3339(s) {
+        return Some(dt.with_timezone(&Utc));
+    }
+
+    // Tolerate ISO without timezone → assume UTC.
+    for fmt in [
+        "%Y-%m-%dT%H:%M:%S%.f",
+        "%Y-%m-%dT%H:%M:%S",
+        "%Y-%m-%d %H:%M:%S%.f",
+        "%Y-%m-%d %H:%M:%S",
+        "%Y/%m/%d %H:%M:%S",
+        "%d/%b/%Y:%H:%M:%S",
+    ] {
+        if let Ok(naive) = NaiveDateTime::parse_from_str(s, fmt) {
+            return Some(DateTime::from_naive_utc_and_offset(naive, Utc));
+        }
+    }
+
+    // Bracketed time-of-day like [16:58:14.532] — attach today's UTC date.
+    let tod = s.trim_matches(|c| c == '[' || c == ']');
+    for fmt in ["%H:%M:%S%.f", "%H:%M:%S"] {
+        if let Ok(t) = chrono::NaiveTime::parse_from_str(tod, fmt) {
+            let naive = Utc::now().date_naive().and_time(t);
+            return Some(DateTime::from_naive_utc_and_offset(naive, Utc));
+        }
+    }
+
+    // Unix epoch seconds / milliseconds.
+    if let Ok(n) = s.parse::<i64>() {
+        if n > 1_000_000_000_000 {
+            return Utc.timestamp_millis_opt(n).single();
+        }
+        if n > 1_000_000_000 {
+            return Utc.timestamp_opt(n, 0).single();
+        }
+    }
+    if let Ok(n) = s.parse::<f64>() {
+        let secs = n.trunc() as i64;
+        let nanos = ((n.fract()) * 1_000_000_000.0) as u32;
+        if secs > 1_000_000_000 {
+            return Utc.timestamp_opt(secs, nanos).single();
+        }
+    }
+
+    None
+}
+
+/// Format a timestamp in the local timezone.
+/// `fmt` of `""` or `"raw"` returns the original string.
+pub fn format(raw: &str, parsed: Option<&DateTime<Utc>>, fmt: &str) -> String {
+    let fmt = fmt.trim();
+    if fmt.is_empty() || fmt.eq_ignore_ascii_case("raw") {
+        return raw.to_string();
+    }
+
+    let dt = parsed.copied().or_else(|| parse(raw));
+    match dt {
+        Some(dt) => dt.with_timezone(&Local).format(fmt).to_string(),
+        None => raw.to_string(),
+    }
+}
+
+pub const DEFAULT_FORMAT: &str = "%H:%M:%S";
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_rfc3339() {
+        let dt = parse("2026-07-27T23:58:14.817Z").unwrap();
+        assert_eq!(dt.format("%Y-%m-%d").to_string(), "2026-07-27");
+    }
+
+    #[test]
+    fn formats_in_local_timezone() {
+        let raw = "2026-07-27T23:58:14.817Z";
+        let dt = parse(raw).unwrap();
+        let expected = dt.with_timezone(&Local).format("%H:%M:%S").to_string();
+        assert_eq!(format(raw, Some(&dt), "%H:%M:%S"), expected);
+        // Sanity: local display should differ from UTC when offset is non-zero.
+        let utc = dt.format("%H:%M:%S").to_string();
+        let local = format(raw, Some(&dt), "%H:%M:%S");
+        if Local::now().offset().local_minus_utc() != 0 {
+            assert_ne!(local, utc);
+        }
+    }
+
+    #[test]
+    fn raw_passthrough() {
+        assert_eq!(format("abc", None, "raw"), "abc");
+        assert_eq!(format("abc", None, ""), "abc");
+    }
+}
