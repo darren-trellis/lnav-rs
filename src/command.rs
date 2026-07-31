@@ -278,6 +278,7 @@ fn execute_inner(app: &mut App, raw: &str, invoke: Invoke) {
             let in_details = app.overlay_focused && app.show_overlay;
             app.input_mode = InputMode::Search;
             app.clear_search();
+            app.search_history.reset_navigation();
             app.search_in_overlay = in_details;
             // Keep details focused while searching inside it.
             if in_details {

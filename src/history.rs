@@ -7,29 +7,57 @@ use crate::config::Config;
 
 const MAX_ENTRIES: usize = 1000;
 
-/// Persistent `:` command history with readline-style up/down navigation.
+/// Persistent line history with readline-style up/down navigation.
+///
+/// Used for `:` commands (`command_history`) and `/` searches (`search_history`).
 #[derive(Debug, Clone, Default)]
-pub struct CommandHistory {
+pub struct History {
     /// Oldest → newest.
     entries: Vec<String>,
     /// Index into `entries` while browsing; `None` means the live buffer.
     cursor: Option<usize>,
     /// Buffer contents saved when leaving the live line for history.
     staging: Option<String>,
+    /// Path used by [`Self::save`]. Empty for in-memory / test instances.
+    path: PathBuf,
 }
 
-impl CommandHistory {
-    pub fn load() -> Self {
-        Self::load_from(&Self::default_path()).unwrap_or_default()
+impl History {
+    pub fn load_commands() -> Self {
+        Self::load(Self::command_path())
     }
 
-    pub fn default_path() -> PathBuf {
+    pub fn load_searches() -> Self {
+        Self::load(Self::search_path())
+    }
+
+    pub fn command_path() -> PathBuf {
         Config::data_dir().join("command_history")
+    }
+
+    pub fn search_path() -> PathBuf {
+        Config::data_dir().join("search_history")
+    }
+
+    pub fn load(path: PathBuf) -> Self {
+        match Self::load_from(&path) {
+            Ok(mut h) => {
+                h.path = path;
+                h
+            }
+            Err(_) => Self {
+                path,
+                ..Self::default()
+            },
+        }
     }
 
     pub fn load_from(path: &Path) -> Result<Self> {
         if !path.is_file() {
-            return Ok(Self::default());
+            return Ok(Self {
+                path: path.to_path_buf(),
+                ..Self::default()
+            });
         }
         let raw = fs::read_to_string(path)
             .with_context(|| format!("failed to read {}", path.display()))?;
@@ -47,11 +75,15 @@ impl CommandHistory {
             entries,
             cursor: None,
             staging: None,
+            path: path.to_path_buf(),
         })
     }
 
     pub fn save(&self) -> Result<()> {
-        self.save_to(&Self::default_path())
+        if self.path.as_os_str().is_empty() {
+            return Ok(());
+        }
+        self.save_to(&self.path)
     }
 
     pub fn save_to(&self, path: &Path) -> Result<()> {
@@ -74,18 +106,18 @@ impl CommandHistory {
         self.staging = None;
     }
 
-    /// Push a committed command. Skips empty and consecutive duplicates.
+    /// Push a committed line. Skips empty and consecutive duplicates.
     /// Caller should `save` when persistence is desired.
-    pub fn push(&mut self, cmd: &str) {
-        let cmd = cmd.trim();
-        if cmd.is_empty() {
+    pub fn push(&mut self, line: &str) {
+        let line = line.trim();
+        if line.is_empty() {
             return;
         }
-        if self.entries.last().is_some_and(|last| last == cmd) {
+        if self.entries.last().is_some_and(|last| last == line) {
             self.reset_navigation();
             return;
         }
-        self.entries.push(cmd.to_string());
+        self.entries.push(line.to_string());
         if self.entries.len() > MAX_ENTRIES {
             let skip = self.entries.len() - MAX_ENTRIES;
             self.entries.drain(0..skip);
@@ -142,7 +174,7 @@ mod tests {
 
     #[test]
     fn push_skips_empty_and_consecutive_dupes() {
-        let mut h = CommandHistory::default();
+        let mut h = History::default();
         h.push("  ");
         h.push("filter list");
         h.push("filter list");
@@ -152,7 +184,7 @@ mod tests {
 
     #[test]
     fn up_down_restores_staging() {
-        let mut h = CommandHistory::default();
+        let mut h = History::default();
         h.push("one");
         h.push("two");
         assert_eq!(h.up("draft").as_deref(), Some("two"));
@@ -168,12 +200,12 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("lnav-rs-hist-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
-        let path = dir.join("command_history");
-        let mut h = CommandHistory::default();
+        let path = dir.join("search_history");
+        let mut h = History::default();
         h.push("a");
         h.push("b");
         h.save_to(&path).unwrap();
-        let loaded = CommandHistory::load_from(&path).unwrap();
+        let loaded = History::load_from(&path).unwrap();
         assert_eq!(loaded.entries(), &["a", "b"]);
         let _ = fs::remove_dir_all(&dir);
     }

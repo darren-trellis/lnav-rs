@@ -16,7 +16,7 @@ use crate::completion::{self, CompletionState};
 use crate::config::Config;
 use crate::details;
 use crate::filter::{self, Filter};
-use crate::history::CommandHistory;
+use crate::history::History;
 use crate::keys;
 use crate::model::LogEntry;
 use crate::object_span;
@@ -118,7 +118,8 @@ pub struct App {
     pub search_regex: Option<Regex>,
     pub search_error: Option<String>,
     pub command_buffer: String,
-    pub command_history: CommandHistory,
+    pub command_history: History,
+    pub search_history: History,
     pub completions: CompletionState,
     pub search_matches: Vec<usize>,
     pub search_cursor: Option<usize>,
@@ -185,7 +186,8 @@ impl App {
             search_regex: None,
             search_error: None,
             command_buffer: String::new(),
-            command_history: CommandHistory::load(),
+            command_history: History::load_commands(),
+            search_history: History::load_searches(),
             completions: CompletionState::default(),
             search_matches: Vec::new(),
             search_cursor: None,
@@ -401,6 +403,7 @@ impl App {
             self.input_mode = InputMode::Normal;
             self.command_buffer.clear();
             self.command_history.reset_navigation();
+            self.search_history.reset_navigation();
             self.completions.clear();
         }
         self.overlay_focused = false;
@@ -537,6 +540,7 @@ impl App {
         self.input_mode = InputMode::Normal;
         self.command_buffer.clear();
         self.command_history.reset_navigation();
+        self.search_history.reset_navigation();
         self.completions.clear();
         self.preview_theme_at_selection();
         self.status_message = Some("theme picker · click/Enter to set · Esc to cancel".into());
@@ -626,9 +630,16 @@ impl App {
         match key.code {
             KeyCode::Esc => {
                 self.input_mode = InputMode::Normal;
+                self.search_history.reset_navigation();
                 self.status_message = None;
             }
             KeyCode::Enter => {
+                if !self.search_query.trim().is_empty() {
+                    self.search_history.push(&self.search_query);
+                    let _ = self.search_history.save();
+                } else {
+                    self.search_history.reset_navigation();
+                }
                 self.input_mode = InputMode::Normal;
                 if let Some(err) = self.search_error.clone() {
                     self.status_message = Some(err);
@@ -648,12 +659,26 @@ impl App {
                     });
                 }
             }
+            KeyCode::Up => {
+                if let Some(line) = self.search_history.up(&self.search_query) {
+                    self.search_query = line;
+                    self.refresh_search_live();
+                }
+            }
+            KeyCode::Down => {
+                if let Some(line) = self.search_history.down() {
+                    self.search_query = line;
+                    self.refresh_search_live();
+                }
+            }
             KeyCode::Backspace => {
                 self.search_query.pop();
+                self.search_history.reset_navigation();
                 self.refresh_search_live();
             }
             KeyCode::Char(c) => {
                 self.search_query.push(c);
+                self.search_history.reset_navigation();
                 self.refresh_search_live();
             }
             _ => {}

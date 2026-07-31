@@ -55,7 +55,7 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 | `Space` | `page-down` (list); `fold toggle` via `[details_keys]` when details focused |
 | `c` | `copy` (copy focused details value to clipboard) |
 | `Esc` | `close` |
-| `/` | `search` (case-insensitive regex; highlights matched text) |
+| `/` | `search` (regex; highlights matched text; Up/Down recall history) |
 | `:` | `command-mode` |
 | `n` / `N` | `next-match` / `prev-match` |
 | `f` | `follow toggle` |
@@ -80,6 +80,8 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 ### Commands (`:`)
 
 In `:` mode, **Up/Down** recall command history when no completion is selected (Tab/↑↓ browse completions once one is selected). History is stored in `~/.local/share/lnav-rs/command_history`.
+
+In `/` mode, **Up/Down** recall search history (shared for list and details search). Stored in `~/.local/share/lnav-rs/search_history`. Enter commits the query to history.
 
 | Command | Action |
 |---------|--------|
@@ -231,7 +233,7 @@ src/
   command.rs      # : command mode
   config.rs       # config.toml load/save
   details.rs      # details overlay content (JSON tree)
-  history.rs      # : command history
+  history.rs      # : / history (commands + searches)
   model.rs        # log entries / fields
   parse/          # json + logfmt
   session.rs      # per-source filter persistence
