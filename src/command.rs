@@ -125,12 +125,8 @@ pub fn catalog() -> &'static [CommandInfo] {
             help: "delete filter by index",
         },
         CommandInfo {
-            name: "write",
-            help: "write config to disk",
-        },
-        CommandInfo {
             name: "config",
-            help: "path | init | set KEY VAL | get KEY",
+            help: "path | init | set KEY VAL | get KEY | save",
         },
         CommandInfo {
             name: "noh",
@@ -360,10 +356,6 @@ fn execute_inner(app: &mut App, raw: &str, invoke: Invoke) {
             app.cancel_pending_op();
             set_option(app, rest);
         }
-        "write" => match app.config.write() {
-            Ok(path) => app.status_message = Some(format!("wrote {}", path.display())),
-            Err(err) => app.status_message = Some(format!("error: {err:#}")),
-        },
         "config" => {
             app.cancel_pending_op();
             config_command(app, rest);
@@ -624,7 +616,7 @@ fn theme_command(app: &mut App, rest: &str) {
     }
 }
 
-const CONFIG_KEYS_USAGE: &str = "theme|follow|wrap_details|details_json_tree|details_max_height|details_tab_width|line_numbers|relative_line_numbers|scrollbar|scroll_lines|timestamp_format|case_mode|session_filters|session_stdin";
+const CONFIG_KEYS_USAGE: &str = "theme|follow|wrap_details|details_json_tree|details_max_height|details_tab_width|line_numbers|relative_line_numbers|scrollbar|autosave|scroll_lines|timestamp_format|case_mode|session_filters|session_stdin";
 
 fn config_command(app: &mut App, rest: &str) {
     let (sub, arg) = split_cmd(rest);
@@ -632,15 +624,19 @@ fn config_command(app: &mut App, rest: &str) {
         "" | "path" => {
             app.status_message = Some(format!("config: {}", Config::default_path().display()));
         }
-        "init" => match init_config(app) {
+        "init" => match save_config(app) {
             Ok(path) => app.status_message = Some(format!("wrote {}", path.display())),
             Err(err) => app.status_message = Some(format!("error: {err:#}")),
         },
         "set" => set_option(app, arg),
         "get" => get_option(app, arg),
+        "save" => match save_config(app) {
+            Ok(path) => app.status_message = Some(format!("saved {}", path.display())),
+            Err(err) => app.status_message = Some(format!("error: {err:#}")),
+        },
         other => {
             app.status_message = Some(format!(
-                "usage: :config [path|init|set|get]  (unknown: {other})"
+                "usage: :config [path|init|set|get|save]  (unknown: {other})"
             ));
         }
     }
@@ -661,18 +657,23 @@ fn get_option(app: &mut App, rest: &str) {
 fn option_value(app: &App, key: &str) -> Option<String> {
     match key.to_ascii_lowercase().as_str() {
         "theme" => Some(app.config.theme.name().to_string()),
-        "follow" => Some(current_bool_option(app, "follow").to_string()),
-        "wrap_details" => Some(current_bool_option(app, "wrap_details").to_string()),
-        "details_json_tree" => Some(current_bool_option(app, "details_json_tree").to_string()),
+        "follow" => Some(format_on_off(current_bool_option(app, "follow")).into()),
+        "wrap_details" => Some(format_on_off(current_bool_option(app, "wrap_details")).into()),
+        "details_json_tree" => {
+            Some(format_on_off(current_bool_option(app, "details_json_tree")).into())
+        }
         "details_max_height" => Some(app.config.details_max_height.max(4).to_string()),
         "details_tab_width" => Some(app.config.details_tab_width.max(2).to_string()),
-        "line_numbers" => Some(current_bool_option(app, "line_numbers").to_string()),
+        "line_numbers" => Some(format_on_off(current_bool_option(app, "line_numbers")).into()),
         "relative_line_numbers" => {
-            Some(current_bool_option(app, "relative_line_numbers").to_string())
+            Some(format_on_off(current_bool_option(app, "relative_line_numbers")).into())
         }
-        "scrollbar" => Some(current_bool_option(app, "scrollbar").to_string()),
-        "session_filters" => Some(current_bool_option(app, "session_filters").to_string()),
-        "session_stdin" => Some(current_bool_option(app, "session_stdin").to_string()),
+        "scrollbar" => Some(format_on_off(current_bool_option(app, "scrollbar")).into()),
+        "autosave" => Some(format_on_off(current_bool_option(app, "autosave")).into()),
+        "session_filters" => {
+            Some(format_on_off(current_bool_option(app, "session_filters")).into())
+        }
+        "session_stdin" => Some(format_on_off(current_bool_option(app, "session_stdin")).into()),
         "case_mode" => Some(app.config.case_mode.as_str().to_string()),
         "scroll_lines" => Some(app.config.scroll_lines.max(1).to_string()),
         "timestamp_format" => Some(app.config.timestamp_format.clone()),
@@ -692,8 +693,17 @@ fn set_option(app: &mut App, rest: &str) {
         ));
         return;
     }
+    if apply_set_option(app, key, value) {
+        maybe_autosave(app);
+    }
+}
+
+fn apply_set_option(app: &mut App, key: &str, value: &str) -> bool {
     match key.to_ascii_lowercase().as_str() {
-        "theme" => app.commit_theme(value),
+        "theme" => {
+            app.commit_theme(value);
+            !status_is_error(app)
+        }
         "follow" => set_bool_option(app, "follow", value, |app, v| {
             app.set_follow(v);
         }),
@@ -708,20 +718,24 @@ fn set_option(app: &mut App, rest: &str) {
             Ok(n) if n >= 4 => {
                 app.config.details_max_height = n;
                 app.status_message = Some(format!("details_max_height={n}"));
+                true
             }
             _ => {
                 app.status_message =
                     Some("usage: :config set details_max_height N (N >= 4)".into());
+                false
             }
         },
         "details_tab_width" => match value.parse::<usize>() {
             Ok(n) if n >= 2 => {
                 app.config.details_tab_width = n;
                 app.status_message = Some(format!("details_tab_width={n}"));
+                true
             }
             _ => {
                 app.status_message =
                     Some("usage: :config set details_tab_width N (N >= 2)".into());
+                false
             }
         },
         "line_numbers" => set_bool_option(app, "line_numbers", value, |app, v| {
@@ -733,6 +747,9 @@ fn set_option(app: &mut App, rest: &str) {
         "scrollbar" => set_bool_option(app, "scrollbar", value, |app, v| {
             app.config.scrollbar = v;
         }),
+        "autosave" => set_bool_option(app, "autosave", value, |app, v| {
+            app.config.autosave = v;
+        }),
         "session_filters" => set_bool_option(app, "session_filters", value, |app, v| {
             app.config.session_filters = v;
         }),
@@ -742,35 +759,45 @@ fn set_option(app: &mut App, rest: &str) {
         "case_mode" => match crate::config::CaseMode::parse(value) {
             Some(mode) => {
                 app.config.case_mode = mode;
-                app.status_message = app
-                    .apply_case_mode()
-                    .or_else(|| Some(format!("case_mode={}", mode.as_str())));
+                if let Some(err) = app.apply_case_mode() {
+                    app.status_message = Some(err);
+                    false
+                } else {
+                    app.status_message = Some(format!("case_mode={}", mode.as_str()));
+                    true
+                }
             }
             None => {
                 app.status_message = Some(
                     "usage: :config set case_mode sensitive|insensitive|smart".into(),
                 );
+                false
             }
         },
         "scroll_lines" => match value.parse::<usize>() {
             Ok(0) => {
                 app.status_message = Some("usage: :config set scroll_lines N (N >= 1)".into());
+                false
             }
             Ok(n) => {
                 app.config.scroll_lines = n;
                 app.status_message = Some(format!("scroll_lines={n}"));
+                true
             }
             Err(_) => {
                 app.status_message = Some("usage: :config set scroll_lines N (N >= 1)".into());
+                false
             }
         },
         "timestamp_format" => {
             app.config.timestamp_format = value.to_string();
             app.status_message =
                 Some(format!("timestamp_format={}", app.config.timestamp_format));
+            true
         }
         other => {
             app.status_message = Some(format!("unknown option: {other}"));
+            false
         }
     }
 }
@@ -783,37 +810,71 @@ fn current_bool_option(app: &App, name: &str) -> bool {
         "line_numbers" => app.config.line_numbers,
         "relative_line_numbers" => app.config.relative_line_numbers,
         "scrollbar" => app.config.scrollbar,
+        "autosave" => app.config.autosave,
         "session_filters" => app.config.session_filters,
         "session_stdin" => app.config.session_stdin,
         _ => false,
     }
 }
 
-fn set_bool_option(app: &mut App, name: &str, value: &str, apply: impl FnOnce(&mut App, bool)) {
+fn set_bool_option(
+    app: &mut App,
+    name: &str,
+    value: &str,
+    apply: impl FnOnce(&mut App, bool),
+) -> bool {
     let resolved = match value.to_ascii_lowercase().as_str() {
         "toggle" => Some(!current_bool_option(app, name)),
-        other => parse_bool(other),
+        "on" => Some(true),
+        "off" => Some(false),
+        _ => None,
     };
     match resolved {
         Some(v) => {
             apply(app, v);
             // `set_follow` already sets the status message.
             if name != "follow" {
-                app.status_message = Some(format!("{name}={v}"));
+                app.status_message = Some(format!("{name}={}", format_on_off(v)));
             }
+            true
         }
         None => {
             app.status_message = Some(format!("usage: :config set {name} on|off|toggle"));
+            false
         }
     }
 }
 
-fn parse_bool(s: &str) -> Option<bool> {
-    match s.to_ascii_lowercase().as_str() {
-        "1" | "true" | "on" | "yes" => Some(true),
-        "0" | "false" | "off" | "no" => Some(false),
-        _ => None,
+fn format_on_off(v: bool) -> &'static str {
+    if v {
+        "on"
+    } else {
+        "off"
     }
+}
+
+fn status_is_error(app: &App) -> bool {
+    app.status_message
+        .as_deref()
+        .is_some_and(|m| m.starts_with("error:"))
+}
+
+fn maybe_autosave(app: &mut App) {
+    if !app.config.autosave {
+        return;
+    }
+    let msg = app.status_message.clone();
+    if let Err(err) = save_config(app) {
+        app.status_message = Some(format!("error: {err:#}"));
+    } else {
+        app.status_message = msg;
+    }
+}
+
+fn save_config(app: &mut App) -> anyhow::Result<std::path::PathBuf> {
+    app.config.theme.set_name(app.theme.name.clone());
+    app.config.follow = app.follow;
+    app.config.write()
 }
 
 fn goto_line(app: &mut App, n: usize) {
@@ -831,8 +892,3 @@ fn goto_line(app: &mut App, n: usize) {
     app.status_message = Some(format!("line {n}"));
 }
 
-fn init_config(app: &mut App) -> anyhow::Result<std::path::PathBuf> {
-    app.config.theme.set_name(app.theme.name.clone());
-    app.config.follow = app.follow;
-    app.config.write()
-}

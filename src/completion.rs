@@ -64,6 +64,7 @@ const SET_KEYS: &[(&str, &str)] = &[
     ("line_numbers", "on|off|toggle"),
     ("relative_line_numbers", "on|off|toggle"),
     ("scrollbar", "on|off|toggle"),
+    ("autosave", "on|off|toggle"),
     ("scroll_lines", "mouse wheel step"),
     ("timestamp_format", "strftime or raw"),
     ("case_mode", "sensitive|insensitive|smart"),
@@ -71,7 +72,7 @@ const SET_KEYS: &[(&str, &str)] = &[
     ("session_stdin", "on|off|toggle"),
 ];
 
-const BOOLS: &[&str] = &["on", "off", "toggle", "true", "false"];
+const BOOLS: &[&str] = &["on", "off", "toggle"];
 
 /// Refresh suggestions for the current command buffer. Clears selection.
 pub fn refresh(app: &mut App) {
@@ -348,6 +349,7 @@ const CONFIG_SUBS: &[(&str, &str)] = &[
     ("init", "write config from current settings"),
     ("set", "set config option"),
     ("get", "show config option value"),
+    ("save", "save config to disk"),
 ];
 
 fn config_suggestions(rest: &str, rest_from: usize) -> Vec<Suggestion> {
@@ -411,6 +413,7 @@ fn set_key_suggestions(rest: &str, rest_from: usize) -> Vec<Suggestion> {
         | "line_numbers"
         | "relative_line_numbers"
         | "scrollbar"
+        | "autosave"
         | "session_filters"
         | "session_stdin" => value_suggestions(value, value_from, &bool_opts(), "bool"),
         "case_mode" => {

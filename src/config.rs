@@ -232,8 +232,12 @@ pub struct Config {
     pub relative_line_numbers: bool,
 
     /// Show a vertical scrollbar on the right of the list and details panes.
-    #[serde(default)]
+    #[serde(default = "default_true")]
     pub scrollbar: bool,
+
+    /// When true, `:config set` writes the config file after a successful change.
+    #[serde(default = "default_true")]
+    pub autosave: bool,
 
     /// Lines to move per mouse-wheel notch in the log list.
     #[serde(default = "default_scroll_lines")]
@@ -326,7 +330,8 @@ impl Default for Config {
             details_tab_width: default_details_tab_width(),
             line_numbers: false,
             relative_line_numbers: false,
-            scrollbar: false,
+            scrollbar: true,
+            autosave: true,
             scroll_lines: default_scroll_lines(),
             timestamp_format: default_timestamp_format(),
             case_mode: CaseMode::default(),
@@ -470,6 +475,9 @@ impl Config {
         }
         if self.scrollbar != defaults.scrollbar {
             body.push_str(&format!("scrollbar = {}\n", self.scrollbar));
+        }
+        if self.autosave != defaults.autosave {
+            body.push_str(&format!("autosave = {}\n", self.autosave));
         }
         if self.scroll_lines.max(1) != defaults.scroll_lines {
             body.push_str(&format!("scroll_lines = {}\n", self.scroll_lines.max(1)));
@@ -789,6 +797,8 @@ mod tests {
         assert!(!raw.contains("details_max_height = "));
         assert!(!raw.contains("details_tab_width = "));
         assert!(!raw.contains("line_numbers = "));
+        assert!(!raw.contains("scrollbar = "));
+        assert!(!raw.contains("autosave = "));
         assert!(!raw.contains("session_filters = "));
         assert!(!raw.contains("session_stdin = "));
         assert!(!raw.contains("case_mode = "));

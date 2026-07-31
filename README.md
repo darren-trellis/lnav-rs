@@ -72,7 +72,7 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 | Click a log line | Select it (completes a pending `d`/`D` operator) |
 | Double-click a log line | Toggle details overlay |
 | Scroll wheel | Move selection (or cycle completions / theme picker) |
-| Click / drag scrollbar | Scroll the list or details (requires `scrollbar = true`) |
+| Click / drag scrollbar | Scroll the list or details |
 | Click a completion | Insert it |
 | Click details overlay | Focus it / move details cursor |
 | Click status bar | Enter `:` command mode |
@@ -113,14 +113,15 @@ In `/` mode, **Up/Down** recall search history (shared for list and details sear
 | `:config set details_tab_width N` | Details tree indent width (default 4, min 2) |
 | `:config set line_numbers on\|off\|toggle` | Show absolute view line numbers |
 | `:config set relative_line_numbers on\|off\|toggle` | Show relative line numbers (vim-style) |
-| `:config set scrollbar on\|off\|toggle` | Show a right-side scrollbar (list + details) |
+| `:config set scrollbar on\|off\|toggle` | Show a right-side scrollbar (default on) |
+| `:config set autosave on\|off\|toggle` | Auto-save after `:config set` (default on) |
 | `:config set scroll_lines N` | Mouse wheel step (default 1) |
 | `:config set timestamp_format …` | strftime for timestamp columns (`raw` = original) |
 | `:config set case_mode …` | `sensitive` / `insensitive` / `smart` (search + filters) |
 | `:config set session_filters on\|off\|toggle` | Persist filters per log file (default on) |
 | `:config set session_stdin on\|off\|toggle` | Persist filters for stdin (default on) |
 | `:config get KEY` | Show current value of a config option |
-| `:w` / `:write` | Write current settings to config |
+| `:config save` | Save current settings to config |
 | `:config` / `:config path` | Show config path |
 | `:config init` | Create config from current settings |
 | `:hide` | Hide current line / JSON object (immediate) |
@@ -154,7 +155,8 @@ details_max_height = 24
 details_tab_width = 4
 line_numbers = false
 relative_line_numbers = false
-scrollbar = false
+scrollbar = true
+autosave = true
 scroll_lines = 1
 timestamp_format = "%H:%M:%S"
 case_mode = "smart"   # or "sensitive" | "insensitive"
@@ -193,6 +195,8 @@ D = "delete"
 `timestamp_format` uses [chrono strftime](https://docs.rs/chrono/latest/chrono/format/strftime/index.html) (default `%H:%M:%S`). Set to `raw` to keep the original log string.
 
 `case_mode` controls `/` search and `:filter` matching: `smart` / `smartcase` (default; insensitive unless the pattern has an uppercase letter), `insensitive`, or `sensitive`.
+
+Boolean `:config set` values use `on` / `off` / `toggle` only. With `autosave` on (default), successful `:config set` writes `config.toml`; use `:config save` to write manually.
 
 Details: `Enter` opens and focuses the overlay — the selection highlight moves into details (`j`/`k` move the cursor; Esc closes). `Tab` / `:focus toggle` switches focus between details and the list. `Space` folds/unfolds the tree item under the cursor when details is focused (`:fold on|off|toggle`). `?` toggles keybinding hints on the overlay border. `c` / `:copy` copies the focused item’s value (strings without quotes; objects/arrays as pretty JSON). With details focused, `/` searches inside the overlay (`n`/`N` cycle matches). Nested JSON fields render as a tree when `details_json_tree` is on (`details_tab_width` sets indent per level). Overlay height grows with content up to `details_max_height` (and screen space).
 
