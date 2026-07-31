@@ -143,6 +143,8 @@ fn suggestions_for(buffer: &str, app: &App) -> Vec<Suggestion> {
             "focus" => on_off_toggle_suggestions(rest, rest_from, FOCUS_SUBS),
             "follow" => on_off_toggle_suggestions(rest, rest_from, FOLLOW_SUBS),
             "view" => view_suggestions(rest, rest_from),
+            "search" => on_off_toggle_suggestions(rest, rest_from, SEARCH_SUBS),
+            "hide" => on_off_toggle_suggestions(rest, rest_from, HIDE_SUBS),
             "help" => on_off_toggle_suggestions(rest, rest_from, HELP_SUBS),
             "config" => config_suggestions(rest, rest_from),
             _ => Vec::new(),
@@ -212,6 +214,10 @@ const HELP_SUBS: &[(&str, &str)] = &[
     ("off", "hide details key hints"),
     ("toggle", "toggle details key hints"),
 ];
+
+const SEARCH_SUBS: &[(&str, &str)] = &[("clear", "clear search highlights")];
+
+const HIDE_SUBS: &[(&str, &str)] = &[("clear", "restore lines hidden with hide")];
 
 fn on_off_toggle_suggestions(
     rest: &str,

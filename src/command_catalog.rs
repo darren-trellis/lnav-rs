@@ -30,12 +30,8 @@ const COMMANDS: &[CommandInfo] = &[
         help: "copy focused details value to clipboard",
     },
     CommandInfo {
-        name: "close",
-        help: "close details overlay",
-    },
-    CommandInfo {
         name: "search",
-        help: "start search",
+        help: "start search | clear",
     },
     CommandInfo {
         name: "command-mode",
@@ -47,7 +43,7 @@ const COMMANDS: &[CommandInfo] = &[
     },
     CommandInfo {
         name: "hide",
-        help: "hide line(s): dd or d{{motion}}",
+        help: "hide line(s): dd or d{{motion}} | clear",
     },
     CommandInfo {
         name: "delete",
@@ -62,16 +58,8 @@ const COMMANDS: &[CommandInfo] = &[
         help: "list | in|out [PATTERN] | on|off|toggle | clear | delete [N]",
     },
     CommandInfo {
-        name: "clear-hidden",
-        help: "restore lines hidden with hide",
-    },
-    CommandInfo {
         name: "config",
         help: "path | init | set KEY VAL | get KEY | save",
-    },
-    CommandInfo {
-        name: "noh",
-        help: "clear search highlights",
     },
 ];
 

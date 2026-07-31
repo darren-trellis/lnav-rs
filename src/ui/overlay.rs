@@ -48,13 +48,14 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect, content: &[DetailLine]
             .unwrap_or(fallback)
     };
     let hint = format!(
-        " {}/{} move · {} fold · {} focus · {} copy · {} search · Esc close · {} hide ",
+        " {}/{} move · {} fold · {} focus · {} copy · {} search · {} close · {} hide ",
         binding("nav down", "j"),
         binding("nav up", "k"),
         binding("fold toggle", "fold"),
         binding("focus toggle", "focus"),
         binding("copy", "copy"),
         binding("search", "search"),
+        binding("view details off", "Esc"),
         binding("help", "help"),
     );
 

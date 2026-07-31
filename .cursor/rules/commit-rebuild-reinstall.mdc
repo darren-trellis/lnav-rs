@@ -1,0 +1,13 @@
+---
+description: After code changes, commit, rebuild, and reinstall
+alwaysApply: true
+---
+
+# Commit, rebuild, reinstall
+
+After finishing a set of code changes in this repo (unless the user says not to):
+
+1. Create a git commit for the changes (follow the repo commit protocol / HEREDOC message style).
+2. Rebuild and reinstall with `cargo install --path . --force`.
+
+Do this at the end of each change set without waiting to be asked.

@@ -143,7 +143,7 @@ impl App {
                     self.run_search();
                 }
                 self.status_message = Some(format!(
-                    "hidden {count} line{}  (:clear-hidden to restore)",
+                    "hidden {count} line{}  (:hide clear to restore)",
                     if count == 1 { "" } else { "s" }
                 ));
             }

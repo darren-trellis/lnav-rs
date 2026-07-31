@@ -27,7 +27,7 @@ pub fn defaults() -> BTreeMap<String, String> {
         ("enter".into(), "view details".into()),
         ("tab".into(), "focus toggle".into()),
         ("c".into(), "copy".into()),
-        ("esc".into(), "close".into()),
+        ("esc".into(), "view details off".into()),
         ("/".into(), "search".into()),
         (":".into(), "command-mode".into()),
         ("n".into(), "match next".into()),

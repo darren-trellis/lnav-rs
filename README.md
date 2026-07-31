@@ -54,7 +54,7 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 | `Tab` | `focus toggle` (cycle list → details → sidebar) |
 | `Space` | `page down` (list); `fold toggle` via `[details_keys]` when details focused |
 | `c` | `copy` (copy focused details value to clipboard) |
-| `Esc` | `close` (details); leave sidebar focus |
+| `Esc` | `view details off` (details); leave sidebar focus |
 | `/` | `search` (regex; highlights matched text; Up/Down recall history) |
 | `:` | `command-mode` |
 | `n` / `N` | `match next` / `match prev` |
@@ -103,7 +103,7 @@ In `/` mode, **Up/Down** recall search history (shared for list and details sear
 | `:view sidebar [on\|off\|toggle]` | Show/hide/toggle filters sidebar |
 | `:focus on\|off\|toggle` | Focus details / list / switch between them |
 | `:copy` | Copy focused details value to the clipboard |
-| `:clear-hidden` | Restore lines hidden with `d` |
+| `:hide clear` | Restore lines hidden with `d` |
 | `:theme` | Show current theme |
 | `:theme list` | List available themes |
 | `:theme set` | Open theme picker (preview on hover / configured navigation keys) |
@@ -131,7 +131,7 @@ In `/` mode, **Up/Down** recall search history (shared for list and details sear
 | `:config init` | Create config from current settings |
 | `:hide` | Hide current line / JSON object (immediate) |
 | `:delete` | Delete current line / JSON object from file (immediate) |
-| `:noh` | Clear search highlights |
+| `:search clear` | Clear search highlights |
 | `:N` | Jump to view line `N` |
 
 ## Config

@@ -56,7 +56,7 @@ impl App {
                     Some("view details" | "view details toggle" | "view details on") => {
                         self.close_theme_picker(true)
                     }
-                    Some("close") => self.close_theme_picker(false),
+                    Some("view details off") => self.close_theme_picker(false),
                     _ => {}
                 }
             }

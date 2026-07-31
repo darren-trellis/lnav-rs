@@ -64,27 +64,7 @@ fn execute_inner(app: &mut App, raw: &str, invoke: Invoke) {
             app.cancel_pending_op();
             app.copy_overlay_value();
         }
-        "close" => {
-            if app.pending_op.is_some() || app.count.is_some() {
-                app.cancel_pending_op();
-            } else if app.details.visible {
-                app.close_details();
-            }
-        }
-        "search" => {
-            app.cancel_pending_op();
-            let in_details = app.is_details_focused() && app.details.visible;
-            app.input_mode = InputMode::Search;
-            app.clear_search();
-            app.search.history.reset_navigation();
-            app.search.in_details = in_details;
-            if in_details {
-                app.focus_details();
-            } else {
-                app.focus_list();
-            }
-            app.status_message = None;
-        }
+        "search" => search_command(app, rest),
         "command-mode" => {
             app.cancel_pending_op();
             app.begin_command_mode();
@@ -94,10 +74,7 @@ fn execute_inner(app: &mut App, raw: &str, invoke: Invoke) {
             app.cancel_pending_op();
             follow_command(app, rest);
         }
-        "hide" => match invoke {
-            Invoke::Key => app.start_or_repeat_op(PendingOp::Hide),
-            Invoke::Line => app.hide_current(),
-        },
+        "hide" => hide_command(app, rest, invoke),
         "delete" => match invoke {
             Invoke::Key => app.start_or_repeat_op(PendingOp::Delete),
             Invoke::Line => app.delete_current(),
@@ -107,17 +84,6 @@ fn execute_inner(app: &mut App, raw: &str, invoke: Invoke) {
             theme_command(app, rest);
         }
         "filter" => filter_command(app, rest, invoke),
-        "clear-hidden" => {
-            app.cancel_pending_op();
-            let n = app.view.hidden.len();
-            app.view.hidden.clear();
-            app.rebuild_visible(None);
-            app.status_message = Some(format!("unhid {n} line(s)"));
-        }
-        "noh" => {
-            app.clear_search();
-            app.status_message = Some("cleared search".into());
-        }
         "config" => {
             app.cancel_pending_op();
             config_command(app, rest);
@@ -380,10 +346,60 @@ fn help_command(app: &mut App, rest: &str) {
     }
     if sub.is_empty() {
         app.status_message =
-            Some(":theme [list|set] · d/D: dd/DD · dj/dG · :hide/:delete · :clear-hidden".into());
+            Some(":theme [list|set] · d/D: dd/DD · dj/dG · :hide/:delete · :hide clear".into());
     } else {
         app.status_message =
             Some("usage: :help  (or focus details, then :help [on|off|toggle])".into());
+    }
+}
+
+fn search_command(app: &mut App, rest: &str) {
+    let (sub, _) = split_cmd(rest);
+    match sub.to_ascii_lowercase().as_str() {
+        "" => {
+            app.cancel_pending_op();
+            let in_details = app.is_details_focused() && app.details.visible;
+            app.input_mode = InputMode::Search;
+            app.clear_search();
+            app.search.history.reset_navigation();
+            app.search.in_details = in_details;
+            if in_details {
+                app.focus_details();
+            } else {
+                app.focus_list();
+            }
+            app.status_message = None;
+        }
+        "clear" => {
+            app.cancel_pending_op();
+            app.clear_search();
+            app.status_message = Some("cleared search".into());
+        }
+        other => {
+            app.status_message =
+                Some(format!("usage: :search | :search clear  (unknown: {other})"));
+        }
+    }
+}
+
+fn hide_command(app: &mut App, rest: &str, invoke: Invoke) {
+    let (sub, _) = split_cmd(rest);
+    match sub.to_ascii_lowercase().as_str() {
+        "" => match invoke {
+            Invoke::Key => app.start_or_repeat_op(PendingOp::Hide),
+            Invoke::Line => app.hide_current(),
+        },
+        "clear" => {
+            app.cancel_pending_op();
+            let n = app.view.hidden.len();
+            app.view.hidden.clear();
+            app.rebuild_visible(None);
+            app.status_message = Some(format!("unhid {n} line(s)"));
+        }
+        other => {
+            app.status_message =
+                Some(format!("usage: :hide | :hide clear  (unknown: {other})"));
+        }
     }
 }
 
