@@ -10,7 +10,7 @@ status_bg = "#eee8d5"
 status_fg = "#93a1a1"
 border = "#93a1a1"
 window_focus_border = "#b58900"
-search_match = "#b58900"
+search_match = { fg = "#fdf6e3", bg = "#b58900" }
 dim = "#93a1a1"
 
 [levels]

@@ -26,8 +26,6 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
         None
     };
     let cursor = app.overlay_cursor;
-    let match_fg = app.theme.search_match.fg;
-    let match_bg = app.theme.search_match.bg;
     let overlay_bg = app.theme.overlay_bg;
     let foreground = app.theme.foreground.fg;
     let selection_bg = app.theme.selection_bg;
@@ -82,18 +80,12 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
     let thumb = app.theme.tone_fg_style(app.theme.window_focus_border);
     let track = app.theme.tone_fg_style(app.theme.dim);
 
-    let match_style = Style::default()
-        .fg(match_fg)
-        .bg(match_bg.unwrap_or(overlay_bg))
-        .add_modifier(Modifier::BOLD);
+    let match_style = app.theme.search_highlight_style(overlay_bg);
     let cursor_style = Style::default()
         .fg(selection_fg)
         .bg(selection_bg)
         .add_modifier(Modifier::BOLD);
-    let cursor_match_style = Style::default()
-        .fg(match_fg)
-        .bg(selection_bg)
-        .add_modifier(Modifier::BOLD);
+    let cursor_match_style = app.theme.search_highlight_style(selection_bg);
     let base_style = Style::default().fg(fg_tone.fg).bg(overlay_bg);
 
     let lines: Vec<Line> = content

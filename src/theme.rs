@@ -130,6 +130,24 @@ impl Theme {
             .fg(self.selection_fg)
             .add_modifier(Modifier::BOLD)
     }
+
+    /// Style for regex search matches.
+    ///
+    /// With `{ fg, bg }`, uses those colors. With a bare accent color, treats it as
+    /// the highlight background and uses `contrast_fg` for the text (classic reverse).
+    pub fn search_highlight_style(&self, contrast_fg: Color) -> Style {
+        let tone = self.search_match;
+        match tone.bg {
+            Some(bg) => Style::default()
+                .fg(tone.fg)
+                .bg(bg)
+                .add_modifier(Modifier::BOLD),
+            None => Style::default()
+                .fg(contrast_fg)
+                .bg(tone.fg)
+                .add_modifier(Modifier::BOLD),
+        }
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -585,6 +603,20 @@ mod tests {
             let theme = Theme::builtin(name).unwrap();
             assert_eq!(theme.name, *name);
         }
+    }
+
+    #[test]
+    fn search_highlight_uses_bg_or_inverts_accent() {
+        let theme = Theme::builtin("catppuccin").unwrap();
+        let style = theme.search_highlight_style(Color::Rgb(0, 0, 0));
+        assert_eq!(style.bg, Some(Color::Rgb(0xf9, 0xe2, 0xaf)));
+        assert_eq!(style.fg, Some(Color::Rgb(0x1e, 0x1e, 0x2e)));
+
+        let mut bare = theme.clone();
+        bare.search_match = Tone::fg_only(Color::Rgb(0xff, 0xff, 0x00));
+        let inverted = bare.search_highlight_style(Color::Rgb(1, 2, 3));
+        assert_eq!(inverted.bg, Some(Color::Rgb(0xff, 0xff, 0x00)));
+        assert_eq!(inverted.fg, Some(Color::Rgb(1, 2, 3)));
     }
 
     #[test]

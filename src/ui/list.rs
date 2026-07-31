@@ -214,7 +214,7 @@ fn render_line<'a>(
             break;
         }
         let base = segment_style(theme, entry, &segment, selected);
-        let match_style = apply_tone(theme, theme.search_match, selected, row_bg(theme, selected), false);
+        let match_style = theme.search_highlight_style(row_bg(theme, selected));
         // Only highlight list text when search targets the list (not details).
         let re = if app.search_in_overlay { None } else { search };
         highlight::push_highlighted(&mut spans, text, base, match_style, re);
