@@ -146,7 +146,15 @@ fn navigate_list(app: &mut App, navigation: Navigation) {
         Navigation::Pages(pages) => app.move_selection(page_height * pages),
         Navigation::Top(line) => {
             app.view.follow = false;
-            app.jump_to(line.unwrap_or(1).saturating_sub(1));
+            if app.display_len() == 0 {
+                return;
+            }
+            // Bare `g` / Home: first scrollable body row, not the sticky pin band.
+            let target = match line {
+                Some(n) => n.saturating_sub(1),
+                None => app.pin_count(),
+            };
+            app.jump_to(target.min(app.display_len() - 1));
         }
         Navigation::Bottom(Some(line)) => {
             app.view.follow = false;
