@@ -50,7 +50,10 @@ pub fn details_defaults() -> BTreeMap<String, String> {
 
 /// Defaults applied when the filters sidebar is focused (override `[keys]`).
 pub fn sidebar_defaults() -> BTreeMap<String, String> {
-    BTreeMap::from([("d".into(), "filter delete".into())])
+    BTreeMap::from([
+        ("d".into(), "filter delete".into()),
+        ("backspace".into(), "filter delete line".into()),
+    ])
 }
 
 /// Merge user keybindings over defaults. Empty command string unbinds a key.
@@ -171,6 +174,10 @@ mod tests {
         assert_eq!(
             sidebar_defaults().get("d").map(String::as_str),
             Some("filter delete")
+        );
+        assert_eq!(
+            sidebar_defaults().get("backspace").map(String::as_str),
+            Some("filter delete line")
         );
     }
 }

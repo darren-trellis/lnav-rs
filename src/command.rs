@@ -471,6 +471,10 @@ fn filter_command(app: &mut App, rest: &str, invoke: Invoke) {
     match sub.to_ascii_lowercase().as_str() {
         "delete" => match invoke {
             Invoke::Key if arg.is_empty() => app.start_or_repeat_filter_delete(),
+            _ if arg.eq_ignore_ascii_case("line") => {
+                app.cancel_pending_op();
+                delete_filter(app, "");
+            }
             _ => {
                 app.cancel_pending_op();
                 delete_filter(app, arg);

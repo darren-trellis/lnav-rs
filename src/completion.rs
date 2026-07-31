@@ -282,8 +282,15 @@ fn filter_suggestions(rest: &str, rest_from: usize, filter_count: usize) -> Vec<
             replace_from: value_from,
         }],
         "delete" => {
+            let mut items = value_suggestions(
+                value,
+                value_from,
+                &["line".to_string()],
+                "selected filter",
+            );
             let idxs: Vec<String> = (0..filter_count).map(|i| i.to_string()).collect();
-            value_suggestions(value, value_from, &idxs, "index")
+            items.extend(value_suggestions(value, value_from, &idxs, "index"));
+            items
         }
         _ => Vec::new(),
     }
