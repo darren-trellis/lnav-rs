@@ -8,7 +8,7 @@ name = "catppuccin"
 
 [[columns]]
 source = "level"
-width = 5
+width = 6
 align = "center"
 
 [[columns]]

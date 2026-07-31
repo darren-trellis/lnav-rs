@@ -131,7 +131,7 @@ timestamp_format = "%H:%M:%S"
 
 [[columns]]
 source = "level"
-width = 5
+width = 6
 
 [[columns]]
 source = "timestamp"

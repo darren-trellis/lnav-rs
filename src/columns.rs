@@ -156,8 +156,11 @@ fn fit_width(value: &str, width: Option<usize>, align: Align) -> String {
     match align {
         Align::Left => format!("{value}{}", " ".repeat(pad)),
         Align::Center => {
-            let left = pad / 2;
-            format!("{}{value}{}", " ".repeat(left), " ".repeat(pad - left))
+            // Prefer the leftover space on the left when pad is odd so short
+            // labels (INFO/WARN in a 5-wide column) don't look left-aligned.
+            let right = pad / 2;
+            let left = pad - right;
+            format!("{}{value}{}", " ".repeat(left), " ".repeat(right))
         }
         Align::Right => format!("{}{value}", " ".repeat(pad)),
     }
@@ -337,8 +340,20 @@ mod tests {
             timestamp_format: "raw",
             view_line: 1,
         };
+        let err = entry();
+        let columns = cols(&[("level", Some(5), Align::Center)]);
+        assert_eq!(render(&columns, &err, &opts), "ERROR");
+
+        let mut info = entry();
+        info.level = LogLevel::Info;
+        let columns = cols(&[("level", Some(5), Align::Center)]);
+        assert_eq!(render(&columns, &info, &opts), " INFO");
+
+        let columns = cols(&[("level", Some(6), Align::Center)]);
+        assert_eq!(render(&columns, &info, &opts), " INFO ");
+
         let columns = cols(&[("level", Some(8), Align::Center)]);
-        assert_eq!(render(&columns, &entry(), &opts), " ERROR  ");
+        assert_eq!(render(&columns, &err, &opts), "  ERROR ");
     }
 
     #[test]

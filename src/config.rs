@@ -159,7 +159,7 @@ pub fn default_columns() -> Vec<Column> {
     vec![
         Column {
             source: "level".into(),
-            width: Some(5),
+            width: Some(6),
             align: Align::Center,
         },
         Column {
