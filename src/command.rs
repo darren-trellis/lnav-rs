@@ -99,7 +99,7 @@ pub fn catalog() -> &'static [CommandInfo] {
         },
         CommandInfo {
             name: "filter",
-            help: "list | in|out PATTERN | on|off|toggle",
+            help: "list | in|out [PATTERN] | on|off|toggle",
         },
         CommandInfo {
             name: "clear-filters",
@@ -327,14 +327,31 @@ fn execute_inner(app: &mut App, raw: &str, invoke: Invoke) {
 }
 
 fn add_filter(app: &mut App, kind: FilterKind, pattern: &str) {
-    if pattern.is_empty() {
-        app.status_message = Some(match kind {
-            FilterKind::Include => "usage: :filter in PATTERN".into(),
-            FilterKind::Exclude => "usage: :filter out PATTERN".into(),
-        });
-        return;
-    }
-    match Filter::new(kind, pattern) {
+    let pattern = if pattern.is_empty() {
+        if app.search_query.is_empty() {
+            app.status_message = Some(match kind {
+                FilterKind::Include => {
+                    "usage: :filter in [PATTERN]  (or /search first)".into()
+                }
+                FilterKind::Exclude => {
+                    "usage: :filter out [PATTERN]  (or /search first)".into()
+                }
+            });
+            return;
+        }
+        if app.search_regex.is_none() {
+            app.status_message = Some(
+                app.search_error
+                    .clone()
+                    .unwrap_or_else(|| "no valid search pattern".into()),
+            );
+            return;
+        }
+        app.search_query.clone()
+    } else {
+        pattern.to_string()
+    };
+    match Filter::new(kind, &pattern) {
         Ok(filter) => {
             let label = filter.label();
             app.filters.push(filter);

@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use regex::Regex;
+use regex::{Regex, RegexBuilder};
 
 use crate::model::LogEntry;
 
@@ -22,7 +22,10 @@ pub struct Filter {
 
 impl Filter {
     pub fn new(kind: FilterKind, pattern: &str) -> Result<Self, regex::Error> {
-        let regex = Regex::new(pattern)?;
+        // Match `/` search: case-insensitive regex.
+        let regex = RegexBuilder::new(pattern)
+            .case_insensitive(true)
+            .build()?;
         Ok(Self {
             kind,
             pattern: pattern.to_string(),
@@ -108,6 +111,7 @@ mod tests {
         let filters = vec![Filter::new(FilterKind::Include, "error").unwrap()];
         assert!(!entry_passes(&filters, true, &entry("info ok")));
         assert!(entry_passes(&filters, true, &entry("got error here")));
+        assert!(entry_passes(&filters, true, &entry("got ERROR here")));
     }
 
     #[test]

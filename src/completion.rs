@@ -161,8 +161,8 @@ fn suggestions_for(buffer: &str, app: &App) -> Vec<Suggestion> {
 
 const FILTER_SUBS: &[(&str, &str)] = &[
     ("list", "list active filters"),
-    ("in", "keep lines matching regex"),
-    ("out", "hide lines matching regex"),
+    ("in", "keep matching regex (default: search)"),
+    ("out", "hide matching regex (default: search)"),
     ("on", "enable filtering"),
     ("off", "disable filtering"),
     ("toggle", "toggle filtering on/off"),

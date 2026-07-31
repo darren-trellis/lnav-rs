@@ -81,8 +81,8 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 | `:q` | Quit |
 | `:help` | List commands |
 | `:filter` / `:filter list` | List active filters |
-| `:filter in PATTERN` | Keep only lines matching regex |
-| `:filter out PATTERN` | Hide lines matching regex |
+| `:filter in [PATTERN]` | Keep only lines matching regex (omit PATTERN to use current `/` search) |
+| `:filter out [PATTERN]` | Hide lines matching regex (omit PATTERN to use current `/` search) |
 | `:filter on\|off\|toggle` | Enable/disable/toggle filtering |
 | `:delete-filter N` | Remove filter by index |
 | `:clear-filters` | Remove all filters |
