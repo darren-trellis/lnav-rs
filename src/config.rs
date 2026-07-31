@@ -274,8 +274,9 @@ impl Config {
 
         let defaults = Self::default();
         let mut body = String::new();
-        write_theme_config(&mut body, &self.theme);
 
+        // Root scalars must come before [theme.*] tables — TOML keeps assigning
+        // keys to the most recent table header until the next one.
         if self.follow != defaults.follow {
             body.push_str(&format!("follow = {}\n", self.follow));
         }
@@ -297,9 +298,11 @@ impl Config {
         if self.timestamp_format != defaults.timestamp_format {
             body.push_str(&format!("timestamp_format = {:?}\n", self.timestamp_format));
         }
-        if body.ends_with('\n') && !body.ends_with("\n\n") {
+        if !body.is_empty() {
             body.push('\n');
         }
+
+        write_theme_config(&mut body, &self.theme);
 
         if self.columns != defaults.columns {
             for col in &self.columns {
@@ -539,6 +542,54 @@ mod tests {
         assert!(!raw.contains("line_numbers = "));
         assert!(!raw.contains("[[columns]]"));
         assert!(raw.contains("[theme]"));
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn write_root_scalars_before_theme_tables_roundtrip() {
+        let dir = std::env::temp_dir().join(format!(
+            "lnav-rs-write-order-{}",
+            std::process::id()
+        ));
+        let _ = fs::create_dir_all(&dir);
+        let path = dir.join("config.toml");
+
+        let mut cfg = Config::default();
+        cfg.line_numbers = true;
+        cfg.theme.levels.info = Some(crate::theme::ColorSpec::Fg("#a6e3a1".into()));
+        cfg.columns = vec![
+            Column {
+                source: "level".into(),
+                width: Some(5),
+                align: Align::Center,
+            },
+            Column {
+                source: "annotations.url".into(),
+                width: None,
+                align: Align::Left,
+            },
+        ];
+
+        cfg.write_to(&path).unwrap();
+        let raw = fs::read_to_string(&path).unwrap();
+        let line_nums_pos = raw.find("line_numbers = true").expect("line_numbers in file");
+        let theme_levels_pos = raw
+            .find("[theme.levels]")
+            .expect("[theme.levels] in file");
+        assert!(
+            line_nums_pos < theme_levels_pos,
+            "line_numbers must appear before [theme.levels]\n{raw}"
+        );
+
+        let (loaded, _) = Config::load_from(&path).unwrap();
+        assert!(loaded.line_numbers);
+        assert_eq!(
+            loaded.theme.overrides().levels.info,
+            Some(crate::theme::ColorSpec::Fg("#a6e3a1".into()))
+        );
+        assert_eq!(loaded.columns.len(), 2);
+        assert_eq!(loaded.columns[1].source, "annotations.url");
+
         let _ = fs::remove_dir_all(&dir);
     }
 

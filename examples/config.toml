@@ -1,10 +1,10 @@
+line_numbers = true
+
 [theme]
 name = "catppuccin"
 
 # [theme.levels]
 # error = { fg = "#1e1e2e", bg = "#f38ba8" }
-
-line_numbers = true
 
 [[columns]]
 source = "level"
