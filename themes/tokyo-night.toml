@@ -1,0 +1,30 @@
+name = "tokyo-night"
+
+[colors]
+background = "#1a1b26"
+foreground = "#c0caf5"
+selection_bg = "#33467c"
+selection_fg = "#c0caf5"
+overlay_bg = "#16161e"
+status_bg = "#16161e"
+status_fg = "#a9b1d6"
+border = "#3b4261"
+search_match = "#e0af68"
+dim = "#565f89"
+
+[levels]
+trace = "#565f89"
+debug = "#7aa2f7"
+info = "#9ece6a"
+warn = "#e0af68"
+error = "#f7768e"
+fatal = "#bb9af7"
+unknown = "#c0caf5"
+
+[ui]
+timestamp = "#7aa2f7"
+key = "#7dcfff"
+string = "#9ece6a"
+number = "#ff9e64"
+bool = "#bb9af7"
+null = "#565f89"

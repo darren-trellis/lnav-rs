@@ -1,0 +1,30 @@
+name = "catppuccin"
+
+[colors]
+background = "#1e1e2e"
+foreground = "#cdd6f4"
+selection_bg = "#45475a"
+selection_fg = "#cdd6f4"
+overlay_bg = "#181825"
+status_bg = "#11111b"
+status_fg = "#a6adc8"
+border = "#585b70"
+search_match = "#f9e2af"
+dim = "#6c7086"
+
+[levels]
+trace = "#6c7086"
+debug = "#89b4fa"
+info = "#a6e3a1"
+warn = "#f9e2af"
+error = "#f38ba8"
+fatal = "#cba6f7"
+unknown = "#cdd6f4"
+
+[ui]
+timestamp = "#89b4fa"
+key = "#89dceb"
+string = "#a6e3a1"
+number = "#fab387"
+bool = "#cba6f7"
+null = "#6c7086"

@@ -1,0 +1,6 @@
+time=2026-07-30T12:00:01Z level=info msg="worker started" worker_id=1
+time=2026-07-30T12:00:02Z level=debug msg="polling queue" depth=3
+time=2026-07-30T12:00:03Z level=info msg="job claimed" job_id=42 kind=ingest
+time=2026-07-30T12:00:04Z level=warn msg="retrying download" url=https://example.com/blob attempt=2
+time=2026-07-30T12:00:05Z level=error msg="checksum mismatch" job_id=42 expected=abc got=def
+time=2026-07-30T12:00:06Z level=info msg="job failed" job_id=42 status=error
