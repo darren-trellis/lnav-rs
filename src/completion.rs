@@ -65,6 +65,7 @@ const SET_KEYS: &[(&str, &str)] = &[
     ("relative_line_numbers", "on|off|toggle"),
     ("scrollbar", "on|off|toggle"),
     ("autosave", "on|off|toggle"),
+    ("sidebar", "on|off|toggle"),
     ("scroll_lines", "mouse wheel step"),
     ("timestamp_format", "strftime or raw"),
     ("case_mode", "sensitive|insensitive|smart"),
@@ -162,6 +163,7 @@ fn suggestions_for(buffer: &str, app: &App) -> Vec<Suggestion> {
             "focus" => on_off_toggle_suggestions(rest, rest_from, &FOCUS_SUBS),
             "follow" => on_off_toggle_suggestions(rest, rest_from, &FOLLOW_SUBS),
             "details" => on_off_toggle_suggestions(rest, rest_from, &DETAILS_SUBS),
+            "sidebar" => on_off_toggle_suggestions(rest, rest_from, &SIDEBAR_SUBS),
             "help" => on_off_toggle_suggestions(rest, rest_from, &HELP_SUBS),
             "set" => set_key_suggestions(rest, rest_from),
             "config" => config_suggestions(rest, rest_from),
@@ -203,7 +205,13 @@ const FOLD_SUBS: &[(&str, &str)] = &[
 const FOCUS_SUBS: &[(&str, &str)] = &[
     ("on", "focus details overlay"),
     ("off", "focus log list"),
-    ("toggle", "switch details/list focus"),
+    ("toggle", "cycle list/details/sidebar focus"),
+];
+
+const SIDEBAR_SUBS: &[(&str, &str)] = &[
+    ("on", "show filters sidebar"),
+    ("off", "hide filters sidebar"),
+    ("toggle", "toggle filters sidebar"),
 ];
 
 const FOLLOW_SUBS: &[(&str, &str)] = &[
@@ -414,6 +422,7 @@ fn set_key_suggestions(rest: &str, rest_from: usize) -> Vec<Suggestion> {
         | "relative_line_numbers"
         | "scrollbar"
         | "autosave"
+        | "sidebar"
         | "session_filters"
         | "session_stdin" => value_suggestions(value, value_from, &bool_opts(), "bool"),
         "case_mode" => {

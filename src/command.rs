@@ -58,7 +58,11 @@ pub fn catalog() -> &'static [CommandInfo] {
         },
         CommandInfo {
             name: "focus",
-            help: "on|off|toggle details vs list focus",
+            help: "on|off|toggle focus across list/details/sidebar",
+        },
+        CommandInfo {
+            name: "sidebar",
+            help: "on|off|toggle filters sidebar",
         },
         CommandInfo {
             name: "fold",
@@ -172,7 +176,9 @@ fn execute_inner(app: &mut App, raw: &str, invoke: Invoke) {
         }
         "down" => {
             let n = app.take_count() as isize;
-            if app.overlay_focused && app.show_overlay {
+            if app.sidebar_focused && app.config.sidebar {
+                app.move_sidebar_cursor(n);
+            } else if app.overlay_focused && app.show_overlay {
                 app.move_overlay_cursor(n);
             } else {
                 app.with_motion(|a| a.move_selection(n));
@@ -180,7 +186,9 @@ fn execute_inner(app: &mut App, raw: &str, invoke: Invoke) {
         }
         "up" => {
             let n = app.take_count() as isize;
-            if app.overlay_focused && app.show_overlay {
+            if app.sidebar_focused && app.config.sidebar {
+                app.move_sidebar_cursor(-n);
+            } else if app.overlay_focused && app.show_overlay {
                 app.move_overlay_cursor(-n);
             } else {
                 app.with_motion(|a| a.move_selection(-n));
@@ -188,7 +196,10 @@ fn execute_inner(app: &mut App, raw: &str, invoke: Invoke) {
         }
         "page-down" => {
             let n = app.take_count() as isize;
-            if app.overlay_focused && app.show_overlay {
+            if app.sidebar_focused && app.config.sidebar {
+                let page = app.hit.sidebar_inner.height.max(1) as isize;
+                app.move_sidebar_cursor(page * n);
+            } else if app.overlay_focused && app.show_overlay {
                 let page = app.overlay_inner_height.max(1) as isize;
                 app.move_overlay_cursor(page * n);
             } else {
@@ -197,7 +208,10 @@ fn execute_inner(app: &mut App, raw: &str, invoke: Invoke) {
         }
         "page-up" => {
             let n = app.take_count() as isize;
-            if app.overlay_focused && app.show_overlay {
+            if app.sidebar_focused && app.config.sidebar {
+                let page = app.hit.sidebar_inner.height.max(1) as isize;
+                app.move_sidebar_cursor(-page * n);
+            } else if app.overlay_focused && app.show_overlay {
                 let page = app.overlay_inner_height.max(1) as isize;
                 app.move_overlay_cursor(-page * n);
             } else {
@@ -206,7 +220,13 @@ fn execute_inner(app: &mut App, raw: &str, invoke: Invoke) {
         }
         "top" => {
             let line = app.take_count_opt();
-            if app.overlay_focused && app.show_overlay {
+            if app.sidebar_focused && app.config.sidebar {
+                if let Some(n) = line {
+                    app.jump_sidebar_cursor(n.saturating_sub(1));
+                } else {
+                    app.jump_sidebar_cursor(0);
+                }
+            } else if app.overlay_focused && app.show_overlay {
                 if let Some(n) = line {
                     app.jump_overlay_cursor(n.saturating_sub(1));
                 } else {
@@ -225,7 +245,14 @@ fn execute_inner(app: &mut App, raw: &str, invoke: Invoke) {
         }
         "bottom" => {
             let line = app.take_count_opt();
-            if app.overlay_focused && app.show_overlay {
+            if app.sidebar_focused && app.config.sidebar {
+                if let Some(n) = line {
+                    app.jump_sidebar_cursor(n.saturating_sub(1));
+                } else {
+                    let last = app.filters.len().saturating_sub(1);
+                    app.jump_sidebar_cursor(last);
+                }
+            } else if app.overlay_focused && app.show_overlay {
                 if let Some(n) = line {
                     app.jump_overlay_cursor(n.saturating_sub(1));
                 } else {
@@ -254,6 +281,10 @@ fn execute_inner(app: &mut App, raw: &str, invoke: Invoke) {
             app.cancel_pending_op();
             focus_command(app, rest);
         }
+        "sidebar" => {
+            app.cancel_pending_op();
+            sidebar_command(app, rest);
+        }
         "fold" => {
             app.cancel_pending_op();
             fold_command(app, rest);
@@ -279,6 +310,9 @@ fn execute_inner(app: &mut App, raw: &str, invoke: Invoke) {
             // Keep details focused while searching inside it.
             if in_details {
                 app.overlay_focused = true;
+                app.sidebar_focused = false;
+            } else {
+                app.sidebar_focused = false;
             }
             app.status_message = None;
         }
@@ -346,7 +380,10 @@ fn execute_inner(app: &mut App, raw: &str, invoke: Invoke) {
             app.rebuild_visible(None);
             app.status_message = Some(format!("unhid {n} line(s)"));
         }
-        "delete-filter" => delete_filter(app, rest),
+        "delete-filter" => match invoke {
+            Invoke::Key if rest.is_empty() => app.start_or_repeat_filter_delete(),
+            _ => delete_filter(app, rest),
+        },
         "noh" => {
             app.clear_search();
             app.status_message = Some("cleared search".into());
@@ -452,22 +489,20 @@ fn list_filters(app: &mut App) {
 }
 
 fn delete_filter(app: &mut App, rest: &str) {
+    if rest.is_empty() {
+        app.delete_selected_filter();
+        return;
+    }
     let Ok(idx) = rest.parse::<usize>() else {
-        app.status_message = Some("usage: :delete-filter INDEX".into());
+        app.status_message = Some("usage: :delete-filter [INDEX]".into());
         return;
     };
     if idx >= app.filters.len() {
         app.status_message = Some("no such filter".into());
         return;
     }
-    let removed = app.filters.remove(idx);
-    app.rebuild_visible(None);
-    app.persist_session();
-    app.status_message = Some(format!(
-        "deleted filter-{} /{}/",
-        removed.label(),
-        removed.pattern
-    ));
+    app.sidebar_selected = idx;
+    app.delete_selected_filter();
 }
 
 fn split_cmd(line: &str) -> (&str, &str) {
@@ -532,6 +567,21 @@ fn focus_command(app: &mut App, rest: &str) {
         None => {
             app.status_message = Some(format!(
                 "usage: :focus [on|off|toggle]  (unknown: {sub})"
+            ));
+        }
+    }
+}
+
+fn sidebar_command(app: &mut App, rest: &str) {
+    let (sub, _) = split_cmd(rest);
+    match parse_on_off_toggle(sub) {
+        Some(action) => {
+            app.set_sidebar(action);
+            maybe_autosave(app);
+        }
+        None => {
+            app.status_message = Some(format!(
+                "usage: :sidebar [on|off|toggle]  (unknown: {sub})"
             ));
         }
     }
@@ -616,7 +666,7 @@ fn theme_command(app: &mut App, rest: &str) {
     }
 }
 
-const CONFIG_KEYS_USAGE: &str = "theme|follow|wrap_details|details_json_tree|details_max_height|details_tab_width|line_numbers|relative_line_numbers|scrollbar|autosave|scroll_lines|timestamp_format|case_mode|session_filters|session_stdin";
+const CONFIG_KEYS_USAGE: &str = "theme|follow|wrap_details|details_json_tree|details_max_height|details_tab_width|line_numbers|relative_line_numbers|scrollbar|autosave|sidebar|scroll_lines|timestamp_format|case_mode|session_filters|session_stdin";
 
 fn config_command(app: &mut App, rest: &str) {
     let (sub, arg) = split_cmd(rest);
@@ -670,6 +720,7 @@ fn option_value(app: &App, key: &str) -> Option<String> {
         }
         "scrollbar" => Some(format_on_off(current_bool_option(app, "scrollbar")).into()),
         "autosave" => Some(format_on_off(current_bool_option(app, "autosave")).into()),
+        "sidebar" => Some(format_on_off(current_bool_option(app, "sidebar")).into()),
         "session_filters" => {
             Some(format_on_off(current_bool_option(app, "session_filters")).into())
         }
@@ -750,6 +801,14 @@ fn apply_set_option(app: &mut App, key: &str, value: &str) -> bool {
         "autosave" => set_bool_option(app, "autosave", value, |app, v| {
             app.config.autosave = v;
         }),
+        "sidebar" => set_bool_option(app, "sidebar", value, |app, v| {
+            app.config.sidebar = v;
+            if v {
+                app.focus_sidebar();
+            } else {
+                app.sidebar_focused = false;
+            }
+        }),
         "session_filters" => set_bool_option(app, "session_filters", value, |app, v| {
             app.config.session_filters = v;
         }),
@@ -811,6 +870,7 @@ fn current_bool_option(app: &App, name: &str) -> bool {
         "relative_line_numbers" => app.config.relative_line_numbers,
         "scrollbar" => app.config.scrollbar,
         "autosave" => app.config.autosave,
+        "sidebar" => app.config.sidebar,
         "session_filters" => app.config.session_filters,
         "session_stdin" => app.config.session_stdin,
         _ => false,

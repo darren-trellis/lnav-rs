@@ -23,7 +23,7 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
     };
     let block = {
         let theme = &app.theme;
-        let list_focused = !app.overlay_focused;
+        let list_focused = !app.overlay_focused && !app.sidebar_focused;
         let border_tone = if list_focused {
             theme.window_focus_border
         } else {
@@ -104,7 +104,8 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
         let src = app.visible[vis_idx];
         let entry = &app.source.entries()[src];
         // When details is focused, the highlight lives in the overlay.
-        let selected = vis_idx == app.selected && !app.overlay_focused;
+        let selected =
+            vis_idx == app.selected && !app.overlay_focused && !app.sidebar_focused;
         let gutter_num = line_number_label(app, vis_idx);
         lines.push(render_line(
             app,

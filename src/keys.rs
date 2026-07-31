@@ -37,12 +37,18 @@ pub fn defaults() -> BTreeMap<String, String> {
         ("d".into(), "hide".into()),
         ("D".into(), "delete".into()),
         ("?".into(), "help".into()),
+        ("s".into(), "sidebar toggle".into()),
     ])
 }
 
 /// Defaults applied when the details overlay is focused (override `[keys]`).
 pub fn details_defaults() -> BTreeMap<String, String> {
     BTreeMap::from([("space".into(), "fold toggle".into())])
+}
+
+/// Defaults applied when the filters sidebar is focused (override `[keys]`).
+pub fn sidebar_defaults() -> BTreeMap<String, String> {
+    BTreeMap::from([("d".into(), "delete-filter".into())])
 }
 
 /// Merge user keybindings over defaults. Empty command string unbinds a key.
@@ -120,5 +126,10 @@ mod tests {
         assert_eq!(defaults().get("d").map(String::as_str), Some("hide"));
         assert_eq!(defaults().get("D").map(String::as_str), Some("delete"));
         assert_eq!(defaults().get("q").map(String::as_str), Some("quit"));
+        assert_eq!(defaults().get("s").map(String::as_str), Some("sidebar toggle"));
+        assert_eq!(
+            sidebar_defaults().get("d").map(String::as_str),
+            Some("delete-filter")
+        );
     }
 }

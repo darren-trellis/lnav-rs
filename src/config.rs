@@ -239,6 +239,10 @@ pub struct Config {
     #[serde(default = "default_true")]
     pub autosave: bool,
 
+    /// Show a filters sidebar listing active filters.
+    #[serde(default)]
+    pub sidebar: bool,
+
     /// Lines to move per mouse-wheel notch in the log list.
     #[serde(default = "default_scroll_lines")]
     pub scroll_lines: usize,
@@ -262,6 +266,10 @@ pub struct Config {
     /// Key overrides while the details overlay is focused (merged over `keys`).
     #[serde(default)]
     pub details_keys: BTreeMap<String, String>,
+
+    /// Key overrides while the filters sidebar is focused (merged over `keys`).
+    #[serde(default)]
+    pub sidebar_keys: BTreeMap<String, String>,
 
     /// Persist filters per log file under `~/.local/share/lnav-rs/sessions/`.
     #[serde(default = "default_true")]
@@ -332,12 +340,14 @@ impl Default for Config {
             relative_line_numbers: false,
             scrollbar: true,
             autosave: true,
+            sidebar: false,
             scroll_lines: default_scroll_lines(),
             timestamp_format: default_timestamp_format(),
             case_mode: CaseMode::default(),
             columns: default_columns(),
             keys: keys::defaults(),
             details_keys: keys::details_defaults(),
+            sidebar_keys: keys::sidebar_defaults(),
             session_filters: true,
             session_stdin: true,
         }
@@ -396,6 +406,8 @@ impl Config {
         cfg.keys = keys::merge(keys::defaults(), std::mem::take(&mut cfg.keys));
         cfg.details_keys =
             keys::merge(keys::details_defaults(), std::mem::take(&mut cfg.details_keys));
+        cfg.sidebar_keys =
+            keys::merge(keys::sidebar_defaults(), std::mem::take(&mut cfg.sidebar_keys));
         if cfg.columns.is_empty() {
             cfg.columns = default_columns();
         }
@@ -424,6 +436,7 @@ impl Config {
         let known: Vec<&str> = command::catalog().iter().map(|c| c.name).collect();
         validate_key_map("keys", &self.keys, &known)?;
         validate_key_map("details_keys", &self.details_keys, &known)?;
+        validate_key_map("sidebar_keys", &self.sidebar_keys, &known)?;
         Ok(())
     }
 
@@ -479,6 +492,9 @@ impl Config {
         if self.autosave != defaults.autosave {
             body.push_str(&format!("autosave = {}\n", self.autosave));
         }
+        if self.sidebar != defaults.sidebar {
+            body.push_str(&format!("sidebar = {}\n", self.sidebar));
+        }
         if self.scroll_lines.max(1) != defaults.scroll_lines {
             body.push_str(&format!("scroll_lines = {}\n", self.scroll_lines.max(1)));
         }
@@ -532,6 +548,12 @@ impl Config {
             "details_keys",
             &self.details_keys,
             &keys::details_defaults(),
+        );
+        write_key_section(
+            &mut body,
+            "sidebar_keys",
+            &self.sidebar_keys,
+            &keys::sidebar_defaults(),
         );
 
         fs::write(path, body).with_context(|| format!("failed to write {}", path.display()))?;

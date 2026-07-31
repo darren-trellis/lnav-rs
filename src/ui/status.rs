@@ -82,7 +82,7 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
             }
             if let Some(op) = app.pending_op {
                 let tag = match op {
-                    PendingOp::Hide => "d",
+                    PendingOp::Hide | PendingOp::DeleteFilter => "d",
                     PendingOp::Delete => "D",
                 };
                 spans.push(Span::styled(

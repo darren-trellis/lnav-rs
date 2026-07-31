@@ -37,6 +37,8 @@ pub enum InputMode {
 pub enum PendingOp {
     Hide,
     Delete,
+    /// Sidebar filter delete (`dd` while filters sidebar focused).
+    DeleteFilter,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -68,6 +70,7 @@ pub struct HitAreas {
     pub list_scrollbar: Rect,
     pub overlay: Rect,
     pub overlay_scrollbar: Rect,
+    pub sidebar_inner: Rect,
     pub suggest_inner: Rect,
     pub suggest_start: usize,
     pub status: Rect,
@@ -112,6 +115,11 @@ pub struct App {
     pub overlay_folded: HashSet<String>,
     /// Show keybinding hints on the details overlay bottom border.
     pub overlay_help: bool,
+    /// Filters sidebar has keyboard focus.
+    pub sidebar_focused: bool,
+    /// Selected filter index in the sidebar.
+    pub sidebar_selected: usize,
+    pub sidebar_scroll: usize,
     pub input_mode: InputMode,
     pub pending_op: Option<PendingOp>,
     /// Visible-row anchor when the pending operator was started.
@@ -184,6 +192,9 @@ impl App {
             overlay_inner_height: 0,
             overlay_folded: HashSet::new(),
             overlay_help: false,
+            sidebar_focused: false,
+            sidebar_selected: 0,
+            sidebar_scroll: 0,
             input_mode: InputMode::Normal,
             pending_op: None,
             op_anchor: 0,
@@ -314,7 +325,12 @@ impl App {
         match mouse.kind {
             MouseEventKind::ScrollUp => {
                 self.cancel_pending_op();
-                if self.show_overlay
+                if self.config.sidebar
+                    && (self.sidebar_focused
+                        || contains(self.hit.sidebar_inner, mouse.column, mouse.row))
+                {
+                    self.move_sidebar_cursor(-(self.config.scroll_lines.max(1) as isize));
+                } else if self.show_overlay
                     && (self.overlay_focused
                         || contains(self.hit.overlay, mouse.column, mouse.row))
                 {
@@ -330,7 +346,12 @@ impl App {
             }
             MouseEventKind::ScrollDown => {
                 self.cancel_pending_op();
-                if self.show_overlay
+                if self.config.sidebar
+                    && (self.sidebar_focused
+                        || contains(self.hit.sidebar_inner, mouse.column, mouse.row))
+                {
+                    self.move_sidebar_cursor(self.config.scroll_lines.max(1) as isize);
+                } else if self.show_overlay
                     && (self.overlay_focused
                         || contains(self.hit.overlay, mouse.column, mouse.row))
                 {
@@ -424,6 +445,7 @@ impl App {
             .min(viewport.saturating_sub(1));
         self.follow = false;
         self.overlay_focused = false;
+        self.sidebar_focused = false;
         self.scroll = new_scroll;
         let new_selected = (new_scroll + offset).min(self.visible.len() - 1);
         if new_selected != self.selected {
@@ -459,11 +481,26 @@ impl App {
             return;
         }
 
+        if contains(self.hit.sidebar_inner, col, row) {
+            self.leave_editing_modes();
+            self.focus_sidebar();
+            let area = self.hit.sidebar_inner;
+            if area.height > 0 {
+                let row_off = (row - area.y) as usize;
+                let idx = self.sidebar_scroll + row_off;
+                if idx < self.filters.len() {
+                    self.sidebar_selected = idx;
+                }
+            }
+            return;
+        }
+
         if contains(self.hit.overlay, col, row) {
             // Scrollbar clicks are handled earlier; ignore the bar strip here.
             if contains(self.hit.overlay_scrollbar, col, row) {
                 return;
             }
+            self.sidebar_focused = false;
             self.overlay_focused = true;
             // Click a row inside the overlay to move the cursor there.
             let inner_y = self.hit.overlay.y.saturating_add(1);
@@ -505,6 +542,7 @@ impl App {
 
         self.leave_editing_modes();
         self.overlay_focused = false;
+        self.sidebar_focused = false;
 
         let double = self
             .last_click
@@ -901,6 +939,9 @@ impl App {
     }
 
     fn handle_normal_key(&mut self, key: KeyEvent) {
+        if self.sidebar_focused && self.config.sidebar && self.handle_sidebar_key(key) {
+            return;
+        }
         if self.overlay_focused && self.show_overlay && self.handle_overlay_key(key) {
             return;
         }
@@ -927,8 +968,17 @@ impl App {
         command::execute_from_key(self, &cmd);
     }
 
-    /// Look up a keybinding, applying `[details_keys]` over `[keys]` when focused.
+    /// Look up a keybinding, applying pane overlays over `[keys]` when focused.
     fn resolve_key_command(&self, spec: &str) -> Option<String> {
+        if self.sidebar_focused && self.config.sidebar {
+            if let Some(cmd) = self.config.sidebar_keys.get(spec) {
+                return if cmd.is_empty() {
+                    None
+                } else {
+                    Some(cmd.clone())
+                };
+            }
+        }
         if self.overlay_focused && self.show_overlay {
             if let Some(cmd) = self.config.details_keys.get(spec) {
                 return if cmd.is_empty() {
@@ -964,6 +1014,21 @@ impl App {
         }
     }
 
+    fn handle_sidebar_key(&mut self, key: KeyEvent) -> bool {
+        match key.code {
+            KeyCode::Esc => {
+                self.sidebar_focused = false;
+                self.cancel_pending_op();
+                true
+            }
+            KeyCode::Char(':') | KeyCode::Char('q') => {
+                self.sidebar_focused = false;
+                false
+            }
+            _ => false,
+        }
+    }
+
     pub fn set_details(&mut self, action: FoldAction) {
         match action {
             FoldAction::On => self.open_details(),
@@ -977,20 +1042,78 @@ impl App {
 
     pub fn set_overlay_focus(&mut self, action: FoldAction) {
         self.cancel_pending_op();
-        if !self.show_overlay {
-            if matches!(action, FoldAction::On | FoldAction::Toggle) {
-                self.open_details();
+        match action {
+            FoldAction::On => {
+                self.sidebar_focused = false;
+                if !self.show_overlay {
+                    self.open_details();
+                } else {
+                    self.overlay_focused = true;
+                }
+            }
+            FoldAction::Off => {
+                self.overlay_focused = false;
+                self.overlay_help = false;
+                self.sidebar_focused = false;
+            }
+            FoldAction::Toggle => self.cycle_focus(),
+        }
+    }
+
+    /// Cycle focus across list → details (if open) → sidebar (if open) → list.
+    pub fn cycle_focus(&mut self) {
+        self.cancel_pending_op();
+        if self.sidebar_focused {
+            self.sidebar_focused = false;
+            self.overlay_focused = false;
+            self.overlay_help = false;
+            return;
+        }
+        if self.overlay_focused && self.show_overlay {
+            self.overlay_focused = false;
+            self.overlay_help = false;
+            if self.config.sidebar {
+                self.focus_sidebar();
             }
             return;
         }
-        let focus = match action {
+        // List focused.
+        if self.show_overlay {
+            self.sidebar_focused = false;
+            self.overlay_focused = true;
+        } else if self.config.sidebar {
+            self.focus_sidebar();
+        }
+    }
+
+    pub fn set_sidebar(&mut self, action: FoldAction) {
+        self.cancel_pending_op();
+        let on = match action {
             FoldAction::On => true,
             FoldAction::Off => false,
-            FoldAction::Toggle => !self.overlay_focused,
+            FoldAction::Toggle => !self.config.sidebar,
         };
-        self.overlay_focused = focus;
-        if !focus {
-            self.overlay_help = false;
+        self.config.sidebar = on;
+        if on {
+            self.focus_sidebar();
+            self.status_message = Some("sidebar: on".into());
+        } else {
+            self.sidebar_focused = false;
+            self.status_message = Some("sidebar: off".into());
+        }
+    }
+
+    pub fn focus_sidebar(&mut self) {
+        if !self.config.sidebar {
+            return;
+        }
+        self.overlay_focused = false;
+        self.overlay_help = false;
+        self.sidebar_focused = true;
+        if self.filters.is_empty() {
+            self.sidebar_selected = 0;
+        } else {
+            self.sidebar_selected = self.sidebar_selected.min(self.filters.len() - 1);
         }
     }
 
@@ -1015,6 +1138,7 @@ impl App {
             self.overlay_cursor = 0;
             self.overlay_scroll = 0;
         }
+        self.sidebar_focused = false;
         self.overlay_focused = true;
     }
 
@@ -1030,6 +1154,84 @@ impl App {
                 self.run_search();
             }
         }
+    }
+
+    pub fn move_sidebar_cursor(&mut self, delta: isize) {
+        if self.filters.is_empty() {
+            self.sidebar_selected = 0;
+            return;
+        }
+        self.cancel_pending_op();
+        let next = (self.sidebar_selected as isize + delta)
+            .clamp(0, self.filters.len() as isize - 1) as usize;
+        self.sidebar_selected = next;
+    }
+
+    pub fn jump_sidebar_cursor(&mut self, idx: usize) {
+        if self.filters.is_empty() {
+            self.sidebar_selected = 0;
+            return;
+        }
+        self.cancel_pending_op();
+        self.sidebar_selected = idx.min(self.filters.len() - 1);
+    }
+
+    pub fn ensure_sidebar_visible(&mut self, viewport_height: usize) {
+        if viewport_height == 0 || self.filters.is_empty() {
+            self.sidebar_scroll = 0;
+            return;
+        }
+        if self.sidebar_selected >= self.filters.len() {
+            self.sidebar_selected = self.filters.len() - 1;
+        }
+        if self.sidebar_selected < self.sidebar_scroll {
+            self.sidebar_scroll = self.sidebar_selected;
+        } else if self.sidebar_selected >= self.sidebar_scroll + viewport_height {
+            self.sidebar_scroll = self.sidebar_selected + 1 - viewport_height;
+        }
+        let max_scroll = self.filters.len().saturating_sub(viewport_height);
+        if self.sidebar_scroll > max_scroll {
+            self.sidebar_scroll = max_scroll;
+        }
+    }
+
+    /// Start or complete `dd` filter delete while the sidebar is focused.
+    pub fn start_or_repeat_filter_delete(&mut self) {
+        if self.filters.is_empty() {
+            self.pending_op = None;
+            self.count = None;
+            self.status_message = Some("no filters".into());
+            return;
+        }
+        if self.pending_op == Some(PendingOp::DeleteFilter) {
+            self.pending_op = None;
+            self.count = None;
+            self.delete_selected_filter();
+            return;
+        }
+        self.pending_op = Some(PendingOp::DeleteFilter);
+        self.status_message = None;
+    }
+
+    pub fn delete_selected_filter(&mut self) {
+        if self.filters.is_empty() {
+            self.status_message = Some("no filters".into());
+            return;
+        }
+        let idx = self.sidebar_selected.min(self.filters.len() - 1);
+        let removed = self.filters.remove(idx);
+        if self.filters.is_empty() {
+            self.sidebar_selected = 0;
+        } else if self.sidebar_selected >= self.filters.len() {
+            self.sidebar_selected = self.filters.len() - 1;
+        }
+        self.rebuild_visible(None);
+        self.persist_session();
+        self.status_message = Some(format!(
+            "deleted filter-{} /{}/",
+            removed.label(),
+            removed.pattern
+        ));
     }
 
     pub fn set_follow(&mut self, enabled: bool) {
@@ -1202,6 +1404,10 @@ impl App {
 
     /// Start a vim-style operator, or complete `dd` / `DD` if the same op is pending.
     pub(crate) fn start_or_repeat_op(&mut self, op: PendingOp) {
+        if matches!(op, PendingOp::DeleteFilter) {
+            self.start_or_repeat_filter_delete();
+            return;
+        }
         if self.visible.is_empty() {
             self.pending_op = None;
             self.count = None;
@@ -1227,7 +1433,7 @@ impl App {
     where
         F: FnOnce(&mut Self),
     {
-        if let Some(op) = self.pending_op {
+        if let Some(op @ (PendingOp::Hide | PendingOp::Delete)) = self.pending_op {
             let start = self.op_anchor;
             motion(self);
             let end = self.selected;
@@ -1235,6 +1441,10 @@ impl App {
             self.count = None;
             self.apply_op_visible_range(op, start, end);
         } else {
+            // Cancel a half-typed filter delete if the user moves instead.
+            if self.pending_op == Some(PendingOp::DeleteFilter) {
+                self.pending_op = None;
+            }
             motion(self);
         }
     }
@@ -1262,6 +1472,9 @@ impl App {
 
         self.follow = false;
         match op {
+            PendingOp::DeleteFilter => {
+                self.delete_selected_filter();
+            }
             PendingOp::Hide => {
                 let n = indices.len();
                 for i in indices {

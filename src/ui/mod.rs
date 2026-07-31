@@ -1,5 +1,6 @@
 mod list;
 mod overlay;
+mod sidebar;
 mod status;
 mod suggest;
 mod theme_picker;
@@ -61,8 +62,26 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
     .split(area);
 
     let body = chunks[0];
+    let show_sidebar = app.config.sidebar && app.theme_picker.is_none();
+    let sidebar_w = if show_sidebar {
+        sidebar::desired_width(body.width)
+    } else {
+        0
+    };
+
+    let (main, sidebar_area) = if sidebar_w > 0 {
+        let split = Layout::horizontal([
+            Constraint::Min(20),
+            Constraint::Length(sidebar_w),
+        ])
+        .split(body);
+        (split[0], Some(split[1]))
+    } else {
+        (body, None)
+    };
+
     let overlay_height = if app.show_overlay && app.theme_picker.is_none() {
-        overlay_desired_height(app, body.height)
+        overlay_desired_height(app, main.height)
     } else {
         0
     };
@@ -72,11 +91,17 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
             Constraint::Min(3),
             Constraint::Length(overlay_height),
         ])
-        .split(body);
+        .split(main);
         list::draw(frame, app, split[0]);
         overlay::draw(frame, app, split[1]);
     } else {
-        list::draw(frame, app, body);
+        list::draw(frame, app, main);
+    }
+
+    if let Some(area) = sidebar_area {
+        sidebar::draw(frame, app, area);
+    } else {
+        app.sidebar_focused = false;
     }
 
     if suggest_h > 0 {
