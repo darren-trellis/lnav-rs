@@ -398,7 +398,11 @@ impl Config {
             if cmd.is_empty() {
                 continue;
             }
-            if !known.iter().any(|n| n.eq_ignore_ascii_case(cmd)) {
+            let name = cmd
+                .split_whitespace()
+                .next()
+                .unwrap_or(cmd);
+            if !known.iter().any(|n| n.eq_ignore_ascii_case(name)) {
                 bail!(
                     "unknown command {cmd:?} for key {key:?} (try: {})",
                     known.join(", ")

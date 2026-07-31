@@ -38,6 +38,13 @@ pub enum PendingOp {
     Delete,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FoldAction {
+    On,
+    Off,
+    Toggle,
+}
+
 /// Interactive theme selector opened by `:theme set`.
 #[derive(Debug, Clone)]
 pub struct ThemePicker {
@@ -841,7 +848,7 @@ impl App {
         self.move_overlay_cursor(delta);
     }
 
-    pub fn toggle_overlay_fold(&mut self) {
+    pub fn set_overlay_fold(&mut self, action: FoldAction) {
         if !self.show_overlay || !self.overlay_focused {
             self.status_message = Some("focus details first (Enter)".into());
             return;
@@ -864,12 +871,18 @@ impl App {
         }
         let key = details::path_key(&path);
         let label = path.join(".");
-        if self.overlay_folded.contains(&key) {
-            self.overlay_folded.remove(&key);
-            self.status_message = Some(format!("unfolded {label}"));
-        } else {
+        let currently_folded = self.overlay_folded.contains(&key);
+        let fold = match action {
+            FoldAction::On => true,
+            FoldAction::Off => false,
+            FoldAction::Toggle => !currently_folded,
+        };
+        if fold {
             self.overlay_folded.insert(key);
             self.status_message = Some(format!("folded {label}"));
+        } else {
+            self.overlay_folded.remove(&key);
+            self.status_message = Some(format!("unfolded {label}"));
         }
         let new_len = self
             .selected_entry()

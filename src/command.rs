@@ -58,8 +58,8 @@ pub fn catalog() -> &'static [CommandInfo] {
             help: "open/focus/close details overlay",
         },
         CommandInfo {
-            name: "toggle-fold",
-            help: "fold/unfold details tree item",
+            name: "fold",
+            help: "on|off|toggle details tree item",
         },
         CommandInfo {
             name: "close",
@@ -242,9 +242,9 @@ fn execute_inner(app: &mut App, raw: &str, invoke: Invoke) {
             }
         }
         "details" => app.toggle_details(),
-        "toggle-fold" => {
+        "fold" => {
             app.cancel_pending_op();
-            app.toggle_overlay_fold();
+            fold_command(app, rest);
         }
         "close" => {
             if app.pending_op.is_some() || app.count.is_some() {
@@ -474,6 +474,20 @@ fn split_cmd(line: &str) -> (&str, &str) {
     match line.split_once(char::is_whitespace) {
         Some((cmd, rest)) => (cmd, rest.trim()),
         None => (line, ""),
+    }
+}
+
+fn fold_command(app: &mut App, rest: &str) {
+    let (sub, _) = split_cmd(rest);
+    match sub.to_ascii_lowercase().as_str() {
+        "" | "toggle" => app.set_overlay_fold(crate::app::FoldAction::Toggle),
+        "on" => app.set_overlay_fold(crate::app::FoldAction::On),
+        "off" => app.set_overlay_fold(crate::app::FoldAction::Off),
+        other => {
+            app.status_message = Some(format!(
+                "usage: :fold [on|off|toggle]  (unknown: {other})"
+            ));
+        }
     }
 }
 

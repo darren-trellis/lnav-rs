@@ -149,6 +149,7 @@ fn suggestions_for(buffer: &str, app: &App) -> Vec<Suggestion> {
     match cmd.to_ascii_lowercase().as_str() {
         "theme" => theme_suggestions(rest, rest_from),
         "filter" => filter_suggestions(rest, rest_from),
+        "fold" => fold_suggestions(rest, rest_from),
         "set" => set_suggestions(rest, rest_from, app),
         "config" => {
             let opts = vec!["path".to_string(), "init".to_string()];
@@ -170,6 +171,29 @@ const FILTER_SUBS: &[(&str, &str)] = &[
     ("off", "disable filtering"),
     ("toggle", "toggle filtering on/off"),
 ];
+
+const FOLD_SUBS: &[(&str, &str)] = &[
+    ("on", "fold tree item under cursor"),
+    ("off", "unfold tree item under cursor"),
+    ("toggle", "toggle fold under cursor"),
+];
+
+fn fold_suggestions(rest: &str, rest_from: usize) -> Vec<Suggestion> {
+    if rest.contains(char::is_whitespace) {
+        return Vec::new();
+    }
+    let prefix = rest.to_ascii_lowercase();
+    FOLD_SUBS
+        .iter()
+        .filter(|(k, _)| k.starts_with(&prefix))
+        .map(|(k, help)| Suggestion {
+            text: (*k).to_string(),
+            label: (*k).to_string(),
+            help: (*help).to_string(),
+            replace_from: rest_from,
+        })
+        .collect()
+}
 
 fn filter_suggestions(rest: &str, rest_from: usize) -> Vec<Suggestion> {
     if !rest.contains(char::is_whitespace) {
