@@ -3,6 +3,7 @@ use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::Paragraph;
 use ratatui::Frame;
+use unicode_width::UnicodeWidthStr;
 
 use crate::app::{App, InputMode, PendingOp};
 
@@ -37,8 +38,12 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
         .fg(theme.status_fg)
         .add_modifier(Modifier::BOLD);
 
+    let mut cursor_col: Option<u16> = None;
+
     let spans = match app.input_mode {
         InputMode::Search => {
+            let query = format!("/{}", app.search_query);
+            cursor_col = Some(UnicodeWidthStr::width(query.as_str()) as u16);
             let suffix = if app.search_query.is_empty() {
                 String::new()
             } else if app.search_error.is_some() {
@@ -50,12 +55,16 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
                 let cur = app.search_cursor.map(|c| c + 1).unwrap_or(1).min(n);
                 format!("  {cur}/{n}")
             };
-            vec![Span::styled(
-                format!("/{}{suffix}", app.search_query),
-                style,
-            )]
+            vec![
+                Span::styled(query, style),
+                Span::styled(suffix, style),
+            ]
         }
-        InputMode::Command => command_spans(app, style),
+        InputMode::Command => {
+            let typed = format!(":{}", app.command_buffer);
+            cursor_col = Some(UnicodeWidthStr::width(typed.as_str()) as u16);
+            command_spans(app, style)
+        }
         InputMode::Normal => {
             let mut spans = Vec::new();
             if let Some(n) = app.count {
@@ -90,8 +99,11 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
         }
     };
 
-    let left_width: usize = spans.iter().map(|s| s.content.chars().count()).sum();
-    let right_w = right.chars().count();
+    let left_width: usize = spans
+        .iter()
+        .map(|s| UnicodeWidthStr::width(s.content.as_ref()))
+        .sum();
+    let right_w = UnicodeWidthStr::width(right.as_str());
     let pad = (area.width as usize)
         .saturating_sub(left_width + right_w)
         .max(1);
@@ -104,6 +116,12 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
         Paragraph::new(Line::from(line_spans)).style(style),
         area,
     );
+
+    if let Some(col) = cursor_col {
+        let max_x = area.width.saturating_sub(1);
+        let x = area.x.saturating_add(col).min(area.x.saturating_add(max_x));
+        frame.set_cursor_position((x, area.y));
+    }
 }
 
 fn command_spans<'a>(app: &'a App, style: Style) -> Vec<Span<'a>> {
