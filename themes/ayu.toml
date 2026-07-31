@@ -1,0 +1,35 @@
+name = "ayu"
+
+[colors]
+background = "#0b0e14"
+foreground = "#bfbdb6"
+selection_bg = "#1b3a5f"
+selection_fg = "#bfbdb6"
+overlay_bg = "#0d1017"
+status_bg = "#0d1017"
+status_fg = "#acb6bf"
+border = "#565b66"
+window_focus_border = "#ffb454"
+search_match = { fg = "#0b0e14", bg = "#ffb454" }
+dim = "#565b66"
+
+[levels]
+trace = "#565b66"
+debug = "#59c2ff"
+info = "#7fd962"
+warn = "#ffb454"
+error = "#f07178"
+fatal = "#d2a6ff"
+unknown = "#bfbdb6"
+
+[ui]
+timestamp = "#59c2ff"
+key = "#95e6cb"
+string = "#aad94c"
+number = "#ff8f40"
+bool = "#d2a6ff"
+null = "#565b66"
+# column_border = { fg = "#565b66", bg = "#0b0e14" }
+# column_border_width = 1
+# column_border_padding = 1
+# column_border_padding = { left = 1, right = 2 }

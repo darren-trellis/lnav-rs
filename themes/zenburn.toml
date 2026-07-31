@@ -1,0 +1,35 @@
+name = "zenburn"
+
+[colors]
+background = "#3f3f3f"
+foreground = "#dcdccc"
+selection_bg = "#2f2f2f"
+selection_fg = "#dcdccc"
+overlay_bg = "#2b2b2b"
+status_bg = "#2b2b2b"
+status_fg = "#9f9f9f"
+border = "#6f6f6f"
+window_focus_border = "#f0dfaf"
+search_match = { fg = "#3f3f3f", bg = "#f0dfaf" }
+dim = "#7f9f7f"
+
+[levels]
+trace = "#7f9f7f"
+debug = "#8cd0d3"
+info = "#7f9f7f"
+warn = "#e0cf9f"
+error = "#cc9393"
+fatal = "#dc8cc3"
+unknown = "#dcdccc"
+
+[ui]
+timestamp = "#8cd0d3"
+key = "#93e0e3"
+string = "#cc9393"
+number = "#8f8f8f"
+bool = "#dc8cc3"
+null = "#7f9f7f"
+# column_border = { fg = "#6f6f6f", bg = "#3f3f3f" }
+# column_border_width = 1
+# column_border_padding = 1
+# column_border_padding = { left = 1, right = 2 }

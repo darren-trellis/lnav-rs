@@ -1,0 +1,35 @@
+name = "kanagawa"
+
+[colors]
+background = "#1f1f28"
+foreground = "#dcd7ba"
+selection_bg = "#2d4f67"
+selection_fg = "#dcd7ba"
+overlay_bg = "#16161d"
+status_bg = "#16161d"
+status_fg = "#c8c093"
+border = "#54546d"
+window_focus_border = "#e6c384"
+search_match = { fg = "#1f1f28", bg = "#e6c384" }
+dim = "#727169"
+
+[levels]
+trace = "#727169"
+debug = "#7e9cd8"
+info = "#98bb6c"
+warn = "#e6c384"
+error = "#e82424"
+fatal = "#957fb8"
+unknown = "#dcd7ba"
+
+[ui]
+timestamp = "#7e9cd8"
+key = "#7fb4ca"
+string = "#98bb6c"
+number = "#ffa066"
+bool = "#957fb8"
+null = "#727169"
+# column_border = { fg = "#54546d", bg = "#1f1f28" }
+# column_border_width = 1
+# column_border_padding = 1
+# column_border_padding = { left = 1, right = 2 }

@@ -1,0 +1,35 @@
+name = "gruvbox-light"
+
+[colors]
+background = "#fbf1c7"
+foreground = "#3c3836"
+selection_bg = "#d5c4a1"
+selection_fg = "#3c3836"
+overlay_bg = "#f2e5bc"
+status_bg = "#ebdbb2"
+status_fg = "#504945"
+border = "#bdae93"
+window_focus_border = "#b57614"
+search_match = { fg = "#fbf1c7", bg = "#b57614" }
+dim = "#928374"
+
+[levels]
+trace = "#928374"
+debug = "#076678"
+info = "#79740e"
+warn = "#b57614"
+error = "#9d0006"
+fatal = "#8f3f71"
+unknown = "#3c3836"
+
+[ui]
+timestamp = "#076678"
+key = "#427b58"
+string = "#79740e"
+number = "#af3a03"
+bool = "#8f3f71"
+null = "#928374"
+# column_border = { fg = "#bdae93", bg = "#fbf1c7" }
+# column_border_width = 1
+# column_border_padding = 1
+# column_border_padding = { left = 1, right = 2 }

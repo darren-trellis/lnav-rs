@@ -237,7 +237,7 @@ Drop TOML themes in `~/.config/lnav-rs/themes/<name>.toml` (same shape as files 
 
 ## Themes
 
-Built-in: `catppuccin` (default), `dracula`, `github-dark`, `github-light`, `gotham`, `nord`, `solarized-dark`, `solarized-light`, `tokyo-night`. Patch individual colors in `config.toml` under `[theme]`.
+Built-in: `ayu`, `catppuccin` (default), `catppuccin-latte`, `dracula`, `everforest`, `github-dark`, `github-light`, `gotham`, `gruvbox`, `gruvbox-light`, `horizon`, `kanagawa`, `monokai`, `night-owl`, `nord`, `one-dark`, `oxocarbon`, `palenight`, `rose-pine`, `solarized-dark`, `solarized-light`, `synthwave`, `tokyo-night`, `zenburn`. Patch individual colors in `config.toml` under `[theme]`.
 
 ## Project layout
 

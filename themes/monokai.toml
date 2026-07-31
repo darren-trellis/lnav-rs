@@ -1,0 +1,35 @@
+name = "monokai"
+
+[colors]
+background = "#272822"
+foreground = "#f8f8f2"
+selection_bg = "#49483e"
+selection_fg = "#f8f8f2"
+overlay_bg = "#1e1f1c"
+status_bg = "#1e1f1c"
+status_fg = "#cfcfc2"
+border = "#75715e"
+window_focus_border = "#e6db74"
+search_match = { fg = "#272822", bg = "#e6db74" }
+dim = "#75715e"
+
+[levels]
+trace = "#75715e"
+debug = "#66d9ef"
+info = "#a6e22e"
+warn = "#e6db74"
+error = "#f92672"
+fatal = "#ae81ff"
+unknown = "#f8f8f2"
+
+[ui]
+timestamp = "#66d9ef"
+key = "#a1efe4"
+string = "#a6e22e"
+number = "#fd971f"
+bool = "#ae81ff"
+null = "#75715e"
+# column_border = { fg = "#75715e", bg = "#272822" }
+# column_border_width = 1
+# column_border_padding = 1
+# column_border_padding = { left = 1, right = 2 }

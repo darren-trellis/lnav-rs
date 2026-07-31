@@ -1,0 +1,35 @@
+name = "oxocarbon"
+
+[colors]
+background = "#161616"
+foreground = "#f2f4f8"
+selection_bg = "#393939"
+selection_fg = "#f2f4f8"
+overlay_bg = "#262626"
+status_bg = "#262626"
+status_fg = "#dde1e6"
+border = "#525252"
+window_focus_border = "#ffe97b"
+search_match = { fg = "#161616", bg = "#ffe97b" }
+dim = "#6f6f6f"
+
+[levels]
+trace = "#6f6f6f"
+debug = "#78a9ff"
+info = "#42be65"
+warn = "#ffe97b"
+error = "#ee5396"
+fatal = "#be95ff"
+unknown = "#f2f4f8"
+
+[ui]
+timestamp = "#78a9ff"
+key = "#33b1ff"
+string = "#42be65"
+number = "#ff7eb6"
+bool = "#be95ff"
+null = "#6f6f6f"
+# column_border = { fg = "#525252", bg = "#161616" }
+# column_border_width = 1
+# column_border_padding = 1
+# column_border_padding = { left = 1, right = 2 }

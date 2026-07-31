@@ -1,0 +1,35 @@
+name = "palenight"
+
+[colors]
+background = "#292d3e"
+foreground = "#a6accd"
+selection_bg = "#444267"
+selection_fg = "#a6accd"
+overlay_bg = "#1b1e2b"
+status_bg = "#1b1e2b"
+status_fg = "#8796b0"
+border = "#676e95"
+window_focus_border = "#ffcb6b"
+search_match = { fg = "#292d3e", bg = "#ffcb6b" }
+dim = "#676e95"
+
+[levels]
+trace = "#676e95"
+debug = "#82aaff"
+info = "#c3e88d"
+warn = "#ffcb6b"
+error = "#ff5370"
+fatal = "#c792ea"
+unknown = "#a6accd"
+
+[ui]
+timestamp = "#82aaff"
+key = "#89ddff"
+string = "#c3e88d"
+number = "#f78c6c"
+bool = "#c792ea"
+null = "#676e95"
+# column_border = { fg = "#676e95", bg = "#292d3e" }
+# column_border_width = 1
+# column_border_padding = 1
+# column_border_padding = { left = 1, right = 2 }

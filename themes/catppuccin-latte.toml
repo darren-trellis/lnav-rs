@@ -1,0 +1,35 @@
+name = "catppuccin-latte"
+
+[colors]
+background = "#eff1f5"
+foreground = "#4c4f69"
+selection_bg = "#ccd0da"
+selection_fg = "#4c4f69"
+overlay_bg = "#e6e9ef"
+status_bg = "#dce0e8"
+status_fg = "#6c6f85"
+border = "#9ca0b0"
+window_focus_border = "#df8e1d"
+search_match = { fg = "#eff1f5", bg = "#df8e1d" }
+dim = "#9ca0b0"
+
+[levels]
+trace = "#9ca0b0"
+debug = "#1e66f5"
+info = "#40a02b"
+warn = "#df8e1d"
+error = "#d20f39"
+fatal = "#8839ef"
+unknown = "#4c4f69"
+
+[ui]
+timestamp = "#1e66f5"
+key = "#04a5e5"
+string = "#40a02b"
+number = "#fe640b"
+bool = "#8839ef"
+null = "#9ca0b0"
+# column_border = { fg = "#9ca0b0", bg = "#eff1f5" }
+# column_border_width = 1
+# column_border_padding = 1
+# column_border_padding = { left = 1, right = 2 }

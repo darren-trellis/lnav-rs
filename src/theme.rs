@@ -250,14 +250,29 @@ impl Theme {
     pub fn builtin(name: &str) -> Result<Self> {
         let raw = match name {
             "default" | "catppuccin" => include_str!("../themes/catppuccin.toml"),
+            "ayu" => include_str!("../themes/ayu.toml"),
+            "catppuccin-latte" => include_str!("../themes/catppuccin-latte.toml"),
             "dracula" => include_str!("../themes/dracula.toml"),
+            "everforest" => include_str!("../themes/everforest.toml"),
             "github-dark" => include_str!("../themes/github-dark.toml"),
             "github-light" => include_str!("../themes/github-light.toml"),
             "gotham" => include_str!("../themes/gotham.toml"),
+            "gruvbox" => include_str!("../themes/gruvbox.toml"),
+            "gruvbox-light" => include_str!("../themes/gruvbox-light.toml"),
+            "horizon" => include_str!("../themes/horizon.toml"),
+            "kanagawa" => include_str!("../themes/kanagawa.toml"),
+            "monokai" => include_str!("../themes/monokai.toml"),
+            "night-owl" => include_str!("../themes/night-owl.toml"),
             "nord" => include_str!("../themes/nord.toml"),
+            "one-dark" => include_str!("../themes/one-dark.toml"),
+            "oxocarbon" => include_str!("../themes/oxocarbon.toml"),
+            "palenight" => include_str!("../themes/palenight.toml"),
+            "rose-pine" => include_str!("../themes/rose-pine.toml"),
             "solarized-dark" => include_str!("../themes/solarized-dark.toml"),
             "solarized-light" => include_str!("../themes/solarized-light.toml"),
+            "synthwave" => include_str!("../themes/synthwave.toml"),
             "tokyo-night" => include_str!("../themes/tokyo-night.toml"),
+            "zenburn" => include_str!("../themes/zenburn.toml"),
             other => bail!("unknown built-in theme '{other}'"),
         };
         Self::parse(raw)
@@ -401,15 +416,30 @@ impl Theme {
 
     pub fn available() -> &'static [&'static str] {
         &[
+            "ayu",
             "catppuccin",
+            "catppuccin-latte",
             "dracula",
+            "everforest",
             "github-dark",
             "github-light",
             "gotham",
+            "gruvbox",
+            "gruvbox-light",
+            "horizon",
+            "kanagawa",
+            "monokai",
+            "night-owl",
             "nord",
+            "one-dark",
+            "oxocarbon",
+            "palenight",
+            "rose-pine",
             "solarized-dark",
             "solarized-light",
+            "synthwave",
             "tokyo-night",
+            "zenburn",
         ]
     }
 

@@ -1,0 +1,35 @@
+name = "everforest"
+
+[colors]
+background = "#2d353b"
+foreground = "#d3c6aa"
+selection_bg = "#503946"
+selection_fg = "#d3c6aa"
+overlay_bg = "#232a2e"
+status_bg = "#232a2e"
+status_fg = "#9da9a0"
+border = "#4f585e"
+window_focus_border = "#dbbc7f"
+search_match = { fg = "#2d353b", bg = "#dbbc7f" }
+dim = "#859289"
+
+[levels]
+trace = "#859289"
+debug = "#7fbbb3"
+info = "#a7c080"
+warn = "#dbbc7f"
+error = "#e67e80"
+fatal = "#d699b6"
+unknown = "#d3c6aa"
+
+[ui]
+timestamp = "#7fbbb3"
+key = "#83c092"
+string = "#a7c080"
+number = "#e69875"
+bool = "#d699b6"
+null = "#859289"
+# column_border = { fg = "#4f585e", bg = "#2d353b" }
+# column_border_width = 1
+# column_border_padding = 1
+# column_border_padding = { left = 1, right = 2 }

@@ -1,0 +1,35 @@
+name = "horizon"
+
+[colors]
+background = "#1c1e26"
+foreground = "#d5d0db"
+selection_bg = "#2e303e"
+selection_fg = "#d5d0db"
+overlay_bg = "#16161c"
+status_bg = "#16161c"
+status_fg = "#6c6f93"
+border = "#6c6f93"
+window_focus_border = "#fab795"
+search_match = { fg = "#1c1e26", bg = "#fab795" }
+dim = "#6c6f93"
+
+[levels]
+trace = "#6c6f93"
+debug = "#25b0bc"
+info = "#09f7a0"
+warn = "#fab795"
+error = "#e95678"
+fatal = "#b877db"
+unknown = "#d5d0db"
+
+[ui]
+timestamp = "#25b0bc"
+key = "#21bfc2"
+string = "#fab795"
+number = "#f09483"
+bool = "#b877db"
+null = "#6c6f93"
+# column_border = { fg = "#6c6f93", bg = "#1c1e26" }
+# column_border_width = 1
+# column_border_padding = 1
+# column_border_padding = { left = 1, right = 2 }
