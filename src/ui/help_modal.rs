@@ -21,8 +21,6 @@ enum Context {
 enum Entry {
     Heading(&'static str),
     Blank,
-    /// Look up keys for each command group; join keys in a group with `/`,
-    /// groups with ` · `, then ` — description`.
     Item {
         context: Context,
         groups: &'static [&'static str],
@@ -78,7 +76,7 @@ const CHEATSHEET: &[Entry] = &[
     Entry::Item {
         context: Context::Base,
         groups: &["view sidebar toggle"],
-        description: "toggle filters/hidden sidebar",
+        description: "toggle sidebar",
     },
     Entry::Item {
         context: Context::Base,
@@ -93,7 +91,7 @@ const CHEATSHEET: &[Entry] = &[
     Entry::Item {
         context: Context::Base,
         groups: &["hide"],
-        description: "hide (dd, dj, …)",
+        description: "hide",
     },
     Entry::Item {
         context: Context::Base,
@@ -103,7 +101,7 @@ const CHEATSHEET: &[Entry] = &[
     Entry::Item {
         context: Context::Base,
         groups: &["delete"],
-        description: "delete from file (DD, Dj, …)",
+        description: "delete from file",
     },
     Entry::Item {
         context: Context::Base,
@@ -285,7 +283,6 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
                 .add_modifier(Modifier::BOLD),
         )
         .title(" help ")
-        .title_bottom(" Esc close · j/k ↕ · h/l ↔ ")
         .style(
             Style::default()
                 .bg(app.theme.overlay_bg)

@@ -5,7 +5,7 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Clear, Paragraph};
 use unicode_width::UnicodeWidthStr;
 
-use crate::app::{App, ConfigModal};
+use crate::app::{App, ConfigModal, ConfigPicker};
 
 pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
     match &app.config_modal {
@@ -62,14 +62,17 @@ fn draw_picker(frame: &mut Frame, app: &mut App, area: Rect) {
     let inner = block.inner(popup);
     frame.render_widget(block, popup);
 
-    let start = selected.saturating_sub(inner.height as usize / 2);
-    let end = (start + inner.height as usize).min(values.len());
-
-    if let Some(ConfigModal::Picker(picker)) = &mut app.config_modal {
+    let viewport = inner.height as usize;
+    let start = if let Some(ConfigModal::Picker(picker)) = &mut app.config_modal {
         picker.popup_area = popup;
         picker.list_area = inner;
-        picker.list_start = start;
-    }
+        // Keep scroll stable across clicks; only nudge when selection leaves the viewport.
+        ensure_picker_visible(picker, viewport);
+        picker.list_start
+    } else {
+        0
+    };
+    let end = (start + viewport).min(values.len());
 
     let theme = &app.theme;
     let row_w = inner.width as usize;
@@ -97,6 +100,22 @@ fn draw_picker(frame: &mut Frame, app: &mut App, area: Rect) {
         Paragraph::new(lines).style(Style::default().bg(theme.overlay_bg)),
         inner,
     );
+}
+
+fn ensure_picker_visible(picker: &mut ConfigPicker, viewport: usize) {
+    if viewport == 0 || picker.values.is_empty() {
+        picker.list_start = 0;
+        return;
+    }
+    if picker.selected < picker.list_start {
+        picker.list_start = picker.selected;
+    } else if picker.selected >= picker.list_start + viewport {
+        picker.list_start = picker.selected + 1 - viewport;
+    }
+    let max_start = picker.values.len().saturating_sub(viewport);
+    if picker.list_start > max_start {
+        picker.list_start = max_start;
+    }
 }
 
 fn draw_editor(frame: &mut Frame, app: &mut App, area: Rect) {
