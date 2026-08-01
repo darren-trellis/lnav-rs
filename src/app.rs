@@ -86,8 +86,11 @@ pub struct ConfigValueEditor {
 
 #[derive(Debug, Clone)]
 pub struct HelpModal {
-    pub scroll: usize,
-    pub viewport: usize,
+    pub scroll_y: usize,
+    pub scroll_x: usize,
+    pub viewport_h: usize,
+    pub viewport_w: usize,
+    pub content_w: usize,
     pub popup_area: Rect,
 }
 

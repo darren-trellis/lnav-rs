@@ -6,6 +6,7 @@ use ratatui::widgets::{Block, Borders, Clear, Paragraph};
 use unicode_width::UnicodeWidthStr;
 
 use crate::app::App;
+use crate::text;
 
 pub const HELP_LINES: &[&str] = &[
     "Navigation",
@@ -45,15 +46,23 @@ pub const HELP_LINES: &[&str] = &[
     "Keys: [keys] · [keys.details] · [keys.sidebar]",
 ];
 
+pub fn content_width() -> usize {
+    HELP_LINES
+        .iter()
+        .map(|line| UnicodeWidthStr::width(*line))
+        .max()
+        .unwrap_or(0)
+}
+
 pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
     let Some(modal) = &app.help_modal else {
         return;
     };
-    let scroll = modal.scroll;
-    let width = 64u16.min(area.width.saturating_sub(2).max(24));
-    let height = (HELP_LINES.len() as u16 + 2)
-        .min(area.height.saturating_sub(2).max(8))
-        .min(area.height);
+    let scroll_y = modal.scroll_y;
+    let scroll_x = modal.scroll_x;
+    let content_w = content_width();
+    let width = area.width.saturating_sub(2).clamp(24, 72);
+    let height = area.height.saturating_sub(2).clamp(8, (HELP_LINES.len() as u16) + 2);
     if width < 20 || height < 5 {
         return;
     }
@@ -75,7 +84,7 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
                 .add_modifier(Modifier::BOLD),
         )
         .title(" help ")
-        .title_bottom(" Esc close · j/k scroll ")
+        .title_bottom(" Esc close · j/k ↕ · h/l ↔ ")
         .style(
             Style::default()
                 .bg(app.theme.overlay_bg)
@@ -86,17 +95,22 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
 
     if let Some(modal) = &mut app.help_modal {
         modal.popup_area = popup;
-        modal.viewport = inner.height as usize;
-        let max_scroll = HELP_LINES.len().saturating_sub(modal.viewport);
-        modal.scroll = scroll.min(max_scroll);
+        modal.viewport_h = inner.height as usize;
+        modal.viewport_w = inner.width as usize;
+        modal.content_w = content_w;
+        let max_y = HELP_LINES.len().saturating_sub(modal.viewport_h);
+        let max_x = content_w.saturating_sub(modal.viewport_w);
+        modal.scroll_y = scroll_y.min(max_y);
+        modal.scroll_x = scroll_x.min(max_x);
     }
-    let scroll = app.help_modal.as_ref().map(|m| m.scroll).unwrap_or(0);
-    let viewport = inner.height as usize;
-    let end = (scroll + viewport).min(HELP_LINES.len());
-    let row_w = inner.width as usize;
+    let scroll_y = app.help_modal.as_ref().map(|m| m.scroll_y).unwrap_or(0);
+    let scroll_x = app.help_modal.as_ref().map(|m| m.scroll_x).unwrap_or(0);
+    let viewport_h = inner.height as usize;
+    let viewport_w = inner.width as usize;
+    let end = (scroll_y + viewport_h).min(HELP_LINES.len());
 
-    let mut lines = Vec::with_capacity(end.saturating_sub(scroll));
-    for line in HELP_LINES.iter().take(end).skip(scroll) {
+    let mut lines = Vec::with_capacity(end.saturating_sub(scroll_y));
+    for line in HELP_LINES.iter().take(end).skip(scroll_y) {
         let is_heading = !line.is_empty() && !line.starts_with(' ');
         let style = if is_heading {
             app.theme
@@ -105,12 +119,12 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
         } else {
             app.theme.tone_style(app.theme.foreground, app.theme.overlay_bg)
         };
-        let display = crate::text::truncate_width(line, row_w);
+        let display = text::slice_width(line, scroll_x, viewport_w);
         let used = UnicodeWidthStr::width(display.as_str());
         let mut spans = vec![Span::styled(display, style)];
-        if used < row_w {
+        if used < viewport_w {
             spans.push(Span::styled(
-                " ".repeat(row_w - used),
+                " ".repeat(viewport_w - used),
                 Style::default().bg(app.theme.overlay_bg),
             ));
         }

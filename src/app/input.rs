@@ -29,32 +29,37 @@ impl App {
     fn handle_help_modal_key(&mut self, key: KeyEvent) {
         match key.code {
             KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('?') => self.close_help_modal(),
-            KeyCode::Char('j') | KeyCode::Down => self.scroll_help_modal(1),
-            KeyCode::Char('k') | KeyCode::Up => self.scroll_help_modal(-1),
+            KeyCode::Char('j') | KeyCode::Down => self.scroll_help_modal_y(1),
+            KeyCode::Char('k') | KeyCode::Up => self.scroll_help_modal_y(-1),
+            KeyCode::Char('h') | KeyCode::Left => self.scroll_help_modal_x(-1),
+            KeyCode::Char('l') | KeyCode::Right => self.scroll_help_modal_x(1),
             KeyCode::PageDown | KeyCode::Char(' ') => {
                 let page = self
                     .help_modal
                     .as_ref()
-                    .map(|m| m.viewport.max(1) as isize)
+                    .map(|m| m.viewport_h.max(1) as isize)
                     .unwrap_or(1);
-                self.scroll_help_modal(page);
+                self.scroll_help_modal_y(page);
             }
             KeyCode::PageUp => {
                 let page = self
                     .help_modal
                     .as_ref()
-                    .map(|m| m.viewport.max(1) as isize)
+                    .map(|m| m.viewport_h.max(1) as isize)
                     .unwrap_or(1);
-                self.scroll_help_modal(-page);
+                self.scroll_help_modal_y(-page);
             }
             KeyCode::Home | KeyCode::Char('g') => {
                 if let Some(modal) = &mut self.help_modal {
-                    modal.scroll = 0;
+                    modal.scroll_y = 0;
+                    modal.scroll_x = 0;
                 }
             }
             KeyCode::End | KeyCode::Char('G') => {
                 if let Some(modal) = &mut self.help_modal {
-                    modal.scroll = HELP_LINES.len().saturating_sub(modal.viewport.max(1));
+                    modal.scroll_y = HELP_LINES
+                        .len()
+                        .saturating_sub(modal.viewport_h.max(1));
                 }
             }
             _ => {}
@@ -68,8 +73,11 @@ impl App {
         self.command_line.buffer.clear();
         self.command_line.completions.clear();
         self.help_modal = Some(HelpModal {
-            scroll: 0,
-            viewport: 0,
+            scroll_y: 0,
+            scroll_x: 0,
+            viewport_h: 0,
+            viewport_w: 0,
+            content_w: 0,
             popup_area: Rect::default(),
         });
         self.status_message = None;
@@ -87,13 +95,20 @@ impl App {
         }
     }
 
-    fn scroll_help_modal(&mut self, delta: isize) {
+    fn scroll_help_modal_y(&mut self, delta: isize) {
         let Some(modal) = &mut self.help_modal else {
             return;
         };
-        let max = HELP_LINES.len().saturating_sub(modal.viewport.max(1));
-        let next = (modal.scroll as isize + delta).clamp(0, max as isize) as usize;
-        modal.scroll = next;
+        let max = HELP_LINES.len().saturating_sub(modal.viewport_h.max(1));
+        modal.scroll_y = (modal.scroll_y as isize + delta).clamp(0, max as isize) as usize;
+    }
+
+    fn scroll_help_modal_x(&mut self, delta: isize) {
+        let Some(modal) = &mut self.help_modal else {
+            return;
+        };
+        let max = modal.content_w.saturating_sub(modal.viewport_w.max(1));
+        modal.scroll_x = (modal.scroll_x as isize + delta).clamp(0, max as isize) as usize;
     }
 
     fn handle_config_modal_key(&mut self, key: KeyEvent) {
@@ -182,8 +197,10 @@ impl App {
         };
         let popup = modal.popup_area;
         match mouse.kind {
-            MouseEventKind::ScrollUp => self.scroll_help_modal(-1),
-            MouseEventKind::ScrollDown => self.scroll_help_modal(1),
+            MouseEventKind::ScrollUp => self.scroll_help_modal_y(-1),
+            MouseEventKind::ScrollDown => self.scroll_help_modal_y(1),
+            MouseEventKind::ScrollLeft => self.scroll_help_modal_x(-1),
+            MouseEventKind::ScrollRight => self.scroll_help_modal_x(1),
             MouseEventKind::Down(MouseButton::Left) => {
                 if !contains(popup, mouse.column, mouse.row) {
                     self.close_help_modal();
