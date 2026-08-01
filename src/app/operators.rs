@@ -28,6 +28,25 @@ fn remap_hidden_after_delete(hidden: &HashSet<usize>, deleted: &HashSet<usize>) 
         .collect()
 }
 
+fn expand_matched_to_object_spans(
+    entries: &[crate::model::LogEntry],
+    matched: &HashSet<usize>,
+) -> Vec<usize> {
+    let mut indices = HashSet::new();
+    let mut i = 0usize;
+    while i < entries.len() {
+        let span = object_span::object_span(entries, i);
+        let end = *span.end();
+        if span.clone().any(|idx| matched.contains(&idx)) {
+            indices.extend(span);
+        }
+        i = end + 1;
+    }
+    let mut indices: Vec<usize> = indices.into_iter().collect();
+    indices.sort_unstable();
+    indices
+}
+
 impl App {
     pub fn start_or_repeat_filter_delete(&mut self) {
         if self.sidebar_len() == 0 {
@@ -37,12 +56,15 @@ impl App {
             return;
         }
         if self.pending_op == Some(PendingOp::DeleteFilter) {
+            let count = self.take_count();
+            let at = self.sidebar_selected;
+            let end = (at + count - 1).min(self.sidebar_len().saturating_sub(1));
             self.pending_op = None;
-            self.count = None;
-            self.delete_sidebar_selection();
+            self.apply_op_sidebar_range(PendingOp::DeleteFilter, at, end);
             return;
         }
         self.pending_op = Some(PendingOp::DeleteFilter);
+        self.op_anchor = self.sidebar_selected;
         self.status_message = None;
     }
 
@@ -180,16 +202,26 @@ impl App {
     }
 
     /// `DD` in the sidebar: delete the selected hidden line, or all lines
-    /// matching the selected filter.
+    /// matching the selected filter (accepts a count / motion range).
     pub(crate) fn start_or_repeat_sidebar_delete(&mut self) {
+        if self.sidebar_len() == 0 {
+            self.pending_op = None;
+            self.count = None;
+            self.status_message = Some("sidebar empty".into());
+            return;
+        }
         match self.sidebar_selection() {
             Some(SidebarItem::Hidden(_)) | Some(SidebarItem::Filter(_)) => {
                 if self.pending_op == Some(PendingOp::Delete) {
+                    let count = self.take_count();
+                    let at = self.sidebar_selected;
+                    let end = (at + count - 1).min(self.sidebar_len().saturating_sub(1));
                     self.pending_op = None;
-                    self.delete_sidebar_selection_from_file();
+                    self.apply_op_sidebar_range(PendingOp::Delete, at, end);
                     return;
                 }
                 self.pending_op = Some(PendingOp::Delete);
+                self.op_anchor = self.sidebar_selected;
                 self.status_message = None;
             }
             None => {
@@ -203,89 +235,14 @@ impl App {
     /// Permanently delete from the file based on the sidebar selection:
     /// hidden row → that line; filter → every line matching the filter.
     pub fn delete_sidebar_selection_from_file(&mut self) {
-        match self.sidebar_selection() {
-            Some(SidebarItem::Hidden(_)) => self.delete_sidebar_hidden_selection(),
-            Some(SidebarItem::Filter(index)) => {
-                let _ = self.take_count();
-                self.delete_lines_matching_filter(index);
-            }
-            None => self.status_message = Some("sidebar empty".into()),
+        if self.sidebar_len() == 0 {
+            self.status_message = Some("sidebar empty".into());
+            return;
         }
-    }
-
-    /// Permanently delete the sidebar's selected hidden line(s) from the file.
-    fn delete_sidebar_hidden_selection(&mut self) {
         let count = self.take_count();
-        let items = self.sidebar_items();
-        let start = self.sidebar_selected.min(items.len().saturating_sub(1));
-        let mut indices = HashSet::new();
-        let mut taken = 0usize;
-        for item in items.into_iter().skip(start) {
-            let SidebarItem::Hidden(source) = item else {
-                continue;
-            };
-            for index in object_span::object_span(self.source.entries(), source) {
-                indices.insert(index);
-            }
-            taken += 1;
-            if taken >= count {
-                break;
-            }
-        }
-        if indices.is_empty() {
-            self.status_message = Some("select a hidden line".into());
-            return;
-        }
-        let mut indices: Vec<usize> = indices.into_iter().collect();
-        indices.sort_unstable();
-        self.delete_source_indices(&indices, None, None);
-    }
-
-    /// Delete every source record that matches the filter at `index`.
-    fn delete_lines_matching_filter(&mut self, index: usize) {
-        let (label, pattern, regex) = match self.filters.get(index) {
-            Some(filter) => (
-                filter.label(),
-                filter.pattern.clone(),
-                filter.regex.clone(),
-            ),
-            None => {
-                self.status_message = Some("no such filter".into());
-                return;
-            }
-        };
-        let matched: HashSet<usize> = self
-            .source
-            .entries()
-            .iter()
-            .enumerate()
-            .filter(|(_, entry)| regex.is_match(&entry.raw))
-            .map(|(i, _)| i)
-            .collect();
-        if matched.is_empty() {
-            self.status_message = Some(format!("no lines match filter-{label} /{pattern}/"));
-            return;
-        }
-
-        // Expand matches to whole JSON objects so pretty-printed records stay intact.
-        let entries = self.source.entries();
-        let mut indices = HashSet::new();
-        let mut i = 0usize;
-        while i < entries.len() {
-            let span = object_span::object_span(entries, i);
-            let end = *span.end();
-            if span.clone().any(|idx| matched.contains(&idx)) {
-                indices.extend(span);
-            }
-            i = end + 1;
-        }
-        let mut indices: Vec<usize> = indices.into_iter().collect();
-        indices.sort_unstable();
-        self.delete_source_indices(
-            &indices,
-            None,
-            Some(format!("matching filter-{label} /{pattern}/")),
-        );
+        let at = self.sidebar_selected;
+        let end = (at + count - 1).min(self.sidebar_len().saturating_sub(1));
+        self.apply_op_sidebar_range(PendingOp::Delete, at, end);
     }
 
     pub(crate) fn with_motion<F>(&mut self, motion: F)
@@ -304,6 +261,134 @@ impl App {
                 self.pending_op = None;
             }
             motion(self);
+        }
+    }
+
+    /// Apply a pending sidebar operator after a motion (`dG`, `D5k`, …).
+    pub(crate) fn with_sidebar_motion<F>(&mut self, motion: F)
+    where
+        F: FnOnce(&mut Self),
+    {
+        if let Some(op @ (PendingOp::Delete | PendingOp::DeleteFilter)) = self.pending_op {
+            let start = self.op_anchor;
+            motion(self);
+            let end = self.sidebar_selected;
+            self.pending_op = None;
+            self.count = None;
+            self.apply_op_sidebar_range(op, start, end);
+        } else {
+            if self.pending_op == Some(PendingOp::Hide) {
+                self.pending_op = None;
+            }
+            motion(self);
+        }
+    }
+
+    pub(crate) fn apply_op_sidebar_range(&mut self, op: PendingOp, from: usize, to: usize) {
+        let len = self.sidebar_len();
+        if len == 0 {
+            return;
+        }
+        let low = from.min(to).min(len - 1);
+        let high = from.max(to).min(len - 1);
+        let range: Vec<SidebarItem> = self.sidebar_items()[low..=high].to_vec();
+        if range.is_empty() {
+            return;
+        }
+
+        match op {
+            PendingOp::Hide => {}
+            PendingOp::DeleteFilter => {
+                let mut filter_indices = Vec::new();
+                let mut unhid = 0usize;
+                for item in &range {
+                    match *item {
+                        SidebarItem::Filter(index) => filter_indices.push(index),
+                        SidebarItem::Hidden(source) => {
+                            if self.view.hidden.remove(&source) {
+                                unhid += 1;
+                            }
+                        }
+                    }
+                }
+                filter_indices.sort_unstable();
+                filter_indices.dedup();
+                let removed_filters = filter_indices.len();
+                for index in filter_indices.into_iter().rev() {
+                    if index < self.filters.len() {
+                        self.filters.remove(index);
+                    }
+                }
+                if removed_filters > 0 {
+                    self.persist_session();
+                }
+                self.rebuild_visible(None);
+                self.clamp_sidebar_selection();
+                if !self.search.query.is_empty() {
+                    self.run_search();
+                }
+                self.status_message = Some(match (removed_filters, unhid) {
+                    (0, 0) => "nothing to delete".into(),
+                    (f, 0) => format!(
+                        "deleted {f} filter{}",
+                        if f == 1 { "" } else { "s" }
+                    ),
+                    (0, h) => format!(
+                        "unhid {h} line{}",
+                        if h == 1 { "" } else { "s" }
+                    ),
+                    (f, h) => format!(
+                        "deleted {f} filter{}, unhid {h} line{}",
+                        if f == 1 { "" } else { "s" },
+                        if h == 1 { "" } else { "s" }
+                    ),
+                });
+            }
+            PendingOp::Delete => {
+                let mut matched = HashSet::new();
+                let mut filter_res: Vec<(String, regex::Regex)> = Vec::new();
+                for item in &range {
+                    match *item {
+                        SidebarItem::Hidden(source) => {
+                            for index in object_span::object_span(self.source.entries(), source) {
+                                matched.insert(index);
+                            }
+                        }
+                        SidebarItem::Filter(index) => {
+                            if let Some(filter) = self.filters.get(index) {
+                                filter_res.push((
+                                    format!("filter-{} /{}/", filter.label(), filter.pattern),
+                                    filter.regex.clone(),
+                                ));
+                            }
+                        }
+                    }
+                }
+                for (_, regex) in &filter_res {
+                    for (i, entry) in self.source.entries().iter().enumerate() {
+                        if regex.is_match(&entry.raw) {
+                            matched.insert(i);
+                        }
+                    }
+                }
+                if matched.is_empty() {
+                    self.status_message = Some(if filter_res.is_empty() {
+                        "select a hidden line".into()
+                    } else if filter_res.len() == 1 {
+                        format!("no lines match {}", filter_res[0].0)
+                    } else {
+                        format!("no lines match {} filters", filter_res.len())
+                    });
+                    return;
+                }
+                let indices = expand_matched_to_object_spans(self.source.entries(), &matched);
+                let detail = match filter_res.as_slice() {
+                    [] => None,
+                    [(one, _)] => Some(format!("matching {one}")),
+                    many => Some(format!("matching {} filters", many.len())),
+                };
+                self.delete_source_indices(&indices, None, detail);
+            }
         }
     }
 

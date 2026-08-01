@@ -196,7 +196,7 @@ const CHEATSHEET: &[Entry] = &[
     Entry::Item {
         context: Context::Sidebar,
         groups: &["filter delete"],
-        description: "delete filter / unhide line (dd)",
+        description: "delete filter / unhide (dd, d+motion)",
     },
     Entry::Item {
         context: Context::Sidebar,
@@ -206,7 +206,7 @@ const CHEATSHEET: &[Entry] = &[
     Entry::Item {
         context: Context::Sidebar,
         groups: &["delete", "delete line"],
-        description: "delete hidden line or filter matches (DD)",
+        description: "delete hidden / filter matches (DD, D+motion)",
     },
 ];
 

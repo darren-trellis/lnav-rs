@@ -171,7 +171,6 @@ impl App {
             self.sidebar_selected = 0;
             return;
         }
-        self.cancel_pending_op();
         let next = (self.sidebar_selected as isize + delta).clamp(0, len as isize - 1) as usize;
         self.sidebar_selected = next;
         self.ensure_sidebar_selection_visible();
@@ -183,7 +182,6 @@ impl App {
             self.sidebar_selected = 0;
             return;
         }
-        self.cancel_pending_op();
         self.sidebar_selected = idx.min(len - 1);
         self.ensure_sidebar_selection_visible();
     }

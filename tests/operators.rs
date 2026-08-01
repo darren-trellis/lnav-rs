@@ -250,3 +250,107 @@ fn sidebar_dd_on_include_filter_deletes_matches() {
 
     let _ = fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn sidebar_dg_deletes_hidden_range_to_end() {
+    let (dir, path) = temp_log(
+        "sidebar-dg",
+        &[
+            r#"{"level":"info","msg":"keep"}"#,
+            r#"{"level":"info","msg":"hide-a"}"#,
+            r#"{"level":"info","msg":"hide-b"}"#,
+            r#"{"level":"info","msg":"hide-c"}"#,
+        ],
+    );
+    let mut app = app_for(&path);
+    for line in [4usize, 3, 2] {
+        app.count = Some(line);
+        command::execute(&mut app, "nav top");
+        command::execute(&mut app, "hide");
+    }
+    assert_eq!(app.hidden_count(), 3);
+    assert_eq!(app.source.len(), 4);
+
+    command::execute(&mut app, "view sidebar on");
+    app.focus_sidebar();
+    // Sidebar order: hidden lines sorted — hide-a, hide-b, hide-c (sources 1,2,3).
+    app.select_sidebar_item(SidebarItem::Hidden(1));
+    command::execute_from_key(&mut app, "delete");
+    command::execute_from_key(&mut app, "nav bottom");
+
+    assert_eq!(app.source.len(), 1);
+    assert!(app.source.entries()[0].raw.contains("keep"));
+    assert_eq!(app.hidden_count(), 0);
+    let on_disk = fs::read_to_string(&path).unwrap();
+    assert!(on_disk.contains("keep"));
+    assert!(!on_disk.contains("hide-a"));
+    assert!(!on_disk.contains("hide-c"));
+
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn sidebar_d5k_unhides_range() {
+    let (dir, path) = temp_log(
+        "sidebar-d5k",
+        &[
+            r#"{"level":"info","msg":"a"}"#,
+            r#"{"level":"info","msg":"b"}"#,
+            r#"{"level":"info","msg":"c"}"#,
+            r#"{"level":"info","msg":"d"}"#,
+            r#"{"level":"info","msg":"e"}"#,
+            r#"{"level":"info","msg":"f"}"#,
+        ],
+    );
+    let mut app = app_for(&path);
+    // Hide all six so sidebar is only hidden rows.
+    for line in (1..=6).rev() {
+        app.count = Some(line);
+        command::execute(&mut app, "nav top");
+        command::execute(&mut app, "hide");
+    }
+    assert_eq!(app.hidden_count(), 6);
+    assert_eq!(app.display_len(), 0);
+
+    command::execute(&mut app, "view sidebar on");
+    app.focus_sidebar();
+    app.jump_sidebar_cursor(5); // last row
+    command::execute_from_key(&mut app, "filter delete"); // d
+    app.count = Some(5);
+    command::execute_from_key(&mut app, "nav up"); // 5k
+
+    assert_eq!(app.hidden_count(), 0);
+    assert_eq!(app.display_len(), 6);
+
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn sidebar_dg_on_filters_deletes_all_matches() {
+    let (dir, path) = temp_log(
+        "sidebar-dg-filters",
+        &[
+            r#"{"level":"info","msg":"keep"}"#,
+            r#"{"level":"error","msg":"e1"}"#,
+            r#"{"level":"warn","msg":"w1"}"#,
+            r#"{"level":"error","msg":"e2"}"#,
+        ],
+    );
+    let mut app = app_for(&path);
+    command::execute(&mut app, "filter out error");
+    command::execute(&mut app, "filter out warn");
+    assert_eq!(app.filters.len(), 2);
+
+    command::execute(&mut app, "view sidebar on");
+    app.focus_sidebar();
+    app.select_sidebar_item(SidebarItem::Filter(0));
+    command::execute_from_key(&mut app, "delete");
+    command::execute_from_key(&mut app, "nav bottom");
+
+    assert_eq!(app.source.len(), 1);
+    assert!(app.source.entries()[0].raw.contains("keep"));
+    // Filters remain; only matching lines were deleted.
+    assert_eq!(app.filters.len(), 2);
+
+    let _ = fs::remove_dir_all(&dir);
+}

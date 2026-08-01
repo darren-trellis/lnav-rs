@@ -105,22 +105,24 @@ fn page_step(app: &App, viewport: usize) -> isize {
 fn navigate(app: &mut App, navigation: Navigation) {
     let focus = app.focus();
     match focus {
-        Focus::Sidebar if app.config.sidebar => match navigation {
-            Navigation::Lines(delta) => app.move_sidebar_cursor(delta),
-            Navigation::Pages(pages) => {
-                let step = page_step(app, app.pointer.hit.sidebar_inner.height as usize);
-                app.move_sidebar_cursor(step * pages);
-            }
-            Navigation::Top(line) => {
-                app.jump_sidebar_cursor(line.unwrap_or(1).saturating_sub(1));
-            }
-            Navigation::Bottom(Some(line)) => {
-                app.jump_sidebar_cursor(line.saturating_sub(1));
-            }
-            Navigation::Bottom(None) => {
-                app.jump_sidebar_cursor(app.sidebar_len().saturating_sub(1));
-            }
-        },
+        Focus::Sidebar if app.config.sidebar => {
+            app.with_sidebar_motion(|app| match navigation {
+                Navigation::Lines(delta) => app.move_sidebar_cursor(delta),
+                Navigation::Pages(pages) => {
+                    let step = page_step(app, app.pointer.hit.sidebar_inner.height as usize);
+                    app.move_sidebar_cursor(step * pages);
+                }
+                Navigation::Top(line) => {
+                    app.jump_sidebar_cursor(line.unwrap_or(1).saturating_sub(1));
+                }
+                Navigation::Bottom(Some(line)) => {
+                    app.jump_sidebar_cursor(line.saturating_sub(1));
+                }
+                Navigation::Bottom(None) => {
+                    app.jump_sidebar_cursor(app.sidebar_len().saturating_sub(1));
+                }
+            });
+        }
         Focus::Details if app.details.visible => match navigation {
             Navigation::Lines(delta) => app.move_overlay_cursor(delta),
             Navigation::Pages(pages) => {
