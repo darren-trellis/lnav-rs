@@ -58,7 +58,7 @@ fn rejects_invalid_color() {
     let path = dir.join("config.toml");
     fs::write(
         &path,
-        "[theme]\nname = \"catppuccin\"\n[theme.levels]\nerror = \"not-a-color\"\n",
+        "[theme]\nname = \"catppuccin\"\n[levels]\nerror = \"not-a-color\"\n",
     )
     .unwrap();
     assert!(Config::load_from(&path).is_err());
@@ -145,19 +145,23 @@ fn write_root_scalars_before_theme_tables_roundtrip() {
         line_numbers: true,
         ..Config::default()
     };
-    cfg.theme.levels.info = Some(lnav_rs::theme::ColorSpec::Fg("#a6e3a1".into()));
+    cfg.levels.info = Some(lnav_rs::theme::ColorSpec::Fg("#a6e3a1".into()));
     cfg.columns = vec![
         Column {
             source: "level".into(),
             width: Some(5),
             align: Align::Center,
             padding: Padding::both(1),
+            border_width: None,
+            border_padding: None,
         },
         Column {
             source: "annotations.url".into(),
             width: None,
             align: Align::Left,
             padding: Padding::default(),
+            border_width: None,
+            border_padding: None,
         },
     ];
 
@@ -166,16 +170,16 @@ fn write_root_scalars_before_theme_tables_roundtrip() {
     let line_nums_pos = raw
         .find("line_numbers = true")
         .expect("line_numbers in file");
-    let theme_levels_pos = raw.find("[theme.levels]").expect("[theme.levels] in file");
+    let levels_pos = raw.find("[levels]").expect("[levels] in file");
     assert!(
-        line_nums_pos < theme_levels_pos,
-        "line_numbers must appear before [theme.levels]\n{raw}"
+        line_nums_pos < levels_pos,
+        "line_numbers must appear before [levels]\n{raw}"
     );
 
     let (loaded, _) = Config::load_from(&path).unwrap();
     assert!(loaded.line_numbers);
     assert_eq!(
-        loaded.theme.overrides().levels.info,
+        loaded.levels.info,
         Some(lnav_rs::theme::ColorSpec::Fg("#a6e3a1".into()))
     );
     assert_eq!(loaded.columns.len(), 2);
@@ -253,18 +257,18 @@ fn load_theme_table_overrides() {
         r##"
 [theme]
 name = "catppuccin"
-[theme.colors]
+[colors]
 background = "#000000"
-[theme.levels]
+[levels]
 error = "#ff0000"
-[theme.ui]
+[ui]
 bool = "#00ff00"
 "##,
     )
     .unwrap();
     let (cfg, _) = Config::load_from(&path).unwrap();
     assert_eq!(cfg.theme.name(), "catppuccin");
-    let o = cfg.theme.overrides();
+    let o = cfg.theme_overrides();
     assert_eq!(o.colors.background.as_deref(), Some("#000000"));
     assert_eq!(
         o.levels.error,
@@ -287,18 +291,18 @@ fn load_tone_fg_bg() {
         r##"
 [theme]
 name = "catppuccin"
-[theme.colors]
+[colors]
 dim = { fg = "#6c7086", bg = "#313244" }
-[theme.levels]
+[levels]
 error = { fg = "#1e1e2e", bg = "#f38ba8" }
 warn = "#f9e2af"
-[theme.ui]
+[ui]
 timestamp = { fg = "#89b4fa", bg = "#11111b" }
 "##,
     )
     .unwrap();
     let (cfg, _) = Config::load_from(&path).unwrap();
-    let o = cfg.theme.overrides();
+    let o = cfg.theme_overrides();
     assert_eq!(
         o.colors.dim,
         Some(lnav_rs::theme::ColorSpec::FgBg(lnav_rs::theme::ColorSpecFgBg {
@@ -349,7 +353,7 @@ fn rejects_legacy_theme_overrides() {
         r##"
 [theme]
 name = "nord"
-[theme_overrides.colors]
+[theme.colors]
 background = "#010101"
 "##,
     )

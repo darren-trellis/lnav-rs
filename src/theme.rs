@@ -469,7 +469,7 @@ impl Theme {
     }
 }
 
-/// Optional color patches from `[theme.*]` in `config.toml`.
+/// Optional color patches from `[colors]` / `[levels]` / `[ui]` in `config.toml`.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct ThemeOverrides {

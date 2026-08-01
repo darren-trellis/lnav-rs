@@ -9,14 +9,20 @@ line_numbers = true
 [theme]
 name = "catppuccin"
 
-# [theme.levels]
+# [levels]
 # error = { fg = "#1e1e2e", bg = "#f38ba8" }
+
+# [ui]
+# column_border_width = 1
+# column_border_padding = 1
 
 [[columns]]
 source = "level"
 width = 5
 align = "center"
 padding = 1
+# border_width = 1
+# border_padding = 1
 
 [[columns]]
 source = "timestamp"

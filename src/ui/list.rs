@@ -240,6 +240,10 @@ fn render_line<'a>(app: &'a App, entry: &'a LogEntry, options: LineRenderOptions
         " "
     };
 
+    let default_border = columns::ColumnBorderStyle {
+        width: theme.column_border_width,
+        padding: theme.column_border_padding,
+    };
     let segments = columns::render_segments_sized(
         &app.config.columns,
         col_widths,
@@ -248,10 +252,7 @@ fn render_line<'a>(app: &'a App, entry: &'a LogEntry, options: LineRenderOptions
             timestamp_format: &app.config.timestamp_format,
             view_line,
         },
-        columns::ColumnBorderStyle {
-            width: app.theme.column_border_width,
-            padding: app.theme.column_border_padding,
-        },
+        default_border,
     );
 
     let gutter_style = if selected {
@@ -273,14 +274,17 @@ fn render_line<'a>(app: &'a App, entry: &'a LogEntry, options: LineRenderOptions
         used += UnicodeWidthStr::width(num.as_str());
         spans.push(Span::styled(num, num_style));
 
-        let border = columns::column_separator(columns::ColumnBorderStyle {
-            width: theme.column_border_width,
-            padding: theme.column_border_padding,
-        });
+        let border_style = app
+            .config
+            .columns
+            .first()
+            .map(|col| columns::ColumnBorderStyle::resolve(col, default_border))
+            .unwrap_or(default_border);
+        let border = columns::column_separator(border_style);
         let border_w = UnicodeWidthStr::width(border.text.as_str());
         if used + border_w <= width {
-            let border_style = segment_style(theme, entry, &border, selected);
-            spans.push(Span::styled(border.text, border_style));
+            let style = segment_style(theme, entry, &border, selected);
+            spans.push(Span::styled(border.text, style));
             used += border_w;
         }
     }

@@ -170,7 +170,7 @@ pub struct App {
 
 impl App {
     pub fn new(source: LogSource, config: Config) -> Result<Self> {
-        let overrides = config.theme.overrides();
+        let overrides = config.theme_overrides();
         let theme = Theme::resolve_with_overrides(config.theme.name(), &overrides)?;
         let names = Theme::list_names();
         let theme_index = names

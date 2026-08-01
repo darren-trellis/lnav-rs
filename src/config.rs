@@ -82,14 +82,22 @@ pub struct Column {
     pub align: Align,
     #[serde(default)]
     pub padding: Padding,
+    /// Leading separator width before this column (`None` → theme `ui.column_border_width`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub border_width: Option<usize>,
+    /// Leading separator padding (`None` → theme `ui.column_border_padding`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub border_padding: Option<Padding>,
 }
 
-/// Theme selection and optional color patches.
+/// Theme name selection (`[theme]`). Color patches live at the config root
+/// under `[colors]` / `[levels]` / `[ui]`.
 ///
 /// ```toml
 /// [theme]
 /// name = "catppuccin"
-/// [theme.colors]
+///
+/// [colors]
 /// background = "#11111b"
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -97,27 +105,12 @@ pub struct Column {
 pub struct ThemeConfig {
     #[serde(default = "default_theme")]
     pub name: String,
-    #[serde(
-        default,
-        skip_serializing_if = "crate::theme::ColorOverrides::is_empty"
-    )]
-    pub colors: crate::theme::ColorOverrides,
-    #[serde(
-        default,
-        skip_serializing_if = "crate::theme::LevelOverrides::is_empty"
-    )]
-    pub levels: crate::theme::LevelOverrides,
-    #[serde(default, skip_serializing_if = "crate::theme::UiOverrides::is_empty")]
-    pub ui: crate::theme::UiOverrides,
 }
 
 impl Default for ThemeConfig {
     fn default() -> Self {
         Self {
             name: default_theme(),
-            colors: crate::theme::ColorOverrides::default(),
-            levels: crate::theme::LevelOverrides::default(),
-            ui: crate::theme::UiOverrides::default(),
         }
     }
 }
@@ -131,14 +124,6 @@ impl ThemeConfig {
         self.name = name.into();
     }
 
-    pub fn overrides(&self) -> crate::theme::ThemeOverrides {
-        crate::theme::ThemeOverrides {
-            colors: self.colors.clone(),
-            levels: self.levels.clone(),
-            ui: self.ui.clone(),
-        }
-    }
-
     fn validate(&self) -> Result<()> {
         if self.name.trim().is_empty() {
             bail!("theme.name must not be empty");
@@ -150,9 +135,6 @@ impl ThemeConfig {
                 Theme::list_names().join(", ")
             )
         })?;
-        self.overrides()
-            .validate()
-            .context("invalid theme color override")?;
         Ok(())
     }
 }
@@ -204,6 +186,24 @@ impl CaseMode {
 pub struct Config {
     #[serde(default)]
     pub theme: ThemeConfig,
+
+    /// Patches for theme `[colors]` (config root `[colors]`).
+    #[serde(
+        default,
+        skip_serializing_if = "crate::theme::ColorOverrides::is_empty"
+    )]
+    pub colors: crate::theme::ColorOverrides,
+
+    /// Patches for theme `[levels]` (config root `[levels]`).
+    #[serde(
+        default,
+        skip_serializing_if = "crate::theme::LevelOverrides::is_empty"
+    )]
+    pub levels: crate::theme::LevelOverrides,
+
+    /// Patches for theme `[ui]` (config root `[ui]`).
+    #[serde(default, skip_serializing_if = "crate::theme::UiOverrides::is_empty")]
+    pub ui: crate::theme::UiOverrides,
 
     #[serde(default = "default_true")]
     pub follow: bool,
@@ -322,6 +322,12 @@ struct PersistedConfig<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     session_stdin: Option<bool>,
     theme: &'a ThemeConfig,
+    #[serde(skip_serializing_if = "crate::theme::ColorOverrides::is_empty")]
+    colors: &'a crate::theme::ColorOverrides,
+    #[serde(skip_serializing_if = "crate::theme::LevelOverrides::is_empty")]
+    levels: &'a crate::theme::LevelOverrides,
+    #[serde(skip_serializing_if = "crate::theme::UiOverrides::is_empty")]
+    ui: &'a crate::theme::UiOverrides,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     columns: Vec<PersistedColumn<'a>>,
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
@@ -341,6 +347,10 @@ struct PersistedColumn<'a> {
     align: Option<Align>,
     #[serde(skip_serializing_if = "Option::is_none")]
     padding: Option<Padding>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    border_width: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    border_padding: Option<Padding>,
 }
 
 impl<'a> PersistedConfig<'a> {
@@ -360,6 +370,8 @@ impl<'a> PersistedConfig<'a> {
                     width: column.width,
                     align: (column.align != Align::Left).then_some(column.align),
                     padding: (!column.padding.is_zero()).then_some(column.padding),
+                    border_width: column.border_width,
+                    border_padding: column.border_padding,
                 })
                 .collect()
         };
@@ -393,6 +405,9 @@ impl<'a> PersistedConfig<'a> {
             session_stdin: (config.session_stdin != defaults.session_stdin)
                 .then_some(config.session_stdin),
             theme: &config.theme,
+            colors: &config.colors,
+            levels: &config.levels,
+            ui: &config.ui,
             columns,
             keys: key_differences(&config.keys, &defaults.keys),
             details_keys: key_differences(&config.details_keys, &defaults.details_keys),
@@ -432,18 +447,24 @@ pub fn default_columns() -> Vec<Column> {
             width: Some(5),
             align: Align::Center,
             padding: Padding::both(1),
+            border_width: None,
+            border_padding: None,
         },
         Column {
             source: "timestamp".into(),
             width: None,
             align: Align::Left,
             padding: Padding::default(),
+            border_width: None,
+            border_padding: None,
         },
         Column {
             source: "message".into(),
             width: None,
             align: Align::Left,
             padding: Padding::default(),
+            border_width: None,
+            border_padding: None,
         },
     ]
 }
@@ -452,6 +473,9 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             theme: ThemeConfig::default(),
+            colors: crate::theme::ColorOverrides::default(),
+            levels: crate::theme::LevelOverrides::default(),
+            ui: crate::theme::UiOverrides::default(),
             follow: true,
             wrap_details: true,
             details_json_tree: true,
@@ -554,6 +578,9 @@ impl Config {
             bail!("timestamp_format must not be empty");
         }
         self.theme.validate()?;
+        self.theme_overrides()
+            .validate()
+            .context("invalid theme color override")?;
         for (i, col) in self.columns.iter().enumerate() {
             if col.source.trim().is_empty() {
                 bail!("columns[{i}].source must not be empty");
@@ -564,6 +591,14 @@ impl Config {
         validate_key_map("details_keys", &self.details_keys, &known)?;
         validate_key_map("sidebar_keys", &self.sidebar_keys, &known)?;
         Ok(())
+    }
+
+    pub fn theme_overrides(&self) -> crate::theme::ThemeOverrides {
+        crate::theme::ThemeOverrides {
+            colors: self.colors.clone(),
+            levels: self.levels.clone(),
+            ui: self.ui.clone(),
+        }
     }
 
     pub fn write(&self) -> Result<PathBuf> {

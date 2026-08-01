@@ -39,6 +39,15 @@ pub struct ColumnBorderStyle {
     pub padding: crate::config::Padding,
 }
 
+impl ColumnBorderStyle {
+    pub fn resolve(column: &Column, defaults: Self) -> Self {
+        Self {
+            width: column.border_width.unwrap_or(defaults.width),
+            padding: column.border_padding.unwrap_or(defaults.padding),
+        }
+    }
+}
+
 /// Compute per-column display widths for a set of rows so columns share an X origin.
 ///
 /// Explicit `width` on a column is kept; otherwise the width is the max natural
@@ -70,10 +79,10 @@ pub fn render_segments(
     columns: &[Column],
     entry: &LogEntry,
     opts: &FormatOptions<'_>,
-    border: ColumnBorderStyle,
+    default_border: ColumnBorderStyle,
 ) -> Vec<Segment> {
     let widths = measure_widths(columns, &[(entry, opts.view_line)], opts.timestamp_format);
-    render_segments_sized(columns, &widths, entry, opts, border)
+    render_segments_sized(columns, &widths, entry, opts, default_border)
 }
 
 /// Render using precomputed column widths (for aligned multi-row tables).
@@ -82,12 +91,12 @@ pub fn render_segments_sized(
     widths: &[usize],
     entry: &LogEntry,
     opts: &FormatOptions<'_>,
-    border: ColumnBorderStyle,
+    default_border: ColumnBorderStyle,
 ) -> Vec<Segment> {
     let mut out = Vec::new();
     for (i, col) in columns.iter().enumerate() {
         if i > 0 {
-            out.push(column_separator(border));
+            out.push(column_separator(ColumnBorderStyle::resolve(col, default_border)));
         }
         let width = widths.get(i).copied().or(col.width);
         out.push(render_column(col, width, entry, opts));
@@ -99,9 +108,9 @@ pub fn render(
     columns: &[Column],
     entry: &LogEntry,
     opts: &FormatOptions<'_>,
-    border: ColumnBorderStyle,
+    default_border: ColumnBorderStyle,
 ) -> String {
-    render_segments(columns, entry, opts, border)
+    render_segments(columns, entry, opts, default_border)
         .into_iter()
         .map(|s| s.text)
         .collect()

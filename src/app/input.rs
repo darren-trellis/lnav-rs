@@ -164,7 +164,7 @@ impl App {
         else {
             return;
         };
-        let overrides = self.config.theme.overrides();
+        let overrides = self.config.theme_overrides();
         if let Ok(theme) = Theme::resolve_with_overrides(&name, &overrides) {
             self.theme = theme;
             self.status_message = Some(format!("preview: {name}"));
@@ -179,7 +179,7 @@ impl App {
             self.commit_theme(name);
             return;
         }
-        let overrides = self.config.theme.overrides();
+        let overrides = self.config.theme_overrides();
         if let Ok(theme) = Theme::resolve_with_overrides(&picker.previous_name, &overrides) {
             self.theme = theme;
             self.theme_index = Theme::list_names()
@@ -191,7 +191,7 @@ impl App {
     }
 
     pub(crate) fn commit_theme(&mut self, name: &str) {
-        let overrides = self.config.theme.overrides();
+        let overrides = self.config.theme_overrides();
         match Theme::resolve_with_overrides(name, &overrides) {
             Ok(theme) => {
                 self.config.theme.set_name(name);
