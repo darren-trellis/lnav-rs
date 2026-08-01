@@ -228,10 +228,7 @@ const HIDE_SUBS: &[(&str, &str)] = &[
     ("clear", "restore lines hidden with hide"),
 ];
 
-const PIN_SUBS: &[(&str, &str)] = &[
-    ("line", "pin/unpin current line(s)"),
-    ("clear", "unpin all sticky lines"),
-];
+const PIN_SUBS: &[(&str, &str)] = &[("clear", "unpin all sticky lines")];
 
 fn on_off_toggle_suggestions(
     rest: &str,

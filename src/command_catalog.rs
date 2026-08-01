@@ -31,7 +31,7 @@ const COMMANDS: &[CommandInfo] = &[
     },
     CommandInfo {
         name: "pin",
-        help: "pin line(s) sticky at top | line | clear",
+        help: "pin/unpin sticky line(s) | clear",
     },
     CommandInfo {
         name: "delete",

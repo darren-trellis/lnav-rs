@@ -66,7 +66,7 @@ pub fn defaults() -> BTreeMap<String, String> {
         ("d".into(), "hide".into()),
         ("backspace".into(), "hide line".into()),
         ("D".into(), "delete".into()),
-        ("p".into(), "pin line".into()),
+        ("p".into(), "pin".into()),
         ("?".into(), "help".into()),
         ("s".into(), "view sidebar toggle".into()),
     ])

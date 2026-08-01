@@ -24,7 +24,7 @@ fn default_d_maps_to_hide() {
         defaults().get("backspace").map(String::as_str),
         Some("hide line")
     );
-    assert_eq!(defaults().get("p").map(String::as_str), Some("pin line"));
+    assert_eq!(defaults().get("p").map(String::as_str), Some("pin"));
     assert_eq!(
         defaults().get("enter").map(String::as_str),
         Some("view details on")

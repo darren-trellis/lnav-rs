@@ -454,14 +454,14 @@ fn hide_command(app: &mut App, rest: &str, invoke: Invoke) {
 fn pin_command(app: &mut App, rest: &str) {
     let (sub, _) = split_cmd(rest);
     match sub.to_ascii_lowercase().as_str() {
-        "" | "line" => app.pin_current(),
+        "" => app.pin_current(),
         "clear" => {
             app.cancel_pending_op();
             app.clear_pins();
         }
         other => {
             app.status_message =
-                Some(format!("usage: :pin | :pin line | :pin clear  (unknown: {other})"));
+                Some(format!("usage: :pin | :pin clear  (unknown: {other})"));
         }
     }
 }

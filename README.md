@@ -61,7 +61,7 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 | `s` | `view sidebar toggle` (filters sidebar) |
 | `d` | `hide` operator — `dd` current, `dj`/`dG`/… range; in sidebar `dd` deletes filter |
 | `Backspace` | `hide line` (same as `dd`; accepts a count); in sidebar `filter delete line` |
-| `p` | `pin line` — toggle sticky pin at top of list (accepts a count) |
+| `p` | `pin` — toggle sticky pin at top of list (accepts a count) |
 | `D` | `delete` operator — `DD` current, `Dj`/`DG`/… range (in-place; safe with `tee -a`) |
 | `?` | `help` (cheatsheet modal; Esc closes; `:help toggle` details border hints when focused) |
 | `q` | `quit` |
@@ -88,7 +88,7 @@ In `/` mode, **Up/Down** recall search history (shared for list and details sear
 
 | Command | Action |
 |---------|--------|
-| `:q` | Quit |
+| `:quit` | Quit |
 | `:help` | Open/close the help cheatsheet modal |
 | `:help on\|off\|toggle` | Show/hide/toggle details key hints (when details focused) |
 | `:filter` / `:filter list` | List active filters |
@@ -105,7 +105,7 @@ In `/` mode, **Up/Down** recall search history (shared for list and details sear
 | `:copy` | Copy focused details value to the clipboard |
 | `:hide line` | Hide current line(s) immediately (same as `dd`) |
 | `:hide clear` | Restore lines hidden with `d` |
-| `:pin` / `:pin line` | Pin/unpin current line(s) sticky at the top of the list |
+| `:pin` | Pin/unpin current line(s) sticky at the top of the list |
 | `:pin clear` | Unpin all sticky lines |
 | `:config set KEY` | Open picker/editor for a setting (theme, bools, formats, numbers) |
 | `:config set theme [NAME]` | Set theme, or open theme picker |

@@ -872,7 +872,7 @@ fn watch_config_file(path: &Path) -> Result<(RecommendedWatcher, Receiver<()>)> 
                 .watch(path, RecursiveMode::NonRecursive)
                 .with_context(|| format!("failed to watch {}", path.display()))?;
         }
-        // Parent may not exist yet; `:config save` / `init` creates it.
+        // Parent may not exist yet; `:config save` creates it.
     } else if path.is_file() {
         watcher
             .watch(path, RecursiveMode::NonRecursive)
