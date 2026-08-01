@@ -1,0 +1,35 @@
+name = "dayfox"
+
+[colors]
+background = "#f6f2ee"
+foreground = "#3d2b5a"
+selection_bg = "#e7d2be"
+selection_fg = "#3d2b5a"
+overlay_bg = "#e4dcd4"
+status_bg = "#e4dcd4"
+status_fg = "#643f61"
+border = "#aab0ad"
+window_focus_border = "#AC5402"
+search_match = { fg = "#f6f2ee", bg = "#AC5402" }
+dim = "#837a72"
+
+[levels]
+trace = "#837a72"
+debug = "#2848a9"
+info = "#396847"
+warn = "#AC5402"
+error = "#a5222f"
+fatal = "#6e33ce"
+unknown = "#3d2b5a"
+
+[ui]
+timestamp = "#287980"
+key = "#2848a9"
+string = "#396847"
+number = "#955f61"
+bool = "#6e33ce"
+null = "#837a72"
+# column_border = { fg = "#aab0ad", bg = "#f6f2ee" }
+# column_border_width = 1
+# column_border_padding = 1
+# column_border_padding = { left = 1, right = 2 }

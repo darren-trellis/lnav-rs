@@ -1,0 +1,35 @@
+name = "nightfox"
+
+[colors]
+background = "#192330"
+foreground = "#cdcecf"
+selection_bg = "#2b3b51"
+selection_fg = "#cdcecf"
+overlay_bg = "#212e3f"
+status_bg = "#131a24"
+status_fg = "#aeafb0"
+border = "#39506d"
+window_focus_border = "#dbc074"
+search_match = { fg = "#192330", bg = "#dbc074" }
+dim = "#738091"
+
+[levels]
+trace = "#738091"
+debug = "#719cd6"
+info = "#81b29a"
+warn = "#dbc074"
+error = "#c94f6d"
+fatal = "#9d79d6"
+unknown = "#cdcecf"
+
+[ui]
+timestamp = "#63cdcf"
+key = "#719cd6"
+string = "#81b29a"
+number = "#f4a261"
+bool = "#9d79d6"
+null = "#738091"
+# column_border = { fg = "#39506d", bg = "#192330" }
+# column_border_width = 1
+# column_border_padding = 1
+# column_border_padding = { left = 1, right = 2 }
