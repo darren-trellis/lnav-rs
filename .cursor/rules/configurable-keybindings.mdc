@@ -7,7 +7,7 @@ alwaysApply: true
 
 When adding or changing keybindings in lnav-rs:
 
-- Wire them through `[keys]`, `[details_keys]`, and/or `[sidebar_keys]` (see `src/keys.rs` defaults), not hardcoded intercepts in input handlers.
-- Hardcode only rare exceptions that already exist for structural reasons (e.g. `:` / `q` leaving overlay/sidebar focus for command-mode/quit) — do not add new hardcoded action keys. Esc closing panes should stay a `[keys]` binding (`view current off`).
-- Prefer context via `[details_keys]` / `[sidebar_keys]` overlays when panes need different bindings for the same key.
-- Document new bindings in the README key tables and example `[keys]` / `[details_keys]` / `[sidebar_keys]` snippets.
+- Wire them through `[keys]`, `[keys.details]`, and/or `[keys.sidebar]` (see `src/keys.rs` defaults), not hardcoded intercepts in input handlers.
+- Hardcode only rare exceptions that already exist for structural reasons (e.g. `:` / `q` leaving overlay/sidebar focus for command-mode/quit; Esc/q closing help/config modals) — do not add new hardcoded action keys. Esc closing panes should stay a `[keys]` binding (`view current off`).
+- Prefer context via `[keys.details]` / `[keys.sidebar]` overlays when panes need different bindings for the same key.
+- Document new bindings in the README key tables and example `[keys]` / `[keys.details]` / `[keys.sidebar]` snippets.

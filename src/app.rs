@@ -84,6 +84,13 @@ pub struct ConfigValueEditor {
     pub popup_area: Rect,
 }
 
+#[derive(Debug, Clone)]
+pub struct HelpModal {
+    pub scroll: usize,
+    pub viewport: usize,
+    pub popup_area: Rect,
+}
+
 /// Widget rects from the last frame, used for mouse hit-testing.
 #[derive(Debug, Default, Clone, Copy)]
 pub(crate) struct HitAreas {
@@ -177,6 +184,7 @@ pub struct App {
     /// Vim-style count prefix being typed (`5` in `5j`).
     pub count: Option<usize>,
     pub config_modal: Option<ConfigModal>,
+    pub help_modal: Option<HelpModal>,
     pub(crate) pointer: PointerState,
     pub(crate) search: SearchState,
     pub(crate) command_line: CommandLineState,
@@ -258,6 +266,7 @@ impl App {
             op_anchor: 0,
             count: None,
             config_modal: None,
+            help_modal: None,
             pointer: PointerState {
                 hit: HitAreas::default(),
                 last_click: None,
@@ -433,6 +442,7 @@ impl App {
         let result = self.run_loop(terminal);
         let _ = execute!(stdout(), DisableMouseCapture);
         self.close_config_modal(false);
+        self.close_help_modal();
         result
     }
 
@@ -786,6 +796,7 @@ impl App {
             .unwrap_or(0);
 
         self.close_config_modal(false);
+        self.close_help_modal();
         self.config = config;
         self.theme = theme;
         self.theme_index = theme_index;

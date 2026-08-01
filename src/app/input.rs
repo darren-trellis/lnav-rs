@@ -1,15 +1,20 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
 use ratatui::layout::Rect;
 
-use super::{App, ConfigModal, ConfigPicker, ConfigValueEditor, InputMode};
+use super::{App, ConfigModal, ConfigPicker, ConfigValueEditor, HelpModal, InputMode};
 use crate::command;
 use crate::completion;
 use crate::config_options::{self, ConfigOption, ValueKind};
 use crate::keys;
 use crate::theme::Theme;
+use crate::ui::help_modal::HELP_LINES;
 
 impl App {
     pub(super) fn handle_key(&mut self, key: KeyEvent) {
+        if self.help_modal.is_some() {
+            self.handle_help_modal_key(key);
+            return;
+        }
         if self.config_modal.is_some() {
             self.handle_config_modal_key(key);
             return;
@@ -19,6 +24,76 @@ impl App {
             InputMode::Command => self.handle_command_key(key),
             InputMode::Normal => self.handle_normal_key(key),
         }
+    }
+
+    fn handle_help_modal_key(&mut self, key: KeyEvent) {
+        match key.code {
+            KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('?') => self.close_help_modal(),
+            KeyCode::Char('j') | KeyCode::Down => self.scroll_help_modal(1),
+            KeyCode::Char('k') | KeyCode::Up => self.scroll_help_modal(-1),
+            KeyCode::PageDown | KeyCode::Char(' ') => {
+                let page = self
+                    .help_modal
+                    .as_ref()
+                    .map(|m| m.viewport.max(1) as isize)
+                    .unwrap_or(1);
+                self.scroll_help_modal(page);
+            }
+            KeyCode::PageUp => {
+                let page = self
+                    .help_modal
+                    .as_ref()
+                    .map(|m| m.viewport.max(1) as isize)
+                    .unwrap_or(1);
+                self.scroll_help_modal(-page);
+            }
+            KeyCode::Home | KeyCode::Char('g') => {
+                if let Some(modal) = &mut self.help_modal {
+                    modal.scroll = 0;
+                }
+            }
+            KeyCode::End | KeyCode::Char('G') => {
+                if let Some(modal) = &mut self.help_modal {
+                    modal.scroll = HELP_LINES.len().saturating_sub(modal.viewport.max(1));
+                }
+            }
+            _ => {}
+        }
+    }
+
+    pub(crate) fn open_help_modal(&mut self) {
+        self.cancel_pending_op();
+        self.close_config_modal(false);
+        self.input_mode = InputMode::Normal;
+        self.command_line.buffer.clear();
+        self.command_line.completions.clear();
+        self.help_modal = Some(HelpModal {
+            scroll: 0,
+            viewport: 0,
+            popup_area: Rect::default(),
+        });
+        self.status_message = None;
+    }
+
+    pub(crate) fn close_help_modal(&mut self) {
+        self.help_modal = None;
+    }
+
+    pub(crate) fn toggle_help_modal(&mut self) {
+        if self.help_modal.is_some() {
+            self.close_help_modal();
+        } else {
+            self.open_help_modal();
+        }
+    }
+
+    fn scroll_help_modal(&mut self, delta: isize) {
+        let Some(modal) = &mut self.help_modal else {
+            return;
+        };
+        let max = HELP_LINES.len().saturating_sub(modal.viewport.max(1));
+        let next = (modal.scroll as isize + delta).clamp(0, max as isize) as usize;
+        modal.scroll = next;
     }
 
     fn handle_config_modal_key(&mut self, key: KeyEvent) {
@@ -52,7 +127,7 @@ impl App {
             KeyCode::Esc | KeyCode::Char('q') => self.close_config_modal(false),
             _ => {
                 let command = keys::encode(key)
-                    .and_then(|spec| self.config.keys.get(&spec))
+                    .and_then(|spec| self.config.keys.bindings.get(&spec))
                     .map(|raw| raw.trim().to_ascii_lowercase());
                 match command.as_deref() {
                     Some("nav up") => self.config_picker_move(-1),
@@ -101,6 +176,23 @@ impl App {
         }
     }
 
+    pub(super) fn handle_help_modal_mouse(&mut self, mouse: MouseEvent) {
+        let Some(modal) = &self.help_modal else {
+            return;
+        };
+        let popup = modal.popup_area;
+        match mouse.kind {
+            MouseEventKind::ScrollUp => self.scroll_help_modal(-1),
+            MouseEventKind::ScrollDown => self.scroll_help_modal(1),
+            MouseEventKind::Down(MouseButton::Left) => {
+                if !contains(popup, mouse.column, mouse.row) {
+                    self.close_help_modal();
+                }
+            }
+            _ => {}
+        }
+    }
+
     pub(super) fn handle_config_modal_mouse(&mut self, mouse: MouseEvent) {
         let Some(ConfigModal::Picker(picker)) = &self.config_modal else {
             return;
@@ -138,6 +230,7 @@ impl App {
 
     pub(crate) fn open_config_modal(&mut self, option: &'static ConfigOption) {
         self.cancel_pending_op();
+        self.close_help_modal();
         self.input_mode = InputMode::Normal;
         self.command_line.buffer.clear();
         self.command_line.history.reset_navigation();
@@ -180,8 +273,15 @@ impl App {
                 if option.name == "theme" {
                     self.preview_theme_at_selection();
                 }
-                let confirm = keys::binding_for_command(&self.config.keys, None, "view details")
-                    .unwrap_or("enter");
+                let confirm = keys::binding_for_command(
+                    &self.config.keys.bindings,
+                    None,
+                    "view details on",
+                )
+                .or_else(|| {
+                    keys::binding_for_command(&self.config.keys.bindings, None, "view details")
+                })
+                .unwrap_or("enter");
                 self.status_message = Some(format!(
                     "{} · click/{confirm} to set · Esc to cancel",
                     option.name
@@ -423,7 +523,7 @@ impl App {
     fn resolve_key_command(&self, spec: &str) -> Option<String> {
         if self.is_sidebar_focused()
             && self.config.sidebar
-            && let Some(cmd) = self.config.sidebar_keys.get(spec)
+            && let Some(cmd) = self.config.keys.sidebar.get(spec)
         {
             return if cmd.is_empty() {
                 None
@@ -433,7 +533,7 @@ impl App {
         }
         if self.is_details_focused()
             && self.details.visible
-            && let Some(cmd) = self.config.details_keys.get(spec)
+            && let Some(cmd) = self.config.keys.details.get(spec)
         {
             return if cmd.is_empty() {
                 None
@@ -443,6 +543,7 @@ impl App {
         }
         self.config
             .keys
+            .bindings
             .get(spec)
             .filter(|cmd| !cmd.is_empty())
             .cloned()

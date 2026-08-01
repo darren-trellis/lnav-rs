@@ -24,9 +24,9 @@ fn load_merges_partial_keys() {
     .unwrap();
     let (cfg, _) = Config::load_from(&path).unwrap();
     assert_eq!(cfg.theme.name(), "nord");
-    assert_eq!(cfg.keys.get("d").map(String::as_str), Some("hide"));
-    assert_eq!(cfg.keys.get("D").map(String::as_str), Some("hide"));
-    assert_eq!(cfg.keys.get("q").map(String::as_str), Some("quit"));
+    assert_eq!(cfg.keys.bindings.get("d").map(String::as_str), Some("hide"));
+    assert_eq!(cfg.keys.bindings.get("D").map(String::as_str), Some("hide"));
+    assert_eq!(cfg.keys.bindings.get("q").map(String::as_str), Some("quit"));
     assert_eq!(cfg.columns, default_columns());
     let _ = fs::remove_dir_all(&dir);
 }
@@ -87,11 +87,55 @@ fn accepts_chained_key_commands() {
     .unwrap();
     let (cfg, _) = Config::load_from(&path).unwrap();
     assert_eq!(
-        cfg.keys.get("r").map(String::as_str),
+        cfg.keys.bindings.get("r").map(String::as_str),
         Some("view details; focus toggle")
     );
     fs::write(&path, "[keys]\nr = \"view details; nope\"\n").unwrap();
     assert!(Config::load_from(&path).is_err());
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn load_nested_keys_details_and_sidebar() {
+    let dir = std::env::temp_dir().join(format!("lnav-rs-nested-keys-{}", std::process::id()));
+    let _ = fs::create_dir_all(&dir);
+    let path = dir.join("config.toml");
+    fs::write(
+        &path,
+        "[keys]\nr = \"quit\"\n[keys.details]\nspace = \"copy\"\n[keys.sidebar]\nd = \"filter delete line\"\n",
+    )
+    .unwrap();
+    let (cfg, _) = Config::load_from(&path).unwrap();
+    assert_eq!(cfg.keys.bindings.get("r").map(String::as_str), Some("quit"));
+    assert_eq!(
+        cfg.keys.details.get("space").map(String::as_str),
+        Some("copy")
+    );
+    assert_eq!(
+        cfg.keys.sidebar.get("d").map(String::as_str),
+        Some("filter delete line")
+    );
+    assert_eq!(
+        cfg.keys.sidebar.get("space").map(String::as_str),
+        Some("filter set toggle")
+    );
+    fs::write(&path, "[details_keys]\nspace = \"copy\"\n").unwrap();
+    assert!(Config::load_from(&path).is_err());
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn write_nested_key_overlays() {
+    let dir = std::env::temp_dir().join(format!("lnav-rs-write-nested-{}", std::process::id()));
+    let _ = fs::create_dir_all(&dir);
+    let path = dir.join("config.toml");
+    let mut cfg = Config::default();
+    cfg.keys.details.insert("c".into(), "fold toggle".into());
+    cfg.write_to(&path).unwrap();
+    let raw = fs::read_to_string(&path).unwrap();
+    assert!(raw.contains("[keys.details]"));
+    assert!(raw.contains("c = \"fold toggle\""));
+    assert!(!raw.contains("details_keys"));
     let _ = fs::remove_dir_all(&dir);
 }
 

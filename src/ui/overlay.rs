@@ -44,7 +44,11 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect, content: &[DetailLine]
     let title = " details ";
     let show_help = focused && app.details.help;
     let binding = |command, fallback| {
-        keys::binding_for_command(&app.config.keys, Some(&app.config.details_keys), command)
+        keys::binding_for_command(
+            &app.config.keys.bindings,
+            Some(&app.config.keys.details),
+            command,
+        )
             .unwrap_or(fallback)
     };
     let hint = format!(

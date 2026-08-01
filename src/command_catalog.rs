@@ -11,7 +11,7 @@ const COMMANDS: &[CommandInfo] = &[
     },
     CommandInfo {
         name: "help",
-        help: "show help; on|off|toggle details hints when focused",
+        help: "cheatsheet modal; on|off|toggle details hints when focused",
     },
     CommandInfo {
         name: "view",

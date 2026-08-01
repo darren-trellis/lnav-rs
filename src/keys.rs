@@ -1,6 +1,36 @@
 use std::collections::BTreeMap;
 
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use serde::{Deserialize, Serialize};
+
+/// Keybindings: base map plus contextual overlays under `[keys.details]` / `[keys.sidebar]`.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct KeysConfig {
+    #[serde(default, flatten)]
+    pub bindings: BTreeMap<String, String>,
+    #[serde(default)]
+    pub details: BTreeMap<String, String>,
+    #[serde(default)]
+    pub sidebar: BTreeMap<String, String>,
+}
+
+impl KeysConfig {
+    pub fn with_defaults() -> Self {
+        Self {
+            bindings: defaults(),
+            details: details_defaults(),
+            sidebar: sidebar_defaults(),
+        }
+    }
+
+    pub fn merge_user(user: Self) -> Self {
+        Self {
+            bindings: merge(defaults(), user.bindings),
+            details: merge_overlay(details_defaults(), user.details),
+            sidebar: merge_overlay(sidebar_defaults(), user.sidebar),
+        }
+    }
+}
 
 /// Default key → command mappings.
 ///
@@ -25,7 +55,7 @@ pub fn defaults() -> BTreeMap<String, String> {
         ("home".into(), "nav top".into()),
         ("G".into(), "nav bottom".into()),
         ("end".into(), "nav bottom".into()),
-        ("enter".into(), "view details".into()),
+        ("enter".into(), "view details on".into()),
         ("tab".into(), "focus toggle".into()),
         ("c".into(), "copy".into()),
         ("esc".into(), "view current off".into()),

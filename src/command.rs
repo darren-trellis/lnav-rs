@@ -357,6 +357,10 @@ fn parse_on_off_toggle(sub: &str) -> Option<ToggleAction> {
 
 fn help_command(app: &mut App, rest: &str) {
     let (sub, _) = split_cmd(rest);
+    if sub.is_empty() {
+        app.toggle_help_modal();
+        return;
+    }
     let focused = app.details.visible && app.is_details_focused();
     if focused {
         match parse_on_off_toggle(sub) {
@@ -368,14 +372,8 @@ fn help_command(app: &mut App, rest: &str) {
         }
         return;
     }
-    if sub.is_empty() {
-        app.status_message = Some(
-            ":config set KEY · d/D: dd/DD · p: pin · :hide/:pin/:delete · :hide/:pin clear".into(),
-        );
-    } else {
-        app.status_message =
-            Some("usage: :help  (or focus details, then :help [on|off|toggle])".into());
-    }
+    app.status_message =
+        Some("usage: :help  (or focus details, then :help [on|off|toggle])".into());
 }
 
 fn search_command(app: &mut App, rest: &str) {

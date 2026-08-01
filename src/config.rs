@@ -6,7 +6,7 @@ use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};
 
 use crate::command_catalog;
-use crate::keys;
+use crate::keys::KeysConfig;
 use crate::theme::Theme;
 use crate::timestamp;
 
@@ -280,17 +280,9 @@ pub struct Config {
     #[serde(default)]
     pub columns: Vec<Column>,
 
-    /// Key → command map. User values override defaults; `""` unbinds.
+    /// Keybindings: `[keys]`, `[keys.details]`, `[keys.sidebar]`.
     #[serde(default)]
-    pub keys: BTreeMap<String, String>,
-
-    /// Key overrides while the details overlay is focused (merged over `keys`).
-    #[serde(default)]
-    pub details_keys: BTreeMap<String, String>,
-
-    /// Key overrides while the filters sidebar is focused (merged over `keys`).
-    #[serde(default)]
-    pub sidebar_keys: BTreeMap<String, String>,
+    pub keys: KeysConfig,
 
     /// Persist filters per log file under `~/.local/share/lnav-rs/sessions/`.
     #[serde(default = "default_true")]
@@ -348,12 +340,32 @@ struct PersistedConfig<'a> {
     ui: &'a crate::theme::UiOverrides,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     columns: Vec<PersistedColumn<'a>>,
+    #[serde(skip_serializing_if = "PersistedKeys::is_empty")]
+    keys: PersistedKeys,
+}
+
+#[derive(Serialize)]
+struct PersistedKeys {
+    #[serde(flatten)]
+    bindings: BTreeMap<String, String>,
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
-    keys: BTreeMap<String, String>,
+    details: BTreeMap<String, String>,
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
-    details_keys: BTreeMap<String, String>,
-    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
-    sidebar_keys: BTreeMap<String, String>,
+    sidebar: BTreeMap<String, String>,
+}
+
+impl PersistedKeys {
+    fn is_empty(&self) -> bool {
+        self.bindings.is_empty() && self.details.is_empty() && self.sidebar.is_empty()
+    }
+
+    fn from_config(config: &Config, defaults: &Config) -> Self {
+        Self {
+            bindings: key_differences(&config.keys.bindings, &defaults.keys.bindings),
+            details: key_differences(&config.keys.details, &defaults.keys.details),
+            sidebar: key_differences(&config.keys.sidebar, &defaults.keys.sidebar),
+        }
+    }
 }
 
 #[derive(Serialize)]
@@ -435,9 +447,7 @@ impl<'a> PersistedConfig<'a> {
             levels: &config.levels,
             ui: &config.ui,
             columns,
-            keys: key_differences(&config.keys, &defaults.keys),
-            details_keys: key_differences(&config.details_keys, &defaults.details_keys),
-            sidebar_keys: key_differences(&config.sidebar_keys, &defaults.sidebar_keys),
+            keys: PersistedKeys::from_config(config, &defaults),
         }
     }
 }
@@ -525,9 +535,7 @@ impl Default for Config {
             timestamp_format: default_timestamp_format(),
             case_mode: CaseMode::default(),
             columns: default_columns(),
-            keys: keys::defaults(),
-            details_keys: keys::details_defaults(),
-            sidebar_keys: keys::sidebar_defaults(),
+            keys: KeysConfig::with_defaults(),
             session_filters: true,
             session_stdin: true,
         }
@@ -583,15 +591,7 @@ impl Config {
             toml::from_str(&raw).with_context(|| format!("invalid config {}", path.display()))?;
         cfg.validate()
             .with_context(|| format!("invalid config {}", path.display()))?;
-        cfg.keys = keys::merge(keys::defaults(), std::mem::take(&mut cfg.keys));
-        cfg.details_keys = keys::merge_overlay(
-            keys::details_defaults(),
-            std::mem::take(&mut cfg.details_keys),
-        );
-        cfg.sidebar_keys = keys::merge_overlay(
-            keys::sidebar_defaults(),
-            std::mem::take(&mut cfg.sidebar_keys),
-        );
+        cfg.keys = KeysConfig::merge_user(std::mem::take(&mut cfg.keys));
         if cfg.columns.is_empty() {
             cfg.columns = default_columns();
         }
@@ -626,9 +626,9 @@ impl Config {
             }
         }
         let known: Vec<&str> = command_catalog::catalog().iter().map(|c| c.name).collect();
-        validate_key_map("keys", &self.keys, &known)?;
-        validate_key_map("details_keys", &self.details_keys, &known)?;
-        validate_key_map("sidebar_keys", &self.sidebar_keys, &known)?;
+        validate_key_map("keys", &self.keys.bindings, &known)?;
+        validate_key_map("keys.details", &self.keys.details, &known)?;
+        validate_key_map("keys.sidebar", &self.keys.sidebar, &known)?;
         Ok(())
     }
 

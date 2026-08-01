@@ -8,6 +8,10 @@ use crate::completion;
 
 impl App {
     pub(super) fn handle_mouse(&mut self, mouse: MouseEvent) {
+        if self.help_modal.is_some() {
+            self.handle_help_modal_mouse(mouse);
+            return;
+        }
         if self.config_modal.is_some() {
             self.handle_config_modal_mouse(mouse);
             return;

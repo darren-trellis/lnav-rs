@@ -26,6 +26,10 @@ fn default_d_maps_to_hide() {
     );
     assert_eq!(defaults().get("p").map(String::as_str), Some("pin line"));
     assert_eq!(
+        defaults().get("enter").map(String::as_str),
+        Some("view details on")
+    );
+    assert_eq!(
         sidebar_defaults().get("d").map(String::as_str),
         Some("filter delete")
     );

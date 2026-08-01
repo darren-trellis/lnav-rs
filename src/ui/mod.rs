@@ -4,6 +4,7 @@ mod sidebar;
 mod status;
 mod suggest;
 mod config_modal;
+pub mod help_modal;
 
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout, Rect};
@@ -48,7 +49,7 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
     let area = frame.area();
     app.pointer.hit = crate::app::HitAreas::default();
 
-    let modal_open = app.config_modal.is_some();
+    let modal_open = app.config_modal.is_some() || app.help_modal.is_some();
     let suggest_h = if app.input_mode == InputMode::Command && !modal_open {
         suggest::desired_height(app, area.height.saturating_sub(4))
     } else {
@@ -115,5 +116,8 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
 
     if app.config_modal.is_some() {
         config_modal::draw(frame, app, body);
+    }
+    if app.help_modal.is_some() {
+        help_modal::draw(frame, app, body);
     }
 }
