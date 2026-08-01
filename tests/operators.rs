@@ -1,7 +1,7 @@
 use std::fs;
 use std::io::Write;
 
-use lnav_rs::app::App;
+use lnav_rs::app::{App, Focus, SidebarItem};
 use lnav_rs::command;
 use lnav_rs::config::Config;
 use lnav_rs::tail::LogSource;
@@ -115,6 +115,77 @@ fn hide_survives_delete_of_unrelated_line() {
     // charlie remaps from source 2 -> 1 and stays hidden (not in the display list).
     assert!(app.source.entries()[1].raw.contains("charlie"));
     assert!(app.display_of_source(1).is_none());
+
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn sidebar_dd_deletes_hidden_line_from_file() {
+    let (dir, path) = temp_log(
+        "sidebar-del",
+        &[
+            r#"{"level":"info","msg":"keep"}"#,
+            r#"{"level":"error","msg":"drop-me"}"#,
+            r#"{"level":"info","msg":"also-keep"}"#,
+        ],
+    );
+    let mut app = app_for(&path);
+
+    app.count = Some(2);
+    command::execute(&mut app, "nav top");
+    assert!(
+        app.selected_entry()
+            .is_some_and(|e| e.raw.contains("drop-me"))
+    );
+    command::execute(&mut app, "hide");
+    assert_eq!(app.hidden_count(), 1);
+    assert_eq!(app.source.len(), 3);
+
+    command::execute(&mut app, "view sidebar on");
+    app.focus_sidebar();
+    assert_eq!(app.focus(), Focus::Sidebar);
+    app.select_sidebar_item(SidebarItem::Hidden(1));
+    assert_eq!(app.sidebar_selection(), Some(SidebarItem::Hidden(1)));
+
+    // DD via keybinding invoke.
+    command::execute_from_key(&mut app, "delete");
+    command::execute_from_key(&mut app, "delete");
+
+    assert_eq!(app.source.len(), 2);
+    assert!(app.source.entries().iter().all(|e| !e.raw.contains("drop-me")));
+    assert!(app.source.entries().iter().any(|e| e.raw.contains("keep")));
+    assert!(app.source.entries().iter().any(|e| e.raw.contains("also-keep")));
+    assert_eq!(app.hidden_count(), 0);
+
+    let on_disk = fs::read_to_string(&path).unwrap();
+    assert!(!on_disk.contains("drop-me"));
+    assert!(on_disk.contains("also-keep"));
+
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn sidebar_delete_line_on_hidden_is_immediate() {
+    let (dir, path) = temp_log(
+        "sidebar-del-line",
+        &[
+            r#"{"level":"info","msg":"alpha"}"#,
+            r#"{"level":"info","msg":"gone"}"#,
+        ],
+    );
+    let mut app = app_for(&path);
+    app.count = Some(2);
+    command::execute(&mut app, "nav top");
+    command::execute(&mut app, "hide");
+
+    command::execute(&mut app, "view sidebar on");
+    app.focus_sidebar();
+    app.select_sidebar_item(SidebarItem::Hidden(1));
+    command::execute(&mut app, "delete line");
+
+    assert_eq!(app.source.len(), 1);
+    assert!(app.source.entries()[0].raw.contains("alpha"));
+    assert!(!fs::read_to_string(&path).unwrap().contains("gone"));
 
     let _ = fs::remove_dir_all(&dir);
 }

@@ -154,6 +154,13 @@ impl App {
             self.start_or_repeat_filter_delete();
             return;
         }
+        if matches!(op, PendingOp::Delete)
+            && self.is_sidebar_focused()
+            && self.config.sidebar
+        {
+            self.start_or_repeat_sidebar_delete();
+            return;
+        }
         if self.display_len() == 0 {
             self.pending_op = None;
             self.count = None;
@@ -170,6 +177,59 @@ impl App {
         self.pending_op = Some(op);
         self.op_anchor = self.view.selected;
         self.status_message = None;
+    }
+
+    /// `DD` in the sidebar: delete the selected hidden line from the file.
+    pub(crate) fn start_or_repeat_sidebar_delete(&mut self) {
+        match self.sidebar_selection() {
+            Some(SidebarItem::Hidden(_)) => {
+                if self.pending_op == Some(PendingOp::Delete) {
+                    self.pending_op = None;
+                    self.delete_sidebar_hidden_selection();
+                    return;
+                }
+                self.pending_op = Some(PendingOp::Delete);
+                self.status_message = None;
+            }
+            Some(SidebarItem::Filter(_)) => {
+                self.pending_op = None;
+                self.count = None;
+                self.status_message = Some("select a hidden line".into());
+            }
+            None => {
+                self.pending_op = None;
+                self.count = None;
+                self.status_message = Some("sidebar empty".into());
+            }
+        }
+    }
+
+    /// Permanently delete the sidebar's selected hidden line(s) from the file.
+    pub fn delete_sidebar_hidden_selection(&mut self) {
+        let count = self.take_count();
+        let items = self.sidebar_items();
+        let start = self.sidebar_selected.min(items.len().saturating_sub(1));
+        let mut indices = HashSet::new();
+        let mut taken = 0usize;
+        for item in items.into_iter().skip(start) {
+            let SidebarItem::Hidden(source) = item else {
+                continue;
+            };
+            for index in object_span::object_span(self.source.entries(), source) {
+                indices.insert(index);
+            }
+            taken += 1;
+            if taken >= count {
+                break;
+            }
+        }
+        if indices.is_empty() {
+            self.status_message = Some("select a hidden line".into());
+            return;
+        }
+        let mut indices: Vec<usize> = indices.into_iter().collect();
+        indices.sort_unstable();
+        self.delete_source_indices(&indices, None);
     }
 
     pub(crate) fn with_motion<F>(&mut self, motion: F)
@@ -239,42 +299,54 @@ impl App {
                 ));
             }
             PendingOp::Delete => {
-                if !self.source.is_file() {
-                    self.status_message = Some("cannot delete from stdin".into());
-                    return;
+                self.delete_source_indices(&indices, Some(low));
+            }
+        }
+    }
+
+    /// Delete source indices from the file and remap pin/hide state.
+    ///
+    /// `prefer_display` selects a list row after rebuild (list `DD`); `None`
+    /// keeps the current selection clamped (sidebar delete).
+    fn delete_source_indices(&mut self, indices: &[usize], prefer_display: Option<usize>) {
+        if indices.is_empty() {
+            return;
+        }
+        if !self.source.is_file() {
+            self.status_message = Some("cannot delete from stdin".into());
+            return;
+        }
+        match self.source.delete_entries(indices) {
+            Ok(removed) => {
+                let deleted: HashSet<usize> = indices.iter().copied().collect();
+                self.view.pinned = remap_pinned_after_delete(&self.view.pinned, &deleted);
+                self.view.hidden = remap_hidden_after_delete(&self.view.hidden, &deleted);
+                self.clamp_sidebar_selection();
+                self.rebuild_visible(None);
+                if self.display_len() == 0 {
+                    self.view.selected = 0;
+                    self.close_details();
+                } else if let Some(low) = prefer_display {
+                    self.view.selected = low.min(self.display_len() - 1);
+                    self.reset_overlay_for_selection_change();
+                } else {
+                    self.view.selected = self.view.selected.min(self.display_len() - 1);
+                    self.reset_overlay_for_selection_change();
                 }
-                match self.source.delete_entries(&indices) {
-                    Ok(removed) => {
-                        let deleted: HashSet<usize> = indices.iter().copied().collect();
-                        self.view.pinned =
-                            remap_pinned_after_delete(&self.view.pinned, &deleted);
-                        self.view.hidden =
-                            remap_hidden_after_delete(&self.view.hidden, &deleted);
-                        self.clamp_sidebar_selection();
-                        self.rebuild_visible(None);
-                        if self.display_len() == 0 {
-                            self.view.selected = 0;
-                            self.close_details();
-                        } else {
-                            self.view.selected = low.min(self.display_len() - 1);
-                            self.reset_overlay_for_selection_change();
-                        }
-                        if !self.search.query.is_empty() {
-                            self.run_search();
-                        }
-                        self.status_message = Some(format!(
-                            "deleted {removed} line{} from {}",
-                            if removed == 1 { "" } else { "s" },
-                            self.source
-                                .path()
-                                .map(|path| path.display().to_string())
-                                .unwrap_or_default()
-                        ));
-                    }
-                    Err(err) => {
-                        self.status_message = Some(format!("delete failed: {err:#}"));
-                    }
+                if !self.search.query.is_empty() {
+                    self.run_search();
                 }
+                self.status_message = Some(format!(
+                    "deleted {removed} line{} from {}",
+                    if removed == 1 { "" } else { "s" },
+                    self.source
+                        .path()
+                        .map(|path| path.display().to_string())
+                        .unwrap_or_default()
+                ));
+            }
+            Err(err) => {
+                self.status_message = Some(format!("delete failed: {err:#}"));
             }
         }
     }
@@ -293,6 +365,11 @@ impl App {
     }
 
     pub(crate) fn delete_current(&mut self) {
+        if self.is_sidebar_focused() && self.config.sidebar {
+            self.pending_op = None;
+            self.delete_sidebar_hidden_selection();
+            return;
+        }
         if self.display_len() == 0 {
             self.pending_op = None;
             self.count = None;

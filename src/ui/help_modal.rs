@@ -203,6 +203,11 @@ const CHEATSHEET: &[Entry] = &[
         groups: &["filter delete line"],
         description: "delete filter / unhide line",
     },
+    Entry::Item {
+        context: Context::Sidebar,
+        groups: &["delete", "delete line"],
+        description: "delete hidden line from file (DD)",
+    },
 ];
 
 pub fn render(keys: &KeysConfig) -> Vec<String> {
