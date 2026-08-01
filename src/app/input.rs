@@ -1,7 +1,9 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
 use ratatui::layout::Rect;
 
-use super::{App, ConfigModal, ConfigPicker, ConfigValueEditor, HelpModal, InputMode};
+use super::{
+    App, ClickTarget, ConfigModal, ConfigPicker, ConfigValueEditor, HelpModal, InputMode,
+};
 use crate::command;
 use crate::completion;
 use crate::config_options::{self, ConfigOption, ValueKind};
@@ -256,20 +258,15 @@ impl App {
                 match mouse.kind {
                     MouseEventKind::ScrollUp => self.config_picker_move(-1),
                     MouseEventKind::ScrollDown => self.config_picker_move(1),
-                    MouseEventKind::Moved => {
-                        if contains(area, col, row) {
-                            let idx = picker.list_start + (row - area.y) as usize;
-                            if idx < picker.values.len() {
-                                self.config_picker_select(idx);
-                            }
-                        }
-                    }
                     MouseEventKind::Down(MouseButton::Left) => {
                         if contains(area, col, row) {
                             let idx = picker.list_start + (row - area.y) as usize;
                             if idx < picker.values.len() {
+                                let double = self.register_click(ClickTarget::ConfigPicker(idx));
                                 self.config_picker_select(idx);
-                                self.close_config_modal(true);
+                                if double {
+                                    self.close_config_modal(true);
+                                }
                             }
                         } else if !contains(popup, col, row) {
                             self.close_config_modal(false);

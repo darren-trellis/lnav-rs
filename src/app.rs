@@ -119,10 +119,17 @@ pub(crate) struct HitAreas {
     pub(crate) status: Rect,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ClickTarget {
+    List(usize),
+    Suggest(usize),
+    ConfigPicker(usize),
+}
+
 #[derive(Debug, Clone, Copy)]
 struct LastClick {
     at: Instant,
-    vis_idx: usize,
+    target: ClickTarget,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

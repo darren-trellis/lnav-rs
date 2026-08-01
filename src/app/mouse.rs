@@ -3,7 +3,7 @@ use std::time::{Duration, Instant};
 use crossterm::event::{KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
 use ratatui::layout::Rect;
 
-use super::{App, InputMode, LastClick, ScrollbarDrag};
+use super::{App, ClickTarget, InputMode, LastClick, ScrollbarDrag};
 use crate::completion;
 
 impl App {
@@ -57,15 +57,6 @@ impl App {
             }
             MouseEventKind::Up(MouseButton::Left) => {
                 self.pointer.scrollbar_drag = None;
-            }
-            MouseEventKind::Moved
-                if self.input_mode == InputMode::Command
-                    && contains(self.pointer.hit.suggest_inner, mouse.column, mouse.row) =>
-            {
-                if let Some(idx) = self.suggest_index_at(mouse.column, mouse.row) {
-                    self.command_line.completions.selected = Some(idx);
-                    self.command_line.completions.browsed = true;
-                }
             }
             _ => {}
         }
@@ -294,9 +285,13 @@ impl App {
     fn handle_left_click(&mut self, col: u16, row: u16) {
         if contains(self.pointer.hit.suggest_inner, col, row) {
             if let Some(idx) = self.suggest_index_at(col, row) {
+                let double = self.register_click(ClickTarget::Suggest(idx));
                 self.command_line.completions.selected = Some(idx);
-                self.command_line.completions.browsed = false;
-                completion::apply_selected(self);
+                self.command_line.completions.browsed = true;
+                if double {
+                    self.command_line.completions.browsed = false;
+                    completion::apply_selected(self);
+                }
             }
             return;
         }
@@ -371,35 +366,38 @@ impl App {
         self.leave_editing_modes();
         self.focus_list();
 
-        let double = self
-            .pointer
-            .last_click
-            .map(|c| c.vis_idx == display && c.at.elapsed() < Duration::from_millis(400))
-            .unwrap_or(false);
-
         if let Some(op) = self.pending_op.take() {
             let start = self.op_anchor;
             self.view.follow = false;
             self.view.selected = display;
             self.apply_op_display_range(op, start, display);
-            self.pointer.last_click = Some(LastClick {
-                at: Instant::now(),
-                vis_idx: display,
-            });
+            let _ = self.register_click(ClickTarget::List(display));
             return;
         }
 
         self.view.follow = false;
         self.view.selected = display;
-        if double {
+        if self.register_click(ClickTarget::List(display)) {
             self.toggle_details();
+        }
+    }
+
+    /// Returns true when this is a double-click on the same target.
+    pub(super) fn register_click(&mut self, target: ClickTarget) -> bool {
+        let double = self
+            .pointer
+            .last_click
+            .map(|c| c.target == target && c.at.elapsed() < Duration::from_millis(400))
+            .unwrap_or(false);
+        if double {
             self.pointer.last_click = None;
         } else {
             self.pointer.last_click = Some(LastClick {
                 at: Instant::now(),
-                vis_idx: display,
+                target,
             });
         }
+        double
     }
 
     fn suggest_index_at(&self, col: u16, row: u16) -> Option<usize> {

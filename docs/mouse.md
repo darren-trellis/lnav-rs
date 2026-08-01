@@ -8,8 +8,10 @@
 | Shift + scroll wheel | Scroll list / sidebar horizontally |
 | Horizontal scroll | Scroll list / sidebar sideways (when the terminal sends it) |
 | Click / drag scrollbar | Scroll the list, sidebar, or details |
-| Click a completion | Insert it |
+| Click a completion | Highlight it |
+| Double-click a completion | Insert it into the command line |
 | Click details overlay | Focus it / move details cursor |
 | Click filters sidebar | Focus it / select a filter or hidden line |
 | Click status bar | Enter `:` command mode |
-| Config picker hover / click | Preview (theme) / set value |
+| Click a config picker row | Highlight / preview that value |
+| Double-click a config picker row | Commit that value |
