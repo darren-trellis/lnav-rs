@@ -82,6 +82,30 @@ impl App {
                     self.scroll_list(n);
                 }
             }
+            MouseEventKind::ScrollLeft => {
+                self.cancel_pending_op();
+                let n = self.config.scroll_lines.max(1) as isize;
+                if self.config.sidebar
+                    && (self.is_sidebar_focused()
+                        || contains(self.pointer.hit.sidebar_inner, mouse.column, mouse.row))
+                {
+                    self.scroll_sidebar_x(-n);
+                } else {
+                    self.scroll_list_x(-n);
+                }
+            }
+            MouseEventKind::ScrollRight => {
+                self.cancel_pending_op();
+                let n = self.config.scroll_lines.max(1) as isize;
+                if self.config.sidebar
+                    && (self.is_sidebar_focused()
+                        || contains(self.pointer.hit.sidebar_inner, mouse.column, mouse.row))
+                {
+                    self.scroll_sidebar_x(n);
+                } else {
+                    self.scroll_list_x(n);
+                }
+            }
             MouseEventKind::Down(MouseButton::Left) => {
                 if self.handle_scrollbar_pointer(mouse.column, mouse.row, true) {
                     return;

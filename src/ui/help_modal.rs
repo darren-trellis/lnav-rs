@@ -19,7 +19,7 @@ pub const HELP_LINES: &[&str] = &[
     "  Enter        open details · reveal hidden (sidebar)",
     "  Esc          clear status (close pane in details/sidebar)",
     "  s            toggle filters/hidden sidebar",
-    "  h/l ←/→      scroll sidebar horizontally",
+    "  h/l ←/→      scroll list/sidebar horizontally",
     "  c            copy focused details value",
     "  Space        fold (details) · toggle filter (sidebar)",
     "",

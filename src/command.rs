@@ -333,11 +333,15 @@ fn scroll_command(app: &mut App, rest: &str) {
         "left" => {
             if app.is_sidebar_focused() && app.config.sidebar {
                 app.scroll_sidebar_x(-n);
+            } else {
+                app.scroll_list_x(-n);
             }
         }
         "right" => {
             if app.is_sidebar_focused() && app.config.sidebar {
                 app.scroll_sidebar_x(n);
+            } else {
+                app.scroll_list_x(n);
             }
         }
         other => {

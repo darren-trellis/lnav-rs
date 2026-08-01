@@ -188,6 +188,9 @@ pub struct App {
     pub sidebar_selected: usize,
     pub sidebar_scroll: usize,
     pub sidebar_scroll_x: usize,
+    pub list_scroll_x: usize,
+    /// Full rendered list-row width from the last draw (for horizontal scroll).
+    pub(crate) list_content_width: usize,
     pub input_mode: InputMode,
     pub pending_op: Option<PendingOp>,
     /// Visible-row anchor when the pending operator was started.
@@ -275,6 +278,8 @@ impl App {
             sidebar_selected: 0,
             sidebar_scroll: 0,
             sidebar_scroll_x: 0,
+            list_scroll_x: 0,
+            list_content_width: 0,
             input_mode: InputMode::Normal,
             pending_op: None,
             op_anchor: 0,
@@ -697,6 +702,20 @@ impl App {
         let max = content_w.saturating_sub(viewport);
         self.sidebar_scroll_x =
             (self.sidebar_scroll_x as isize + delta).clamp(0, max as isize) as usize;
+    }
+
+    pub fn clamp_list_scroll_x(&mut self, viewport_width: usize, content_width: usize) {
+        let max = content_width.saturating_sub(viewport_width.max(1));
+        if self.list_scroll_x > max {
+            self.list_scroll_x = max;
+        }
+    }
+
+    pub fn scroll_list_x(&mut self, delta: isize) {
+        let viewport = self.pointer.hit.list_inner.width.max(1) as usize;
+        let max = self.list_content_width.saturating_sub(viewport);
+        self.list_scroll_x =
+            (self.list_scroll_x as isize + delta).clamp(0, max as isize) as usize;
     }
 
     pub fn toggle_details(&mut self) {

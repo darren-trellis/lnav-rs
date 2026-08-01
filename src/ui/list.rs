@@ -7,6 +7,7 @@ use unicode_width::UnicodeWidthStr;
 
 use crate::app::App;
 use crate::columns::{self, Segment, SegmentKind};
+use crate::config::Column;
 use crate::highlight;
 use crate::model::LogEntry;
 use crate::text;
@@ -114,6 +115,24 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
     }
     let col_widths = columns::measure_widths(&app.config.columns, &measure_rows, ts_fmt);
 
+    let default_border = columns::ColumnBorderStyle {
+        width: app.theme.column_border_width,
+        padding: app.theme.column_border_padding,
+        color: None,
+        enabled: app.config.border,
+    };
+    let content_w = layout_content_width(
+        &app.config.columns,
+        &col_widths,
+        line_no_width,
+        show_nums,
+        &default_border,
+    );
+    let viewport_w = content.width as usize;
+    app.list_content_width = content_w;
+    app.clamp_list_scroll_x(viewport_w, content_w);
+    let scroll_x = app.list_scroll_x;
+
     for display in 0..pin_rows {
         let src = app.view.pinned[display];
         let entry = &app.source.entries()[src];
@@ -129,13 +148,14 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
                 line_no_width,
                 selected,
                 pinned: app.is_display_pinned(display),
-                width: content.width as usize,
+                width: viewport_w,
+                scroll_x,
             },
         ));
     }
     if sep_rows > 0 {
         let theme = &app.theme;
-        let width = content.width as usize;
+        let width = viewport_w;
         let label = " pinned ";
         let rule = if width <= label.len() {
             "─".repeat(width)
@@ -169,7 +189,8 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
                 line_no_width,
                 selected,
                 pinned: app.is_display_pinned(display),
-                width: content.width as usize,
+                width: viewport_w,
+                scroll_x,
             },
         ));
     }
@@ -189,6 +210,33 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
             theme.tone_fg_style(theme.dim),
         );
     }
+}
+
+fn layout_content_width(
+    columns: &[Column],
+    col_widths: &[usize],
+    line_no_width: usize,
+    show_nums: bool,
+    default_border: &columns::ColumnBorderStyle,
+) -> usize {
+    let mut width = 1usize; // gutter
+    if show_nums {
+        width += line_no_width;
+        let border = columns
+            .first()
+            .map(|col| columns::ColumnBorderStyle::resolve(col, default_border))
+            .unwrap_or_else(|| default_border.clone());
+        width += UnicodeWidthStr::width(columns::column_separator(border).text.as_str());
+    }
+    for (i, col) in columns.iter().enumerate() {
+        if i > 0 {
+            let border = columns::ColumnBorderStyle::resolve(col, default_border);
+            width += UnicodeWidthStr::width(columns::column_separator(border).text.as_str());
+        }
+        let cell = col_widths.get(i).copied().unwrap_or(0);
+        width += cell + col.padding.left + col.padding.right;
+    }
+    width
 }
 
 fn line_number_label(app: &App, display: usize) -> Option<String> {
@@ -219,9 +267,10 @@ struct LineRenderOptions<'a> {
     selected: bool,
     pinned: bool,
     width: usize,
+    scroll_x: usize,
 }
 
-fn render_line<'a>(app: &'a App, entry: &'a LogEntry, options: LineRenderOptions<'_>) -> Line<'a> {
+fn render_line<'a>(app: &'a App, entry: &'a LogEntry, options: LineRenderOptions<'_>) -> Line<'static> {
     let LineRenderOptions {
         view_line,
         col_widths,
@@ -230,6 +279,7 @@ fn render_line<'a>(app: &'a App, entry: &'a LogEntry, options: LineRenderOptions
         selected,
         pinned,
         width,
+        scroll_x,
     } = options;
     let theme = &app.theme;
     let gutter = if selected {
@@ -264,7 +314,6 @@ fn render_line<'a>(app: &'a App, entry: &'a LogEntry, options: LineRenderOptions
     };
 
     let mut spans = vec![Span::styled(gutter.to_string(), gutter_style)];
-    let mut used = 1usize;
 
     if let Some(num_text) = gutter_num {
         let num = format!("{num_text:>width$}", width = line_no_width);
@@ -273,7 +322,6 @@ fn render_line<'a>(app: &'a App, entry: &'a LogEntry, options: LineRenderOptions
         } else {
             theme.tone_style(theme.dim, theme.background)
         };
-        used += UnicodeWidthStr::width(num.as_str());
         spans.push(Span::styled(num, num_style));
 
         let border_style = app
@@ -283,44 +331,30 @@ fn render_line<'a>(app: &'a App, entry: &'a LogEntry, options: LineRenderOptions
             .map(|col| columns::ColumnBorderStyle::resolve(col, &default_border))
             .unwrap_or(default_border);
         let border = columns::column_separator(border_style);
-        let border_w = UnicodeWidthStr::width(border.text.as_str());
-        if used + border_w <= width {
-            let style = segment_style(theme, entry, &border, selected);
-            spans.push(Span::styled(border.text, style));
-            used += border_w;
-        }
+        let style = segment_style(theme, entry, &border, selected);
+        spans.push(Span::styled(border.text, style));
     }
 
     let search = app.search.regex.as_ref();
     for segment in segments {
-        if used >= width {
-            break;
-        }
-        let budget = width - used;
-        let text = text::truncate_width(&segment.text, budget);
-        let text_w = UnicodeWidthStr::width(text.as_str());
-        if text.is_empty() && !segment.text.is_empty() {
-            break;
-        }
         let base = segment_style(theme, entry, &segment, selected);
         let match_style = theme.search_highlight_style(row_bg(theme, selected));
-        // Only highlight list text when search targets the list (not details).
         let re = if app.search.in_details { None } else { search };
-        highlight::push_highlighted(&mut spans, text, base, match_style, re);
-        used += text_w;
+        highlight::push_highlighted(&mut spans, segment.text, base, match_style, re);
     }
 
-    // Pad to full width so the selection highlight spans the whole row.
+    let mut visible = text::slice_spans(&spans, scroll_x, width);
+    let used = text::spans_width(&visible);
     if used < width {
         let pad_style = if selected {
             theme.selection_style()
         } else {
             Style::default().bg(theme.background)
         };
-        spans.push(Span::styled(" ".repeat(width - used), pad_style));
+        visible.push(Span::styled(" ".repeat(width - used), pad_style));
     }
 
-    Line::from(spans)
+    Line::from(visible)
 }
 
 fn row_bg(theme: &Theme, selected: bool) -> Color {

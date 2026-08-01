@@ -50,6 +50,8 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 | `PgUp` | `page up` |
 | `g` / `Home` | `nav top` |
 | `G` / `End` | `nav bottom` |
+| `h` / `←` | `scroll left` (list; sidebar when focused) |
+| `l` / `→` | `scroll right` (list; sidebar when focused) |
 | `Enter` | `view details on` (list); in sidebar `hide reveal` (unhide + jump) |
 | `Tab` | `focus toggle` (cycle list → details → sidebar) |
 | `Space` | `page down` (list); `fold toggle` in details; `filter set toggle` in sidebar |
@@ -73,6 +75,7 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 | Click a log line | Select it (completes a pending `d`/`D` operator) |
 | Double-click a log line | Toggle details overlay |
 | Scroll wheel | Move selection (or cycle completions / config picker) |
+| Horizontal scroll | Scroll list / sidebar sideways |
 | Click / drag scrollbar | Scroll the list or details |
 | Click a completion | Insert it |
 | Click details overlay | Focus it / move details cursor |
@@ -205,6 +208,8 @@ source = "annotations.url"
 [keys]
 q = "quit"
 space = "page down"
+h = "scroll left"
+l = "scroll right"
 # r = "view details on; focus toggle"
 
 [keys.details]
@@ -223,7 +228,7 @@ l = "scroll right"
 
 `line_numbers` / `relative_line_numbers` show a gutter for the visible list (not file line numbers). With both on, the current line is absolute and others are relative. Counts work like vim (`5j`, `3dd`, `10G`). `:N` jumps to view line `N`.
 
-`[[columns]]` define the list layout. `source` is a builtin (`level`, `timestamp`, `message`, `raw`, `line`, `format`) or a field path (`annotations.url`, `items.0.id`). Columns without `width` auto-size to the widest value in the current viewport so fields share an X position. Set `width` to fix/truncate; `align` is `"left"` (default), `"center"`, or `"right"`. `padding` is spaces around the cell (`1` for both sides, or `{ left = 1, right = 2 }`). Optional `border` / `border_color` / `border_width` / `border_padding` control the leading rule before that column (`border` overrides the top-level `border` setting; omit to inherit). The first column’s border is also used between line numbers and the list.
+`[[columns]]` define the list layout. `source` is a builtin (`level`, `timestamp`, `message`, `raw`, `line`, `format`) or a field path (`annotations.url`, `items.0.id`). Columns without `width` auto-size to the widest value in the current viewport so fields share an X position. Set `width` to fix/truncate; `align` is `"left"` (default), `"center"`, or `"right"`. `padding` is spaces around the cell (`1` for both sides, or `{ left = 1, right = 2 }`). Optional `border` / `border_color` / `border_width` / `border_padding` control the leading rule before that column (`border` overrides the top-level `border` setting; omit to inherit). The first column’s border is also used between line numbers and the list. When the full row is wider than the list pane, `h`/`l` (or ←/→) scroll all columns together horizontally.
 
 `timestamp_format` uses [chrono strftime](https://docs.rs/chrono/latest/chrono/format/strftime/index.html) (default `%H:%M:%S`). Set to `raw` to keep the original log string.
 

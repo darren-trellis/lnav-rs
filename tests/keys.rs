@@ -30,6 +30,22 @@ fn default_d_maps_to_hide() {
         Some("view details on")
     );
     assert_eq!(
+        defaults().get("h").map(String::as_str),
+        Some("scroll left")
+    );
+    assert_eq!(
+        defaults().get("l").map(String::as_str),
+        Some("scroll right")
+    );
+    assert_eq!(
+        defaults().get("left").map(String::as_str),
+        Some("scroll left")
+    );
+    assert_eq!(
+        defaults().get("right").map(String::as_str),
+        Some("scroll right")
+    );
+    assert_eq!(
         sidebar_defaults().get("d").map(String::as_str),
         Some("filter delete")
     );
