@@ -76,6 +76,26 @@ fn rejects_unknown_key_command() {
 }
 
 #[test]
+fn accepts_chained_key_commands() {
+    let dir = std::env::temp_dir().join(format!("lnav-rs-chain-{}", std::process::id()));
+    let _ = fs::create_dir_all(&dir);
+    let path = dir.join("config.toml");
+    fs::write(
+        &path,
+        "[keys]\nr = \"view details; focus toggle\"\n",
+    )
+    .unwrap();
+    let (cfg, _) = Config::load_from(&path).unwrap();
+    assert_eq!(
+        cfg.keys.get("r").map(String::as_str),
+        Some("view details; focus toggle")
+    );
+    fs::write(&path, "[keys]\nr = \"view details; nope\"\n").unwrap();
+    assert!(Config::load_from(&path).is_err());
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn rejects_zero_scroll_lines() {
     let dir = std::env::temp_dir().join(format!("lnav-rs-scroll-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);

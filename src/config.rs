@@ -665,12 +665,18 @@ fn validate_key_map(section: &str, map: &BTreeMap<String, String>, known: &[&str
         if cmd.is_empty() {
             continue;
         }
-        let name = cmd.split_whitespace().next().unwrap_or(cmd);
-        if !command_catalog::is_known_command(name) {
-            bail!(
-                "unknown command {cmd:?} for {section}.{key} (try: {})",
-                known.join(", ")
-            );
+        for part in cmd.split(';') {
+            let part = part.trim();
+            if part.is_empty() {
+                continue;
+            }
+            let name = part.split_whitespace().next().unwrap_or(part);
+            if !command_catalog::is_known_command(name) {
+                bail!(
+                    "unknown command {part:?} in {cmd:?} for {section}.{key} (try: {})",
+                    known.join(", ")
+                );
+            }
         }
     }
     Ok(())

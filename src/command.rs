@@ -27,11 +27,19 @@ pub fn execute_from_key(app: &mut App, raw: &str) {
 }
 
 fn execute_inner(app: &mut App, raw: &str, invoke: Invoke) {
-    let line = raw.trim();
-    if line.is_empty() {
-        return;
+    for part in raw.split(';') {
+        let line = part.trim();
+        if line.is_empty() {
+            continue;
+        }
+        execute_one(app, line, invoke);
+        if app.should_quit {
+            break;
+        }
     }
+}
 
+fn execute_one(app: &mut App, line: &str, invoke: Invoke) {
     let (cmd, rest) = split_cmd(line);
     let cmd_l = cmd.to_ascii_lowercase();
 
