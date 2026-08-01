@@ -16,7 +16,7 @@ pub const HELP_LINES: &[&str] = &[
     "  Tab          cycle focus: list → details → sidebar",
     "",
     "Views",
-    "  Enter        open details       Esc  close pane / clear status",
+    "  Enter        open details       Esc  clear status (close pane in details/sidebar)",
     "  s            toggle filters sidebar",
     "  c            copy focused details value",
     "  Space        fold (details) · toggle filter (sidebar)",

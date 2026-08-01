@@ -58,7 +58,7 @@ pub fn defaults() -> BTreeMap<String, String> {
         ("enter".into(), "view details on".into()),
         ("tab".into(), "focus toggle".into()),
         ("c".into(), "copy".into()),
-        ("esc".into(), "view current off".into()),
+        ("esc".into(), "command-mode clear".into()),
         ("/".into(), "search".into()),
         (":".into(), "command-mode".into()),
         ("n".into(), "match next".into()),
@@ -74,7 +74,10 @@ pub fn defaults() -> BTreeMap<String, String> {
 
 /// Defaults applied when the details overlay is focused (override `[keys]`).
 pub fn details_defaults() -> BTreeMap<String, String> {
-    BTreeMap::from([("space".into(), "fold toggle".into())])
+    BTreeMap::from([
+        ("space".into(), "fold toggle".into()),
+        ("esc".into(), "view current off".into()),
+    ])
 }
 
 /// Defaults applied when the filters sidebar is focused (override `[keys]`).
@@ -83,6 +86,7 @@ pub fn sidebar_defaults() -> BTreeMap<String, String> {
         ("d".into(), "filter delete".into()),
         ("backspace".into(), "filter delete line".into()),
         ("space".into(), "filter set toggle".into()),
+        ("esc".into(), "view current off".into()),
     ])
 }
 

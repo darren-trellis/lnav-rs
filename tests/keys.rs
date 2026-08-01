@@ -43,6 +43,14 @@ fn default_d_maps_to_hide() {
     );
     assert_eq!(
         defaults().get("esc").map(String::as_str),
+        Some("command-mode clear")
+    );
+    assert_eq!(
+        details_defaults().get("esc").map(String::as_str),
+        Some("view current off")
+    );
+    assert_eq!(
+        sidebar_defaults().get("esc").map(String::as_str),
         Some("view current off")
     );
     assert!(!defaults().contains_key("t"));

@@ -71,10 +71,7 @@ fn execute_one(app: &mut App, line: &str, invoke: Invoke) {
             app.copy_overlay_value();
         }
         "search" => search_command(app, rest),
-        "command-mode" => {
-            app.cancel_pending_op();
-            app.begin_command_mode();
-        }
+        "command-mode" => command_mode_command(app, rest),
         "match" => match_command(app, rest),
         "hide" => hide_command(app, rest, invoke),
         "pin" => pin_command(app, rest),
@@ -352,6 +349,24 @@ fn parse_on_off_toggle(sub: &str) -> Option<ToggleAction> {
         "on" => Some(ToggleAction::On),
         "off" => Some(ToggleAction::Off),
         _ => None,
+    }
+}
+
+fn command_mode_command(app: &mut App, rest: &str) {
+    let (sub, _) = split_cmd(rest);
+    match sub.to_ascii_lowercase().as_str() {
+        "" => {
+            app.cancel_pending_op();
+            app.begin_command_mode();
+        }
+        "clear" => {
+            app.cancel_pending_op();
+            app.status_message = None;
+        }
+        other => {
+            app.status_message =
+                Some(format!("usage: :command-mode [clear]  (unknown: {other})"));
+        }
     }
 }
 
