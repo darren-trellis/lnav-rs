@@ -2,7 +2,6 @@ use crate::app::{App, Focus, InputMode, PendingOp, ToggleAction};
 use crate::config::Config;
 use crate::config_options;
 use crate::filter::{Filter, FilterKind};
-use crate::theme::Theme;
 
 #[derive(Clone, Copy)]
 enum Invoke {
@@ -76,10 +75,6 @@ fn execute_inner(app: &mut App, raw: &str, invoke: Invoke) {
             Invoke::Key => app.start_or_repeat_op(PendingOp::Delete),
             Invoke::Line => app.delete_current(),
         },
-        "theme" => {
-            app.cancel_pending_op();
-            theme_command(app, rest);
-        }
         "filter" => filter_command(app, rest, invoke),
         "config" => {
             app.cancel_pending_op();
@@ -350,11 +345,9 @@ fn help_command(app: &mut App, rest: &str) {
         return;
     }
     if sub.is_empty() {
-        app.status_message =
-            Some(
-                ":theme [list|set] · d/D: dd/DD · p: pin · :hide/:pin/:delete · :hide/:pin clear"
-                    .into(),
-            );
+        app.status_message = Some(
+            ":config set KEY · d/D: dd/DD · p: pin · :hide/:pin/:delete · :hide/:pin clear".into(),
+        );
     } else {
         app.status_message =
             Some("usage: :help  (or focus details, then :help [on|off|toggle])".into());
@@ -541,32 +534,6 @@ fn set_filtering(app: &mut App, enabled: bool) {
     });
 }
 
-fn theme_command(app: &mut App, rest: &str) {
-    let (sub, arg) = split_cmd(rest);
-    match sub.to_ascii_lowercase().as_str() {
-        "" => {
-            app.status_message = Some(format!("theme: {}", app.theme.name));
-        }
-        "list" => {
-            let list = Theme::list_names().join(", ");
-            app.status_message = Some(format!("themes: {list}"));
-        }
-        "set" => {
-            if arg.is_empty() {
-                app.open_theme_picker();
-            } else {
-                app.commit_theme(arg);
-            }
-        }
-        "cycle" => app.cycle_theme(),
-        other => {
-            app.status_message = Some(format!(
-                "usage: :theme | :theme list | :theme set [NAME] | :theme cycle  (unknown: {other})"
-            ));
-        }
-    }
-}
-
 fn config_command(app: &mut App, rest: &str) {
     let (sub, arg) = split_cmd(rest);
     match sub.to_ascii_lowercase().as_str() {
@@ -607,14 +574,8 @@ fn set_option(app: &mut App, rest: &str) {
     let (key, value) = split_cmd(rest);
     if key.is_empty() {
         app.status_message = Some(format!(
-            "usage: :config set {} VALUE",
+            "usage: :config set {} [VALUE]",
             config_options::usage()
-        ));
-        return;
-    }
-    if value.is_empty() {
-        app.status_message = Some(format!(
-            "usage: :config set {key} VALUE  (or :config get {key})"
         ));
         return;
     }
@@ -622,6 +583,10 @@ fn set_option(app: &mut App, rest: &str) {
         app.status_message = Some(format!("unknown option: {}", key.to_ascii_lowercase()));
         return;
     };
+    if value.is_empty() {
+        app.open_config_modal(option);
+        return;
+    }
     if option.set(app, value) {
         // Theme changes autosave inside `commit_theme`; other options save here.
         if option.name != "theme" {

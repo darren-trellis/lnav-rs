@@ -3,7 +3,7 @@ mod overlay;
 mod sidebar;
 mod status;
 mod suggest;
-mod theme_picker;
+mod config_modal;
 
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout, Rect};
@@ -48,7 +48,8 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
     let area = frame.area();
     app.pointer.hit = crate::app::HitAreas::default();
 
-    let suggest_h = if app.input_mode == InputMode::Command && app.theme_picker.is_none() {
+    let modal_open = app.config_modal.is_some();
+    let suggest_h = if app.input_mode == InputMode::Command && !modal_open {
         suggest::desired_height(app, area.height.saturating_sub(4))
     } else {
         0
@@ -62,7 +63,7 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
     .split(area);
 
     let body = chunks[0];
-    let show_sidebar = app.config.sidebar && app.theme_picker.is_none();
+    let show_sidebar = app.config.sidebar && !modal_open;
     let sidebar_w = if show_sidebar {
         sidebar::desired_width(body.width)
     } else {
@@ -77,7 +78,7 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
         (body, None)
     };
 
-    let detail_content = if app.details.visible && app.theme_picker.is_none() {
+    let detail_content = if app.details.visible && !modal_open {
         app.selected_entry()
             .map(|entry| details::build_lines(entry, &app.theme, &app.config, &app.details.folded))
     } else {
@@ -112,7 +113,7 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
     }
     status::draw(frame, app, chunks[2]);
 
-    if app.theme_picker.is_some() {
-        theme_picker::draw(frame, app, body);
+    if app.config_modal.is_some() {
+        config_modal::draw(frame, app, body);
     }
 }

@@ -59,7 +59,6 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 | `:` | `command-mode` |
 | `n` / `N` | `match next` / `match prev` |
 | `s` | `view sidebar toggle` (filters sidebar) |
-| `t` | `theme cycle` |
 | `d` | `hide` operator — `dd` current, `dj`/`dG`/… range; in sidebar `dd` deletes filter |
 | `Backspace` | `hide line` (same as `dd`; accepts a count); in sidebar `filter delete line` |
 | `p` | `pin line` — toggle sticky pin at top of list (accepts a count) |
@@ -73,13 +72,13 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 |--------|--------|
 | Click a log line | Select it (completes a pending `d`/`D` operator) |
 | Double-click a log line | Toggle details overlay |
-| Scroll wheel | Move selection (or cycle completions / theme picker) |
+| Scroll wheel | Move selection (or cycle completions / config picker) |
 | Click / drag scrollbar | Scroll the list or details |
 | Click a completion | Insert it |
 | Click details overlay | Focus it / move details cursor |
 | Click filters sidebar | Focus it / select a filter |
 | Click status bar | Enter `:` command mode |
-| Theme picker hover / click | Preview / set theme |
+| Config picker hover / click | Preview (theme) / set value |
 
 ### Commands (`:`)
 
@@ -107,12 +106,8 @@ In `/` mode, **Up/Down** recall search history (shared for list and details sear
 | `:hide clear` | Restore lines hidden with `d` |
 | `:pin` / `:pin line` | Pin/unpin current line(s) sticky at the top of the list |
 | `:pin clear` | Unpin all sticky lines |
-| `:theme` | Show current theme |
-| `:theme list` | List available themes |
-| `:theme set` | Open theme picker (preview on hover / configured navigation keys) |
-| `:theme set NAME` | Switch theme |
-| `:theme cycle` | Cycle to the next theme |
-| `:config set theme NAME` | Set theme |
+| `:config set KEY` | Open picker/editor for a setting (theme, bools, formats, numbers) |
+| `:config set theme [NAME]` | Set theme, or open theme picker with live preview |
 | `:config set follow on\|off\|toggle` | Enable/disable/toggle live follow |
 | `:config set wrap_details on\|off\|toggle` | Wrap overlay text |
 | `:config set details_json_tree on\|off\|toggle` | Tree-view nested JSON in details (default on) |
@@ -218,7 +213,7 @@ backspace = "filter delete line"
 
 `case_mode` controls `/` search and `:filter` matching: `smart` / `smartcase` (default; insensitive unless the pattern has an uppercase letter), `insensitive`, or `sensitive`.
 
-Boolean `:config set` values use `on` / `off` / `toggle` only. With `autosave` on (default), successful `:config set`, theme changes (`:theme set` / `:theme cycle` / picker / `t`), and sidebar visibility writes `config.toml`; use `:config save` to write manually.
+Boolean `:config set` values use `on` / `off` / `toggle` only. Bare `:config set KEY` opens a modal: a list for theme/bool/case/timestamp options, or a value editor for numbers. With `autosave` on (default), successful `:config set` (including modal confirms) and sidebar visibility writes `config.toml`; use `:config save` to write manually.
 
 Details: `Enter` opens and focuses the overlay — the selection highlight moves into details (`j`/`k` move the cursor; Esc runs `view current off` and closes it). `Tab` / `:focus toggle` cycles focus across the list, details (if open), and the filters sidebar (if open). `Space` folds/unfolds the tree item under the cursor when details is focused (`:fold on|off|toggle`). `?` toggles keybinding hints on the overlay border. `c` / `:copy` copies the focused item’s value (strings without quotes; objects/arrays as pretty JSON). With details focused, `/` searches inside the overlay (`n`/`N` cycle matches). Nested JSON fields render as a tree when `details_json_tree` is on (`details_tab_width` sets indent per level). Overlay height grows with content up to `details_max_height` (and screen space).
 
@@ -245,8 +240,8 @@ CLI flags override the config file (`--theme`, `--config PATH`).
 Drop TOML themes in `~/.config/lnav-rs/themes/<name>.toml` (same shape as files in `themes/`), then:
 
 ```text
-:theme set <name>
-:theme set          # interactive picker
+:config set theme <name>
+:config set theme          # interactive picker
 ```
 
 ## Themes

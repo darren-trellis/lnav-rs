@@ -38,16 +38,12 @@ const COMMANDS: &[CommandInfo] = &[
         help: "delete line(s): DD or D{{motion}}",
     },
     CommandInfo {
-        name: "theme",
-        help: "theme | list | set [NAME] | cycle",
-    },
-    CommandInfo {
         name: "filter",
         help: "list | in|out [PATTERN] | on|off|toggle | clear | delete [N]",
     },
     CommandInfo {
         name: "config",
-        help: "path | init | set KEY VAL | get KEY | save",
+        help: "path | init | set KEY [VAL] | get KEY | save",
     },
 ];
 

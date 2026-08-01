@@ -54,19 +54,31 @@ pub enum Focus {
     Sidebar,
 }
 
-/// Interactive theme selector opened by `:theme set`.
+/// Modal opened by bare `:config set KEY` (list picker or freeform editor).
 #[derive(Debug, Clone)]
-pub struct ThemePicker {
-    pub names: Vec<String>,
+pub enum ConfigModal {
+    Picker(ConfigPicker),
+    Editor(ConfigValueEditor),
+}
+
+#[derive(Debug, Clone)]
+pub struct ConfigPicker {
+    pub option_name: &'static str,
+    pub values: Vec<String>,
     pub selected: usize,
-    /// Committed theme name to restore on cancel.
-    pub previous_name: String,
-    /// Full popup rect from the last draw.
+    /// Committed value to restore on cancel (theme preview) / mark with `*`.
+    pub previous_value: String,
     pub popup_area: Rect,
-    /// List inner area from the last draw (for mouse hit-testing).
     pub list_area: Rect,
-    /// First visible name index in `list_area`.
     pub list_start: usize,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConfigValueEditor {
+    pub option_name: &'static str,
+    pub previous_value: String,
+    pub buffer: String,
+    pub popup_area: Rect,
 }
 
 /// Widget rects from the last frame, used for mouse hit-testing.
@@ -160,7 +172,7 @@ pub struct App {
     pub op_anchor: usize,
     /// Vim-style count prefix being typed (`5` in `5j`).
     pub count: Option<usize>,
-    pub theme_picker: Option<ThemePicker>,
+    pub config_modal: Option<ConfigModal>,
     pub(crate) pointer: PointerState,
     pub(crate) search: SearchState,
     pub(crate) command_line: CommandLineState,
@@ -225,7 +237,7 @@ impl App {
             pending_op: None,
             op_anchor: 0,
             count: None,
-            theme_picker: None,
+            config_modal: None,
             pointer: PointerState {
                 hit: HitAreas::default(),
                 last_click: None,
@@ -397,7 +409,7 @@ impl App {
         let _ = execute!(stdout(), EnableMouseCapture);
         let result = self.run_loop(terminal);
         let _ = execute!(stdout(), DisableMouseCapture);
-        self.close_theme_picker(false);
+        self.close_config_modal(false);
         result
     }
 

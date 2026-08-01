@@ -33,7 +33,6 @@ pub fn defaults() -> BTreeMap<String, String> {
         (":".into(), "command-mode".into()),
         ("n".into(), "match next".into()),
         ("N".into(), "match prev".into()),
-        ("t".into(), "theme cycle".into()),
         ("d".into(), "hide".into()),
         ("backspace".into(), "hide line".into()),
         ("D".into(), "delete".into()),

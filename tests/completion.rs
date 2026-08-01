@@ -46,6 +46,7 @@ fn does_not_suggest_keybinding_only_commands() {
     assert!(items.iter().any(|s| s.text == "hide"));
     assert!(items.iter().any(|s| s.text == "delete"));
     assert!(items.iter().any(|s| s.text == "config"));
+    assert!(items.iter().all(|s| s.text != "theme"));
     assert!(items.iter().all(|s| {
         !matches!(
             s.text.as_str(),

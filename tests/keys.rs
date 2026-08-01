@@ -37,4 +37,5 @@ fn default_d_maps_to_hide() {
         defaults().get("esc").map(String::as_str),
         Some("view current off")
     );
+    assert!(!defaults().contains_key("t"));
 }

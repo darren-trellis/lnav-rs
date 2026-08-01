@@ -1,16 +1,17 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
 use ratatui::layout::Rect;
 
-use super::{App, InputMode, ThemePicker};
+use super::{App, ConfigModal, ConfigPicker, ConfigValueEditor, InputMode};
 use crate::command;
 use crate::completion;
+use crate::config_options::{self, ConfigOption, ValueKind};
 use crate::keys;
 use crate::theme::Theme;
 
 impl App {
     pub(super) fn handle_key(&mut self, key: KeyEvent) {
-        if self.theme_picker.is_some() {
-            self.handle_theme_picker_key(key);
+        if self.config_modal.is_some() {
+            self.handle_config_modal_key(key);
             return;
         }
         match self.input_mode {
@@ -20,37 +21,69 @@ impl App {
         }
     }
 
-    fn handle_theme_picker_key(&mut self, key: KeyEvent) {
+    fn handle_config_modal_key(&mut self, key: KeyEvent) {
+        match &self.config_modal {
+            Some(ConfigModal::Editor(_)) => self.handle_config_editor_key(key),
+            Some(ConfigModal::Picker(_)) => self.handle_config_picker_key(key),
+            None => {}
+        }
+    }
+
+    fn handle_config_editor_key(&mut self, key: KeyEvent) {
         match key.code {
-            KeyCode::Esc | KeyCode::Char('q') => self.close_theme_picker(false),
+            KeyCode::Esc => self.close_config_modal(false),
+            KeyCode::Enter => self.close_config_modal(true),
+            KeyCode::Backspace => {
+                if let Some(ConfigModal::Editor(editor)) = &mut self.config_modal {
+                    editor.buffer.pop();
+                }
+            }
+            KeyCode::Char(c) if !key.modifiers.contains(KeyModifiers::CONTROL) => {
+                if let Some(ConfigModal::Editor(editor)) = &mut self.config_modal {
+                    editor.buffer.push(c);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    fn handle_config_picker_key(&mut self, key: KeyEvent) {
+        match key.code {
+            KeyCode::Esc | KeyCode::Char('q') => self.close_config_modal(false),
             _ => {
                 let command = keys::encode(key)
                     .and_then(|spec| self.config.keys.get(&spec))
                     .map(|raw| raw.trim().to_ascii_lowercase());
                 match command.as_deref() {
-                    Some("nav up") => self.theme_picker_move(-1),
-                    Some("nav down") => self.theme_picker_move(1),
+                    Some("nav up") => self.config_picker_move(-1),
+                    Some("nav down") => self.config_picker_move(1),
                     Some("page up") => {
                         let page = self
-                            .theme_picker
+                            .config_modal
                             .as_ref()
-                            .map(|picker| picker.list_area.height.max(1) as isize)
+                            .and_then(|m| match m {
+                                ConfigModal::Picker(p) => Some(p.list_area.height.max(1) as isize),
+                                _ => None,
+                            })
                             .unwrap_or(1);
-                        self.theme_picker_move(-page);
+                        self.config_picker_move(-page);
                     }
                     Some("page down") => {
                         let page = self
-                            .theme_picker
+                            .config_modal
                             .as_ref()
-                            .map(|picker| picker.list_area.height.max(1) as isize)
+                            .and_then(|m| match m {
+                                ConfigModal::Picker(p) => Some(p.list_area.height.max(1) as isize),
+                                _ => None,
+                            })
                             .unwrap_or(1);
-                        self.theme_picker_move(page);
+                        self.config_picker_move(page);
                     }
-                    Some("nav top") => self.theme_picker_select(0),
+                    Some("nav top") => self.config_picker_select(0),
                     Some("nav bottom") => {
-                        if let Some(picker) = &self.theme_picker {
-                            let last = picker.names.len().saturating_sub(1);
-                            self.theme_picker_select(last);
+                        if let Some(ConfigModal::Picker(picker)) = &self.config_modal {
+                            let last = picker.values.len().saturating_sub(1);
+                            self.config_picker_select(last);
                         }
                     }
                     Some(
@@ -60,18 +93,16 @@ impl App {
                         | "view current"
                         | "view current toggle"
                         | "view current on",
-                    ) => self.close_theme_picker(true),
-                    Some("view details off" | "view current off") => {
-                        self.close_theme_picker(false)
-                    }
+                    ) => self.close_config_modal(true),
+                    Some("view details off" | "view current off") => self.close_config_modal(false),
                     _ => {}
                 }
             }
         }
     }
 
-    pub(super) fn handle_theme_picker_mouse(&mut self, mouse: MouseEvent) {
-        let Some(picker) = &self.theme_picker else {
+    pub(super) fn handle_config_modal_mouse(&mut self, mouse: MouseEvent) {
+        let Some(ConfigModal::Picker(picker)) = &self.config_modal else {
             return;
         };
         let popup = picker.popup_area;
@@ -80,95 +111,118 @@ impl App {
         let row = mouse.row;
 
         match mouse.kind {
-            MouseEventKind::ScrollUp => self.theme_picker_move(-1),
-            MouseEventKind::ScrollDown => self.theme_picker_move(1),
+            MouseEventKind::ScrollUp => self.config_picker_move(-1),
+            MouseEventKind::ScrollDown => self.config_picker_move(1),
             MouseEventKind::Moved => {
                 if contains(area, col, row) {
                     let idx = picker.list_start + (row - area.y) as usize;
-                    if idx < picker.names.len() {
-                        self.theme_picker_select(idx);
+                    if idx < picker.values.len() {
+                        self.config_picker_select(idx);
                     }
                 }
             }
             MouseEventKind::Down(MouseButton::Left) => {
                 if contains(area, col, row) {
                     let idx = picker.list_start + (row - area.y) as usize;
-                    if idx < picker.names.len() {
-                        self.theme_picker_select(idx);
-                        self.close_theme_picker(true);
+                    if idx < picker.values.len() {
+                        self.config_picker_select(idx);
+                        self.close_config_modal(true);
                     }
                 } else if !contains(popup, col, row) {
-                    self.close_theme_picker(false);
+                    self.close_config_modal(false);
                 }
             }
             _ => {}
         }
     }
 
-    pub(crate) fn open_theme_picker(&mut self) {
+    pub(crate) fn open_config_modal(&mut self, option: &'static ConfigOption) {
         self.cancel_pending_op();
-        let names = Theme::list_names();
-        if names.is_empty() {
-            self.status_message = Some("no themes available".into());
-            return;
-        }
-        let previous_name = self.config.theme.name().to_string();
-        let selected = names
-            .iter()
-            .position(|n| n == &previous_name || n == &self.theme.name)
-            .unwrap_or(0);
-        self.theme_picker = Some(ThemePicker {
-            names,
-            selected,
-            previous_name,
-            popup_area: Rect::default(),
-            list_area: Rect::default(),
-            list_start: 0,
-        });
         self.input_mode = InputMode::Normal;
         self.command_line.buffer.clear();
         self.command_line.history.reset_navigation();
         self.search.history.reset_navigation();
         self.command_line.completions.clear();
-        self.preview_theme_at_selection();
-        let confirm =
-            keys::binding_for_command(&self.config.keys, None, "view details").unwrap_or("enter");
-        self.status_message = Some(format!(
-            "theme picker · click/{confirm} to set · Esc to cancel"
-        ));
+
+        let previous_value = option.get(self);
+        match option.value_kind {
+            ValueKind::Unsigned => {
+                self.config_modal = Some(ConfigModal::Editor(ConfigValueEditor {
+                    option_name: option.name,
+                    previous_value: previous_value.clone(),
+                    buffer: previous_value,
+                    popup_area: Rect::default(),
+                }));
+                self.status_message = Some(format!(
+                    "{} · type value · Enter to set · Esc to cancel",
+                    option.name
+                ));
+            }
+            ValueKind::Theme | ValueKind::Bool | ValueKind::CaseMode | ValueKind::TimestampFormat => {
+                let values = option.value_kind.suggestions();
+                if values.is_empty() {
+                    self.status_message = Some(format!("no values for {}", option.name));
+                    return;
+                }
+                let selected = values
+                    .iter()
+                    .position(|v| v == &previous_value)
+                    .unwrap_or(0);
+                self.config_modal = Some(ConfigModal::Picker(ConfigPicker {
+                    option_name: option.name,
+                    values,
+                    selected,
+                    previous_value,
+                    popup_area: Rect::default(),
+                    list_area: Rect::default(),
+                    list_start: 0,
+                }));
+                if option.name == "theme" {
+                    self.preview_theme_at_selection();
+                }
+                let confirm = keys::binding_for_command(&self.config.keys, None, "view details")
+                    .unwrap_or("enter");
+                self.status_message = Some(format!(
+                    "{} · click/{confirm} to set · Esc to cancel",
+                    option.name
+                ));
+            }
+        }
     }
 
-    fn theme_picker_move(&mut self, delta: isize) {
-        let Some(picker) = &self.theme_picker else {
+    fn config_picker_move(&mut self, delta: isize) {
+        let Some(ConfigModal::Picker(picker)) = &self.config_modal else {
             return;
         };
-        let len = picker.names.len() as isize;
+        let len = picker.values.len() as isize;
         if len == 0 {
             return;
         }
         let next = (picker.selected as isize + delta).rem_euclid(len) as usize;
-        self.theme_picker_select(next);
+        self.config_picker_select(next);
     }
 
-    fn theme_picker_select(&mut self, idx: usize) {
-        {
-            let Some(picker) = &mut self.theme_picker else {
+    fn config_picker_select(&mut self, idx: usize) {
+        let option_name = {
+            let Some(ConfigModal::Picker(picker)) = &mut self.config_modal else {
                 return;
             };
-            if idx >= picker.names.len() || idx == picker.selected {
+            if idx >= picker.values.len() || idx == picker.selected {
                 return;
             }
             picker.selected = idx;
+            picker.option_name
+        };
+        if option_name == "theme" {
+            self.preview_theme_at_selection();
         }
-        self.preview_theme_at_selection();
     }
 
     fn preview_theme_at_selection(&mut self) {
-        let Some(name) = self
-            .theme_picker
-            .as_ref()
-            .and_then(|p| p.names.get(p.selected).cloned())
-        else {
+        let Some(name) = self.config_modal.as_ref().and_then(|m| match m {
+            ConfigModal::Picker(p) if p.option_name == "theme" => p.values.get(p.selected).cloned(),
+            _ => None,
+        }) else {
             return;
         };
         let overrides = self.config.theme_overrides();
@@ -178,23 +232,56 @@ impl App {
         }
     }
 
-    pub(crate) fn close_theme_picker(&mut self, confirm: bool) {
-        let Some(picker) = self.theme_picker.take() else {
+    pub(crate) fn close_config_modal(&mut self, confirm: bool) {
+        let Some(modal) = self.config_modal.take() else {
             return;
         };
-        if confirm && let Some(name) = picker.names.get(picker.selected) {
-            self.commit_theme(name);
+        match modal {
+            ConfigModal::Picker(picker) => {
+                if confirm && let Some(value) = picker.values.get(picker.selected) {
+                    self.commit_config_value(picker.option_name, value);
+                    return;
+                }
+                if picker.option_name == "theme" {
+                    let overrides = self.config.theme_overrides();
+                    if let Ok(theme) =
+                        Theme::resolve_with_overrides(&picker.previous_value, &overrides)
+                    {
+                        self.theme = theme;
+                        self.theme_index = Theme::list_names()
+                            .iter()
+                            .position(|t| t == &picker.previous_value)
+                            .unwrap_or(self.theme_index);
+                    }
+                    self.status_message = Some(format!("theme: {}", self.config.theme.name()));
+                } else {
+                    self.status_message = Some(format!(
+                        "{}={}",
+                        picker.option_name, picker.previous_value
+                    ));
+                }
+            }
+            ConfigModal::Editor(editor) => {
+                if confirm {
+                    self.commit_config_value(editor.option_name, &editor.buffer);
+                    return;
+                }
+                self.status_message = Some(format!(
+                    "{}={}",
+                    editor.option_name, editor.previous_value
+                ));
+            }
+        }
+    }
+
+    fn commit_config_value(&mut self, name: &str, value: &str) {
+        let Some(option) = config_options::find(name) else {
+            self.status_message = Some(format!("unknown option: {name}"));
             return;
+        };
+        if option.set(self, value) && option.name != "theme" {
+            self.maybe_autosave();
         }
-        let overrides = self.config.theme_overrides();
-        if let Ok(theme) = Theme::resolve_with_overrides(&picker.previous_name, &overrides) {
-            self.theme = theme;
-            self.theme_index = Theme::list_names()
-                .iter()
-                .position(|t| t == &picker.previous_name)
-                .unwrap_or(self.theme_index);
-        }
-        self.status_message = Some(format!("theme: {}", self.config.theme.name()));
     }
 
     pub(crate) fn commit_theme(&mut self, name: &str) {
@@ -382,18 +469,6 @@ impl App {
         }
     }
 
-    pub(crate) fn cycle_theme(&mut self) {
-        if self.theme_picker.is_some() {
-            return;
-        }
-        let themes = Theme::list_names();
-        if themes.is_empty() {
-            return;
-        }
-        self.theme_index = (self.theme_index + 1) % themes.len();
-        let name = themes[self.theme_index].clone();
-        self.commit_theme(&name);
-    }
 }
 
 fn contains(area: Rect, col: u16, row: u16) -> bool {

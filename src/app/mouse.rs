@@ -8,8 +8,8 @@ use crate::completion;
 
 impl App {
     pub(super) fn handle_mouse(&mut self, mouse: MouseEvent) {
-        if self.theme_picker.is_some() {
-            self.handle_theme_picker_mouse(mouse);
+        if self.config_modal.is_some() {
+            self.handle_config_modal_mouse(mouse);
             return;
         }
 

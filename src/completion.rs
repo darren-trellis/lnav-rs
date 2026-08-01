@@ -1,7 +1,6 @@
 use crate::app::App;
 use crate::command_catalog;
 use crate::config_options;
-use crate::theme::Theme;
 
 #[derive(Debug, Clone)]
 pub struct Suggestion {
@@ -137,7 +136,6 @@ fn suggestions_for(buffer: &str, app: &App) -> Vec<Suggestion> {
         let rest_from = buffer.len() - rest.len();
 
         match cmd.to_ascii_lowercase().as_str() {
-            "theme" => theme_suggestions(rest, rest_from),
             "filter" => filter_suggestions(rest, rest_from, app.filters.len()),
             "fold" => on_off_toggle_suggestions(rest, rest_from, FOLD_SUBS),
             "focus" => on_off_toggle_suggestions(rest, rest_from, FOCUS_SUBS),
@@ -345,40 +343,10 @@ pub fn command_suggestions(prefix: &str, replace_from: usize) -> Vec<Suggestion>
     items
 }
 
-const THEME_SUBS: &[(&str, &str)] = &[
-    ("list", "list available themes"),
-    ("set", "set theme or open picker"),
-    ("cycle", "cycle to the next theme"),
-];
-
-fn theme_suggestions(rest: &str, rest_from: usize) -> Vec<Suggestion> {
-    if !rest.contains(char::is_whitespace) {
-        let prefix = rest.to_ascii_lowercase();
-        return THEME_SUBS
-            .iter()
-            .filter(|(k, _)| k.starts_with(&prefix))
-            .map(|(k, help)| Suggestion {
-                text: (*k).to_string(),
-                label: (*k).to_string(),
-                help: (*help).to_string(),
-                replace_from: rest_from,
-            })
-            .collect();
-    }
-
-    let (sub, value_raw) = split_once_ws(rest);
-    let value = value_raw.trim_start();
-    let value_from = rest_from + (rest.len() - value.len());
-    match sub.to_ascii_lowercase().as_str() {
-        "set" => value_suggestions(value, value_from, &Theme::list_names(), "theme"),
-        _ => Vec::new(),
-    }
-}
-
 const CONFIG_SUBS: &[(&str, &str)] = &[
     ("path", "show config file path"),
     ("init", "write config from current settings"),
-    ("set", "set config option"),
+    ("set", "set option (omit value for picker)"),
     ("get", "show config option value"),
     ("save", "save config to disk"),
 ];
