@@ -74,14 +74,14 @@ pub fn defaults() -> BTreeMap<String, String> {
         ("p".into(), "pin".into()),
         ("?".into(), "help".into()),
         ("s".into(), "view sidebar toggle".into()),
-        ("S-D-left".into(), "resize sidebar left".into()),
-        ("S-D-h".into(), "resize sidebar left".into()),
-        ("S-D-right".into(), "resize sidebar right".into()),
-        ("S-D-l".into(), "resize sidebar right".into()),
-        ("S-D-up".into(), "resize details up".into()),
-        ("S-D-k".into(), "resize details up".into()),
-        ("S-D-down".into(), "resize details down".into()),
-        ("S-D-j".into(), "resize details down".into()),
+        ("S-D-left".into(), "config set sidebar_width -1".into()),
+        ("S-D-h".into(), "config set sidebar_width -1".into()),
+        ("S-D-right".into(), "config set sidebar_width +1".into()),
+        ("S-D-l".into(), "config set sidebar_width +1".into()),
+        ("S-D-up".into(), "config set details_max_height +1".into()),
+        ("S-D-k".into(), "config set details_max_height +1".into()),
+        ("S-D-down".into(), "config set details_max_height -1".into()),
+        ("S-D-j".into(), "config set details_max_height -1".into()),
     ])
 }
 

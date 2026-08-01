@@ -23,8 +23,8 @@ Unknown keys, invalid colors, unknown theme names, and unknown keybinding comman
 - `[keys.sidebar]` overrides `[keys]` while the filters sidebar is focused.
 - An empty binding in either contextual section blocks fallback to the same key in `[keys]`.
 
-Keybinding-only commands (`nav`, `page`, `scroll`, `resize`, `match`, `focus`, `search`, `command`) are listed in the README Commands section; they are omitted from `:` completions.
+Keybinding-only commands (`nav`, `page`, `scroll`, `match`, `focus`, `search`, `command`) are listed in the README Commands section; they are omitted from `:` completions.
 
-Default resize chords (Shift+Command): `S-D-left`/`S-D-h` and `S-D-right`/`S-D-l` adjust `sidebar_width`; `S-D-up`/`S-D-k` and `S-D-down`/`S-D-j` adjust `details_max_height` (capped by content height and main viewport minus pinned rows minus 5). Some terminals swallow Cmd chords — rebind if needed.
+Default resize chords (Shift+Command) call `:config set` with relative values (`+1`/`-1`), so autosave persists them: `S-D-left`/`S-D-h` → `sidebar_width -1`, `S-D-right`/`S-D-l` → `sidebar_width +1`, `S-D-up`/`S-D-k` → `details_max_height +1`, `S-D-down`/`S-D-j` → `details_max_height -1`. Relative `details_max_height` adjusts are capped by content height and main viewport minus pinned rows minus 5; relative `sidebar_width` is capped to leave room for the list. Some terminals swallow Cmd chords — rebind if needed.
 
 `?` / `:help` opens a cheatsheet modal (Esc / `q` / `?` closes; `j`/`k` and `h`/`l` scroll).

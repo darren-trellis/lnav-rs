@@ -63,12 +63,18 @@ const CHEATSHEET: &[Entry] = &[
     },
     Entry::Item {
         context: Context::Base,
-        groups: &["resize sidebar left", "resize sidebar right"],
+        groups: &[
+            "config set sidebar_width -1",
+            "config set sidebar_width +1",
+        ],
         description: "resize sidebar width",
     },
     Entry::Item {
         context: Context::Base,
-        groups: &["resize details up", "resize details down"],
+        groups: &[
+            "config set details_max_height +1",
+            "config set details_max_height -1",
+        ],
         description: "resize details max height",
     },
     Entry::Blank,

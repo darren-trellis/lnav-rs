@@ -33,11 +33,11 @@ fn encodes_shift_super_chords() {
 fn default_resize_bindings() {
     assert_eq!(
         defaults().get("S-D-left").map(String::as_str),
-        Some("resize sidebar left")
+        Some("config set sidebar_width -1")
     );
     assert_eq!(
         defaults().get("S-D-j").map(String::as_str),
-        Some("resize details down")
+        Some("config set details_max_height -1")
     );
 }
 

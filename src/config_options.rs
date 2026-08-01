@@ -371,14 +371,29 @@ fn get_details_max_height(app: &App) -> String {
 }
 
 fn set_details_max_height(app: &mut App, value: &str) -> bool {
+    const MIN: usize = 4;
+    if let Some(delta) = parse_relative_delta(value) {
+        let delta = delta.saturating_mul(app.take_count() as isize);
+        let max = app.details_max_height_cap();
+        let current = app.config.details_max_height.min(max).max(MIN);
+        let next = (current as isize + delta).clamp(MIN as isize, max as isize) as usize;
+        app.config.details_max_height = next;
+        if !app.details.visible {
+            app.open_details();
+        }
+        app.status_message = Some(format!("details_max_height={next}"));
+        return true;
+    }
     match value.parse::<usize>() {
-        Ok(height) if height >= 4 => {
+        Ok(height) if height >= MIN => {
             app.config.details_max_height = height;
             app.status_message = Some(format!("details_max_height={height}"));
             true
         }
         _ => {
-            app.status_message = Some("usage: :config set details_max_height N (N >= 4)".into());
+            app.status_message = Some(
+                "usage: :config set details_max_height N|+N|-N (N >= 4)".into(),
+            );
             false
         }
     }
@@ -586,6 +601,16 @@ fn get_sidebar_width(app: &App) -> String {
 
 fn set_sidebar_width(app: &mut App, value: &str) -> bool {
     let min = crate::config::default_sidebar_width_min();
+    if let Some(delta) = parse_relative_delta(value) {
+        let delta = delta.saturating_mul(app.take_count() as isize);
+        let max = app.sidebar_width_max();
+        let current = app.config.sidebar_width.max(min).min(max);
+        let next = (current as isize + delta).clamp(min as isize, max as isize) as usize;
+        app.config.sidebar_width = next;
+        app.config.sidebar = true;
+        app.status_message = Some(format!("sidebar_width={next}"));
+        return true;
+    }
     match value.parse::<usize>() {
         Ok(width) if width >= min => {
             app.config.sidebar_width = width;
@@ -593,11 +618,24 @@ fn set_sidebar_width(app: &mut App, value: &str) -> bool {
             true
         }
         _ => {
-            app.status_message =
-                Some(format!("usage: :config set sidebar_width N (N >= {min})"));
+            app.status_message = Some(format!(
+                "usage: :config set sidebar_width N|+N|-N (N >= {min})"
+            ));
             false
         }
     }
+}
+
+/// `+N` / `-N` relative adjust (not a bare integer).
+fn parse_relative_delta(value: &str) -> Option<isize> {
+    let value = value.trim();
+    if value.len() < 2 || !(value.starts_with('+') || value.starts_with('-')) {
+        return None;
+    }
+    if !value[1..].bytes().all(|b| b.is_ascii_digit()) {
+        return None;
+    }
+    value.parse().ok()
 }
 
 fn get_scroll_lines(app: &App) -> String {

@@ -55,7 +55,6 @@ fn execute_one(app: &mut App, line: &str, invoke: Invoke) {
         "nav" => nav_command(app, rest),
         "page" => page_command(app, rest),
         "scroll" => scroll_command(app, rest),
-        "resize" => resize_command(app, rest),
         "view" => {
             app.cancel_pending_op();
             view_command(app, rest);
@@ -345,25 +344,6 @@ fn scroll_command(app: &mut App, rest: &str) {
         other => {
             app.status_message =
                 Some(format!("usage: scroll [left|right]  (unknown: {other})"));
-        }
-    }
-}
-
-fn resize_command(app: &mut App, rest: &str) {
-    let (target, dir) = split_cmd(rest);
-    let n = app.take_count() as isize;
-    match (
-        target.to_ascii_lowercase().as_str(),
-        dir.to_ascii_lowercase().as_str(),
-    ) {
-        ("sidebar", "left" | "h" | "narrower") => app.resize_sidebar_width(-n),
-        ("sidebar", "right" | "l" | "wider") => app.resize_sidebar_width(n),
-        ("details", "up" | "k" | "taller") => app.resize_details_max_height(n),
-        ("details", "down" | "j" | "shorter") => app.resize_details_max_height(-n),
-        _ => {
-            app.status_message = Some(
-                "usage: resize sidebar left|right | resize details up|down".into(),
-            );
         }
     }
 }

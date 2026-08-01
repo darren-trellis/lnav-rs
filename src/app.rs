@@ -874,10 +874,10 @@ impl App {
         self.details.folded.clear();
     }
 
-    pub(crate) fn resize_sidebar_width(&mut self, delta: isize) {
+    /// Soft upper bound when adjusting `sidebar_width` relatively (`+N`/`-N`).
+    pub(crate) fn sidebar_width_max(&self) -> usize {
         let min = crate::config::default_sidebar_width_min();
         let body_w = if self.pointer.hit.sidebar_inner.width > 0 {
-            // main + sidebar content + borders
             self.pointer
                 .hit
                 .main
@@ -887,21 +887,12 @@ impl App {
         } else {
             self.pointer.hit.main.width
         } as usize;
-        // Mirror sidebar::desired_width: leave at least MIN_MAIN (20) for the list.
-        let max = body_w.saturating_sub(20).max(min);
-        let current = self.config.sidebar_width.max(min).min(max);
-        let next = (current as isize + delta).clamp(min as isize, max as isize) as usize;
-        if next == self.config.sidebar_width && self.config.sidebar {
-            self.status_message = Some(format!("sidebar_width={next}"));
-            return;
-        }
-        self.config.sidebar_width = next;
-        self.config.sidebar = true;
-        self.status_message = Some(format!("sidebar_width={next}"));
-        self.maybe_autosave();
+        body_w.saturating_sub(20).max(min)
     }
 
-    pub(crate) fn resize_details_max_height(&mut self, delta: isize) {
+    /// Soft upper bound when adjusting `details_max_height` relatively (`+N`/`-N`):
+    /// min(content+borders, main − pins − 5).
+    pub(crate) fn details_max_height_cap(&self) -> usize {
         const MIN: usize = 4;
         const PIN_BUFFER: usize = 5;
         let content_lines = if self.details.visible {
@@ -920,24 +911,11 @@ impl App {
                 .unwrap_or(0)
         };
         let content_cap = content_lines.saturating_add(2).max(MIN);
-        let main_h = self.pointer.hit.main.height as usize;
-        let layout_cap = main_h
+        let layout_cap = (self.pointer.hit.main.height as usize)
             .saturating_sub(self.pin_count())
             .saturating_sub(PIN_BUFFER)
             .max(MIN);
-        let max = content_cap.min(layout_cap).max(MIN);
-        let current = self.config.details_max_height.min(max).max(MIN);
-        let next = (current as isize + delta).clamp(MIN as isize, max as isize) as usize;
-        if next == self.config.details_max_height {
-            self.status_message = Some(format!("details_max_height={next} (max {max})"));
-            return;
-        }
-        self.config.details_max_height = next;
-        if !self.details.visible {
-            self.open_details();
-        }
-        self.status_message = Some(format!("details_max_height={next}"));
-        self.maybe_autosave();
+        content_cap.min(layout_cap).max(MIN)
     }
 
     pub(crate) fn maybe_autosave(&mut self) {
