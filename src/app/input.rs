@@ -193,11 +193,11 @@ impl App {
                             .unwrap_or(1);
                         self.config_picker_move(page);
                     }
-                    Some("nav top") => self.config_picker_select(0),
+                    Some("nav top") => self.config_picker_select(0, true),
                     Some("nav bottom") => {
                         if let Some(ConfigModal::Picker(picker)) = &self.config_modal {
                             let last = picker.values.len().saturating_sub(1);
-                            self.config_picker_select(last);
+                            self.config_picker_select(last, true);
                         }
                     }
                     Some(
@@ -263,7 +263,7 @@ impl App {
                             let idx = picker.list_start + (row - area.y) as usize;
                             if idx < picker.values.len() {
                                 let double = self.register_click(ClickTarget::ConfigPicker(idx));
-                                self.config_picker_select(idx);
+                                self.config_picker_select(idx, false);
                                 if double {
                                     self.close_config_modal(true);
                                 }
@@ -309,6 +309,8 @@ impl App {
                     .iter()
                     .position(|v| v == &previous_value)
                     .unwrap_or(0);
+                // Max picker viewport is 12 rows; center until the first draw sets list_area.
+                let list_start = selected.saturating_sub(6);
                 self.config_modal = Some(ConfigModal::Picker(ConfigPicker {
                     option_name: option.name,
                     values,
@@ -316,7 +318,7 @@ impl App {
                     previous_value,
                     popup_area: Rect::default(),
                     list_area: Rect::default(),
-                    list_start: 0,
+                    list_start,
                 }));
                 self.preview_config_at_selection();
             }
@@ -332,18 +334,30 @@ impl App {
             return;
         }
         let next = (picker.selected as isize + delta).rem_euclid(len) as usize;
-        self.config_picker_select(next);
+        self.config_picker_select(next, true);
     }
 
-    fn config_picker_select(&mut self, idx: usize) {
+    fn config_picker_select(&mut self, idx: usize, recenter: bool) {
         {
             let Some(ConfigModal::Picker(picker)) = &mut self.config_modal else {
                 return;
             };
-            if idx >= picker.values.len() || idx == picker.selected {
+            if idx >= picker.values.len() {
                 return;
             }
+            let changed = idx != picker.selected;
             picker.selected = idx;
+            if recenter {
+                let viewport = if picker.list_area.height > 0 {
+                    picker.list_area.height as usize
+                } else {
+                    12
+                };
+                crate::ui::config_modal::center_picker_on_selection(picker, viewport);
+            }
+            if !changed {
+                return;
+            }
         }
         self.preview_config_at_selection();
     }

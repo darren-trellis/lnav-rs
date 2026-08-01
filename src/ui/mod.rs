@@ -3,7 +3,7 @@ mod overlay;
 mod sidebar;
 mod status;
 mod suggest;
-mod config_modal;
+pub(crate) mod config_modal;
 pub mod help_modal;
 
 use ratatui::Frame;

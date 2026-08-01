@@ -118,6 +118,19 @@ fn ensure_picker_visible(picker: &mut ConfigPicker, viewport: usize) {
     }
 }
 
+/// Center the viewport on the selected row (keyboard / wheel navigation).
+pub(crate) fn center_picker_on_selection(picker: &mut ConfigPicker, viewport: usize) {
+    if viewport == 0 || picker.values.is_empty() {
+        picker.list_start = 0;
+        return;
+    }
+    picker.list_start = picker.selected.saturating_sub(viewport / 2);
+    let max_start = picker.values.len().saturating_sub(viewport);
+    if picker.list_start > max_start {
+        picker.list_start = max_start;
+    }
+}
+
 fn draw_editor(frame: &mut Frame, app: &mut App, area: Rect) {
     let Some(ConfigModal::Editor(editor)) = &app.config_modal else {
         return;
