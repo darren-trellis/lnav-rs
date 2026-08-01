@@ -17,7 +17,7 @@ Unknown keys, invalid colors, unknown theme names, and unknown keybinding comman
 
 ## Keybindings
 
-`[keys]` overrides defaults (merged). Use `key = ""` to unbind. Chain commands with `;` (e.g. `r = "view details on; focus toggle"`). Special key names: `enter`, `esc`, `up`, `down`, `left`, `right`, `home`, `end`, `pagedown`, `pageup`, `space`, `backspace`, `C-c`.
+`[keys]` overrides defaults (merged). Use `key = ""` to unbind. Chain commands with `;` (e.g. `r = "view details on; focus toggle"`). Special key names: `enter`, `esc`, `up`, `down`, `left`, `right`, `home`, `end`, `pagedown`, `pageup`, `space`, `backspace`, `S-backspace`, `C-c`.
 
 - `[keys.details]` overrides `[keys]` while the details overlay is focused.
 - `[keys.sidebar]` overrides `[keys]` while the filters sidebar is focused.

@@ -76,10 +76,7 @@ fn execute_one(app: &mut App, line: &str, invoke: Invoke) {
         "match" => match_command(app, rest),
         "hide" => hide_command(app, rest, invoke),
         "pin" => pin_command(app, rest),
-        "delete" => match invoke {
-            Invoke::Key => app.start_or_repeat_op(PendingOp::Delete),
-            Invoke::Line => app.delete_current(),
-        },
+        "delete" => delete_command(app, rest, invoke),
         "filter" => filter_command(app, rest, invoke),
         "config" => {
             app.cancel_pending_op();
@@ -525,6 +522,21 @@ fn pin_command(app: &mut App, rest: &str) {
         other => {
             app.status_message =
                 Some(format!("usage: :pin | :pin clear  (unknown: {other})"));
+        }
+    }
+}
+
+fn delete_command(app: &mut App, rest: &str, invoke: Invoke) {
+    let (sub, _) = split_cmd(rest);
+    match sub.to_ascii_lowercase().as_str() {
+        "" => match invoke {
+            Invoke::Key => app.start_or_repeat_op(PendingOp::Delete),
+            Invoke::Line => app.delete_current(),
+        },
+        "line" => app.delete_current(),
+        other => {
+            app.status_message =
+                Some(format!("usage: :delete | :delete line  (unknown: {other})"));
         }
     }
 }

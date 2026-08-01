@@ -57,6 +57,7 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 | `s` | `view sidebar toggle` (filters + hidden lines) |
 | `d` | `hide` operator — `dd` current, `dj`/`dG`/… range; in sidebar `dd` deletes filter / unhides line |
 | `Backspace` | `hide line` (same as `dd`; accepts a count); in sidebar `filter delete line` (unhides if on a hidden row) |
+| `Shift+Backspace` | `delete line` (same as `DD`; accepts a count) |
 | `p` | `pin` — toggle sticky pin at top of list (accepts a count) |
 | `D` | `delete` operator — `DD` current, `Dj`/`DG`/… range (in-place; safe with `tee -a`) |
 | `?` | `help` (cheatsheet modal; Esc closes; `:help toggle` details border hints when focused) |
@@ -73,7 +74,7 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 | `:copy` | | Copy the focused details value to the clipboard |
 | `:hide` | `[line]` \| `clear` \| `unhide [N]` \| `reveal [N]` | Hide current line(s) (`dd`); clear restores; unhide/reveal by sidebar selection or source line N |
 | `:pin` | `[clear]` | Pin/unpin sticky line(s) at the top of the list; `clear` unpins all |
-| `:delete` | | Delete current line(s) from the file (`DD` / `D`+motion) |
+| `:delete` | `[line]` | Delete current line(s) from the file (`DD` / `D`+motion); `line` is immediate |
 | `:filter` | `list` \| `in [PATTERN]` \| `out [PATTERN]` \| `on` \| `off` \| `toggle` \| `set on` \| `set off` \| `set toggle` `[N]` \| `clear` \| `delete [N]` | List, add, enable/disable, or remove include/exclude filters (omit PATTERN to use list `/` search) |
 | `:config` | `path` \| `set KEY [VAL]` \| `get KEY` \| `save` \| `load` | Show path, get/set options (picker/editor when VAL omitted), save, or reload — see [config reference](docs/config.md) |
 | `:N` | | Jump to view line `N` |

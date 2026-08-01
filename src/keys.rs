@@ -39,7 +39,7 @@ impl KeysConfig {
 /// - specials: `enter`, `esc`, `up`, `down`, `left`, `right`,
 ///   `home`, `end`, `pagedown`, `pageup`, `tab`, `backtab`, `space`,
 ///   `backspace`
-/// - modifiers: `C-c`, `C-d` (control + key)
+/// - modifiers: `C-c`, `C-d` (control + key), `S-backspace` (shift + special)
 pub fn defaults() -> BTreeMap<String, String> {
     BTreeMap::from([
         ("q".into(), "quit".into()),
@@ -70,6 +70,7 @@ pub fn defaults() -> BTreeMap<String, String> {
         ("d".into(), "hide".into()),
         ("backspace".into(), "hide line".into()),
         ("D".into(), "delete".into()),
+        ("S-backspace".into(), "delete line".into()),
         ("p".into(), "pin".into()),
         ("?".into(), "help".into()),
         ("s".into(), "view sidebar toggle".into()),
@@ -150,6 +151,7 @@ pub fn binding_for_command<'a>(
 pub fn encode(key: KeyEvent) -> Option<String> {
     let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
     let alt = key.modifiers.contains(KeyModifiers::ALT);
+    let shift = key.modifiers.contains(KeyModifiers::SHIFT);
 
     let base = match key.code {
         KeyCode::Char(' ') => "space".to_string(),
@@ -171,8 +173,20 @@ pub fn encode(key: KeyEvent) -> Option<String> {
         _ => return None,
     };
 
-    if ctrl && alt {
+    // Shift on chars is already reflected in the character (`D` vs `d`).
+    let shift_prefix = shift && !matches!(key.code, KeyCode::Char(_));
+
+    if ctrl && alt && shift_prefix {
+        Some(format!("C-A-S-{base}"))
+    } else if ctrl && alt {
         Some(format!("C-A-{base}"))
+    } else if ctrl && shift_prefix {
+        let base = if base.len() == 1 {
+            base.to_ascii_lowercase()
+        } else {
+            base
+        };
+        Some(format!("C-S-{base}"))
     } else if ctrl {
         // Normalize C-C / C-c → C-c for letters.
         let base = if base.len() == 1 {
@@ -181,8 +195,12 @@ pub fn encode(key: KeyEvent) -> Option<String> {
             base
         };
         Some(format!("C-{base}"))
+    } else if alt && shift_prefix {
+        Some(format!("A-S-{base}"))
     } else if alt {
         Some(format!("A-{base}"))
+    } else if shift_prefix {
+        Some(format!("S-{base}"))
     } else {
         Some(base)
     }

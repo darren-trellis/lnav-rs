@@ -265,8 +265,16 @@ impl App {
     }
 
     pub(crate) fn delete_current(&mut self) {
+        if self.display_len() == 0 {
+            self.pending_op = None;
+            self.count = None;
+            return;
+        }
+        let count = self.take_count();
         let at = self.view.selected;
-        self.apply_op_display_range(PendingOp::Delete, at, at);
+        let end = (at + count - 1).min(self.display_len().saturating_sub(1));
+        self.pending_op = None;
+        self.apply_op_display_range(PendingOp::Delete, at, end);
     }
 
     pub(crate) fn pin_current(&mut self) {

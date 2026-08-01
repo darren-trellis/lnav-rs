@@ -12,6 +12,14 @@ fn encodes_case_sensitive_chars() {
 }
 
 #[test]
+fn encodes_shift_backspace() {
+    let key = KeyEvent::new(KeyCode::Backspace, KeyModifiers::SHIFT);
+    assert_eq!(encode(key).as_deref(), Some("S-backspace"));
+    let plain = KeyEvent::new(KeyCode::Backspace, KeyModifiers::NONE);
+    assert_eq!(encode(plain).as_deref(), Some("backspace"));
+}
+
+#[test]
 fn default_d_maps_to_hide() {
     assert_eq!(defaults().get("d").map(String::as_str), Some("hide"));
     assert_eq!(defaults().get("D").map(String::as_str), Some("delete"));
@@ -23,6 +31,10 @@ fn default_d_maps_to_hide() {
     assert_eq!(
         defaults().get("backspace").map(String::as_str),
         Some("hide line")
+    );
+    assert_eq!(
+        defaults().get("S-backspace").map(String::as_str),
+        Some("delete line")
     );
     assert_eq!(defaults().get("p").map(String::as_str), Some("pin"));
     assert_eq!(

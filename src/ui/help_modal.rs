@@ -34,6 +34,7 @@ pub const HELP_LINES: &[&str] = &[
     "  D            delete from file (DD, Dj, …)",
     "  p            pin/unpin sticky line",
     "  Backspace    hide line (list) · delete/unhide (sidebar)",
+    "  S-Backspace  delete line (same as DD)",
     "  :hide clear|unhide|reveal   restore / unhide / jump",
     "  :pin clear   unpin all",
     "",
