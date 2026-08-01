@@ -147,6 +147,79 @@ pub fn binding_for_command<'a>(
     best
 }
 
+/// All keys bound to `command` in `overlay` (if any) then `base`, excluding base keys
+/// shadowed by the overlay. Shorter keys are listed first.
+pub fn bindings_for_command(
+    base: &BTreeMap<String, String>,
+    overlay: Option<&BTreeMap<String, String>>,
+    command: &str,
+) -> Vec<String> {
+    let mut keys = Vec::new();
+    if let Some(overlay) = overlay {
+        for (key, bound) in overlay {
+            if bound == command {
+                keys.push(key.clone());
+            }
+        }
+    }
+    for (key, bound) in base {
+        if overlay.is_some_and(|overlay| overlay.contains_key(key)) {
+            continue;
+        }
+        if bound == command {
+            keys.push(key.clone());
+        }
+    }
+    keys.sort_by(|a, b| a.len().cmp(&b.len()).then_with(|| a.cmp(b)));
+    keys
+}
+
+/// Pretty-print a config key name for the cheatsheet / UI hints.
+pub fn display_key(spec: &str) -> String {
+    let (prefix, base) = if let Some(rest) = spec.strip_prefix("C-A-S-") {
+        ("C-A-S-", rest)
+    } else if let Some(rest) = spec.strip_prefix("C-A-") {
+        ("C-A-", rest)
+    } else if let Some(rest) = spec.strip_prefix("C-S-") {
+        ("C-S-", rest)
+    } else if let Some(rest) = spec.strip_prefix("A-S-") {
+        ("A-S-", rest)
+    } else if let Some(rest) = spec.strip_prefix("C-") {
+        ("C-", rest)
+    } else if let Some(rest) = spec.strip_prefix("A-") {
+        ("A-", rest)
+    } else if let Some(rest) = spec.strip_prefix("S-") {
+        ("S-", rest)
+    } else {
+        ("", spec)
+    };
+    let pretty = match base {
+        "up" => "↑",
+        "down" => "↓",
+        "left" => "←",
+        "right" => "→",
+        "pagedown" => "PgDn",
+        "pageup" => "PgUp",
+        "enter" => "Enter",
+        "esc" => "Esc",
+        "space" => "Space",
+        "backspace" => "Backspace",
+        "tab" => "Tab",
+        "backtab" => "S-Tab",
+        "home" => "Home",
+        "end" => "End",
+        "delete-key" => "Delete",
+        other => other,
+    };
+    if prefix.is_empty() {
+        pretty.to_string()
+    } else if pretty == "Backspace" && prefix == "S-" {
+        "S-Backspace".into()
+    } else {
+        format!("{prefix}{pretty}")
+    }
+}
+
 /// Encode a key event as a config key name.
 pub fn encode(key: KeyEvent) -> Option<String> {
     let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);

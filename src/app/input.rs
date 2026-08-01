@@ -9,7 +9,6 @@ use crate::completion;
 use crate::config_options::{self, ConfigOption, ValueKind};
 use crate::keys;
 use crate::theme::Theme;
-use crate::ui::help_modal::HELP_LINES;
 
 impl App {
     pub(super) fn handle_key(&mut self, key: KeyEvent) {
@@ -59,8 +58,8 @@ impl App {
             }
             KeyCode::End | KeyCode::Char('G') => {
                 if let Some(modal) = &mut self.help_modal {
-                    modal.scroll_y = HELP_LINES
-                        .len()
+                    modal.scroll_y = modal
+                        .line_count
                         .saturating_sub(modal.viewport_h.max(1));
                 }
             }
@@ -80,6 +79,7 @@ impl App {
             viewport_h: 0,
             viewport_w: 0,
             content_w: 0,
+            line_count: 0,
             popup_area: Rect::default(),
         });
         self.status_message = None;
@@ -101,7 +101,7 @@ impl App {
         let Some(modal) = &mut self.help_modal else {
             return;
         };
-        let max = HELP_LINES.len().saturating_sub(modal.viewport_h.max(1));
+        let max = modal.line_count.saturating_sub(modal.viewport_h.max(1));
         modal.scroll_y = (modal.scroll_y as isize + delta).clamp(0, max as isize) as usize;
     }
 

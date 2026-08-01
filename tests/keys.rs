@@ -1,7 +1,7 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
 use lnav_rs::keys::*;
-
+use lnav_rs::ui::help_modal;
 
 #[test]
 fn encodes_case_sensitive_chars() {
@@ -102,4 +102,33 @@ fn default_d_maps_to_hide() {
         Some("view current off")
     );
     assert!(!defaults().contains_key("t"));
+}
+
+#[test]
+fn display_key_prettifies_specials() {
+    assert_eq!(display_key("down"), "↓");
+    assert_eq!(display_key("pagedown"), "PgDn");
+    assert_eq!(display_key("S-backspace"), "S-Backspace");
+    assert_eq!(display_key("C-c"), "C-c");
+}
+
+#[test]
+fn cheatsheet_uses_configured_bindings() {
+    let mut keys = KeysConfig::with_defaults();
+    keys.bindings.insert("x".into(), "quit".into());
+    let lines = help_modal::render(&keys);
+    let quit = lines
+        .iter()
+        .find(|line| line.contains("— quit"))
+        .expect("quit row");
+    assert!(quit.contains('x'), "{quit}");
+    assert!(quit.contains('q'), "{quit}");
+}
+
+#[test]
+fn bindings_for_command_lists_aliases() {
+    let base = defaults();
+    let keys = bindings_for_command(&base, None, "nav down");
+    assert!(keys.iter().any(|k| k == "j"));
+    assert!(keys.iter().any(|k| k == "down"));
 }

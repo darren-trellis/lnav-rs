@@ -98,6 +98,7 @@ pub struct HelpModal {
     pub viewport_h: usize,
     pub viewport_w: usize,
     pub content_w: usize,
+    pub line_count: usize,
     pub popup_area: Rect,
 }
 
