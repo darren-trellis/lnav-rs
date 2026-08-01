@@ -418,7 +418,8 @@ impl App {
             "view details on",
         )
         .or_else(|| keys::binding_for_command(&self.config.keys.bindings, None, "view details"))
-        .unwrap_or("enter");
+        .unwrap_or("enter")
+        .to_string();
         if value.is_empty() {
             self.status_message = Some(format!(
                 "{name}= · ↑/↓ adjust · {confirm} to set · Esc to cancel"
