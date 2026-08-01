@@ -167,6 +167,7 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
     } else {
         (body, None)
     };
+    app.pointer.hit.main = main;
 
     let detail_content = if app.details.visible {
         app.selected_entry()

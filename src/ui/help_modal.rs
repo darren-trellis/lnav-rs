@@ -61,6 +61,16 @@ const CHEATSHEET: &[Entry] = &[
         groups: &["focus toggle"],
         description: "cycle focus: list → details → sidebar",
     },
+    Entry::Item {
+        context: Context::Base,
+        groups: &["resize sidebar left", "resize sidebar right"],
+        description: "resize sidebar width",
+    },
+    Entry::Item {
+        context: Context::Base,
+        groups: &["resize details up", "resize details down"],
+        description: "resize details max height",
+    },
     Entry::Blank,
     Entry::Heading("List"),
     Entry::Item {

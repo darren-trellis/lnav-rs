@@ -61,6 +61,7 @@ fn does_not_suggest_keybinding_only_commands() {
                 | "focus"
                 | "search"
                 | "command"
+                | "resize"
                 | "q"
                 | "d"
                 | "D"

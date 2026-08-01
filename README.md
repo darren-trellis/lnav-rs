@@ -58,6 +58,8 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 | `d` | `hide` operator — `dd` current, `dj`/`dG`/… range; in sidebar `dd` deletes filter / unhides line |
 | `Backspace` | `hide line` (same as `dd`; accepts a count); in sidebar `filter delete line` (unhides if on a hidden row) |
 | `Shift+Backspace` | `delete line` (same as `DD`; accepts a count) |
+| `Shift+Cmd+←/→` / `h`/`l` | `resize sidebar left` / `right` (shows sidebar; accepts a count) |
+| `Shift+Cmd+↑/↓` / `k`/`j` | `resize details up` / `down` (capped by content and layout; accepts a count) |
 | `p` | `pin` — toggle sticky pin at top of list (accepts a count) |
 | `D` | `delete` operator — `DD` current, `Dj`/`DG`/… range (in-place; safe with `tee -a`) |
 | `?` | `help` (cheatsheet modal; Esc closes; `:help toggle` details border hints when focused) |
@@ -86,6 +88,7 @@ Hidden commands (these are mainly used internally for keybindings):
 | `nav` | `up` \| `down` \| `top` \| `bottom` | Move selection / cursor (accepts a count) |
 | `page` | `up` \| `down` | Page by viewport height or `page_lines` |
 | `scroll` | `left` \| `right` | Horizontal scroll (list, or sidebar when focused) |
+| `resize` | `sidebar left` \| `sidebar right` \| `details up` \| `details down` | Resize sidebar width or details max height (accepts a count) |
 | `match` | `next` \| `prev` | Jump between search matches |
 | `focus` | `on` \| `off` \| `toggle` | Focus details, list, or cycle list → details → sidebar |
 | `search` | `[clear]` | Enter `/` search, or clear highlights |

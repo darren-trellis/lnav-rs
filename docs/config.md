@@ -17,12 +17,14 @@ Unknown keys, invalid colors, unknown theme names, and unknown keybinding comman
 
 ## Keybindings
 
-`[keys]` overrides defaults (merged). Use `key = ""` to unbind. Chain commands with `;` (e.g. `r = "view details on; focus toggle"`). Special key names: `enter`, `esc`, `up`, `down`, `left`, `right`, `home`, `end`, `pagedown`, `pageup`, `space`, `backspace`, `S-backspace`, `C-c`.
+`[keys]` overrides defaults (merged). Use `key = ""` to unbind. Chain commands with `;` (e.g. `r = "view details on; focus toggle"`). Special key names: `enter`, `esc`, `up`, `down`, `left`, `right`, `home`, `end`, `pagedown`, `pageup`, `space`, `backspace`, `S-backspace`, `C-c`, `D-` (Super/Command), combinable as `S-D-left`.
 
 - `[keys.details]` overrides `[keys]` while the details overlay is focused.
 - `[keys.sidebar]` overrides `[keys]` while the filters sidebar is focused.
 - An empty binding in either contextual section blocks fallback to the same key in `[keys]`.
 
-Keybinding-only commands (`nav`, `page`, `scroll`, `match`, `focus`, `search`, `command`) are listed in the README Commands section; they are omitted from `:` completions.
+Keybinding-only commands (`nav`, `page`, `scroll`, `resize`, `match`, `focus`, `search`, `command`) are listed in the README Commands section; they are omitted from `:` completions.
+
+Default resize chords (Shift+Command): `S-D-left`/`S-D-h` and `S-D-right`/`S-D-l` adjust `sidebar_width`; `S-D-up`/`S-D-k` and `S-D-down`/`S-D-j` adjust `details_max_height` (capped by content height and main viewport minus pinned rows minus 5). Some terminals swallow Cmd chords — rebind if needed.
 
 `?` / `:help` opens a cheatsheet modal (Esc / `q` / `?` closes; `j`/`k` and `h`/`l` scroll).

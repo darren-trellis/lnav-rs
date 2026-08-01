@@ -39,7 +39,8 @@ impl KeysConfig {
 /// - specials: `enter`, `esc`, `up`, `down`, `left`, `right`,
 ///   `home`, `end`, `pagedown`, `pageup`, `tab`, `backtab`, `space`,
 ///   `backspace`
-/// - modifiers: `C-c`, `C-d` (control + key), `S-backspace` (shift + special)
+/// - modifiers: `C-c` (control), `A-` (alt), `S-` (shift on specials),
+///   `D-` (super / Command), combinable as `S-D-left`
 pub fn defaults() -> BTreeMap<String, String> {
     BTreeMap::from([
         ("q".into(), "quit".into()),
@@ -73,6 +74,14 @@ pub fn defaults() -> BTreeMap<String, String> {
         ("p".into(), "pin".into()),
         ("?".into(), "help".into()),
         ("s".into(), "view sidebar toggle".into()),
+        ("S-D-left".into(), "resize sidebar left".into()),
+        ("S-D-h".into(), "resize sidebar left".into()),
+        ("S-D-right".into(), "resize sidebar right".into()),
+        ("S-D-l".into(), "resize sidebar right".into()),
+        ("S-D-up".into(), "resize details up".into()),
+        ("S-D-k".into(), "resize details up".into()),
+        ("S-D-down".into(), "resize details down".into()),
+        ("S-D-j".into(), "resize details down".into()),
     ])
 }
 
@@ -175,24 +184,42 @@ pub fn bindings_for_command(
 
 /// Pretty-print a config key name for the cheatsheet / UI hints.
 pub fn display_key(spec: &str) -> String {
-    let (prefix, base) = if let Some(rest) = spec.strip_prefix("C-A-S-") {
-        ("C-A-S-", rest)
-    } else if let Some(rest) = spec.strip_prefix("C-A-") {
-        ("C-A-", rest)
-    } else if let Some(rest) = spec.strip_prefix("C-S-") {
-        ("C-S-", rest)
-    } else if let Some(rest) = spec.strip_prefix("A-S-") {
-        ("A-S-", rest)
-    } else if let Some(rest) = spec.strip_prefix("C-") {
-        ("C-", rest)
-    } else if let Some(rest) = spec.strip_prefix("A-") {
-        ("A-", rest)
-    } else if let Some(rest) = spec.strip_prefix("S-") {
-        ("S-", rest)
-    } else {
-        ("", spec)
-    };
-    let pretty = match base {
+    let mut rest = spec;
+    let mut ctrl = false;
+    let mut alt = false;
+    let mut shift = false;
+    let mut super_key = false;
+    loop {
+        if let Some(after) = rest.strip_prefix("C-") {
+            ctrl = true;
+            rest = after;
+        } else if let Some(after) = rest.strip_prefix("A-") {
+            alt = true;
+            rest = after;
+        } else if let Some(after) = rest.strip_prefix("S-") {
+            shift = true;
+            rest = after;
+        } else if let Some(after) = rest.strip_prefix("D-") {
+            super_key = true;
+            rest = after;
+        } else {
+            break;
+        }
+    }
+    let mut prefixes = Vec::new();
+    if ctrl {
+        prefixes.push("C");
+    }
+    if alt {
+        prefixes.push("A");
+    }
+    if shift {
+        prefixes.push("S");
+    }
+    if super_key {
+        prefixes.push("D");
+    }
+    let pretty = match rest {
         "up" => "↑",
         "down" => "↓",
         "left" => "←",
@@ -210,12 +237,10 @@ pub fn display_key(spec: &str) -> String {
         "delete-key" => "Delete",
         other => other,
     };
-    if prefix.is_empty() {
+    if prefixes.is_empty() {
         pretty.to_string()
-    } else if pretty == "Backspace" && prefix == "S-" {
-        "S-Backspace".into()
     } else {
-        format!("{prefix}{pretty}")
+        format!("{}-{pretty}", prefixes.join("-"))
     }
 }
 
@@ -224,8 +249,9 @@ pub fn encode(key: KeyEvent) -> Option<String> {
     let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
     let alt = key.modifiers.contains(KeyModifiers::ALT);
     let shift = key.modifiers.contains(KeyModifiers::SHIFT);
+    let super_key = key.modifiers.contains(KeyModifiers::SUPER);
 
-    let base = match key.code {
+    let mut base = match key.code {
         KeyCode::Char(' ') => "space".to_string(),
         KeyCode::Char(c) => c.to_string(),
         KeyCode::Enter => "enter".into(),
@@ -245,35 +271,27 @@ pub fn encode(key: KeyEvent) -> Option<String> {
         _ => return None,
     };
 
-    // Shift on chars is already reflected in the character (`D` vs `d`).
-    let shift_prefix = shift && !matches!(key.code, KeyCode::Char(_));
-
-    if ctrl && alt && shift_prefix {
-        Some(format!("C-A-S-{base}"))
-    } else if ctrl && alt {
-        Some(format!("C-A-{base}"))
-    } else if ctrl && shift_prefix {
-        let base = if base.len() == 1 {
-            base.to_ascii_lowercase()
-        } else {
-            base
-        };
-        Some(format!("C-S-{base}"))
-    } else if ctrl {
-        // Normalize C-C / C-c → C-c for letters.
-        let base = if base.len() == 1 {
-            base.to_ascii_lowercase()
-        } else {
-            base
-        };
-        Some(format!("C-{base}"))
-    } else if alt && shift_prefix {
-        Some(format!("A-S-{base}"))
-    } else if alt {
-        Some(format!("A-{base}"))
-    } else if shift_prefix {
-        Some(format!("S-{base}"))
-    } else {
-        Some(base)
+    let is_char = matches!(key.code, KeyCode::Char(_));
+    // With modifiers, normalize letters and keep Shift as an explicit `S-` prefix
+    // so Shift+Cmd+h encodes as `S-D-h` (not `D-H`).
+    if (ctrl || alt || super_key) && base.len() == 1 {
+        base = base.to_ascii_lowercase();
     }
+    let shift_prefix = shift && (!is_char || ctrl || alt || super_key);
+
+    let mut out = String::new();
+    if ctrl {
+        out.push_str("C-");
+    }
+    if alt {
+        out.push_str("A-");
+    }
+    if shift_prefix {
+        out.push_str("S-");
+    }
+    if super_key {
+        out.push_str("D-");
+    }
+    out.push_str(&base);
+    Some(out)
 }

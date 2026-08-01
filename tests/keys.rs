@@ -20,6 +20,28 @@ fn encodes_shift_backspace() {
 }
 
 #[test]
+fn encodes_shift_super_chords() {
+    let left = KeyEvent::new(KeyCode::Left, KeyModifiers::SHIFT | KeyModifiers::SUPER);
+    assert_eq!(encode(left).as_deref(), Some("S-D-left"));
+    let h = KeyEvent::new(KeyCode::Char('h'), KeyModifiers::SHIFT | KeyModifiers::SUPER);
+    assert_eq!(encode(h).as_deref(), Some("S-D-h"));
+    let h_upper = KeyEvent::new(KeyCode::Char('H'), KeyModifiers::SHIFT | KeyModifiers::SUPER);
+    assert_eq!(encode(h_upper).as_deref(), Some("S-D-h"));
+}
+
+#[test]
+fn default_resize_bindings() {
+    assert_eq!(
+        defaults().get("S-D-left").map(String::as_str),
+        Some("resize sidebar left")
+    );
+    assert_eq!(
+        defaults().get("S-D-j").map(String::as_str),
+        Some("resize details down")
+    );
+}
+
+#[test]
 fn default_d_maps_to_hide() {
     assert_eq!(defaults().get("d").map(String::as_str), Some("hide"));
     assert_eq!(defaults().get("D").map(String::as_str), Some("delete"));

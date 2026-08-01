@@ -105,6 +105,8 @@ pub struct HelpModal {
 /// Widget rects from the last frame, used for mouse hit-testing.
 #[derive(Debug, Default, Clone, Copy)]
 pub(crate) struct HitAreas {
+    /// Main list+details column (excludes sidebar / status / completions).
+    pub(crate) main: Rect,
     pub(crate) list_inner: Rect,
     pub(crate) list_scrollbar_vertical: Rect,
     pub(crate) list_scrollbar_horizontal: Rect,
@@ -870,6 +872,72 @@ impl App {
         self.details.cursor = 0;
         self.details.scroll = 0;
         self.details.folded.clear();
+    }
+
+    pub(crate) fn resize_sidebar_width(&mut self, delta: isize) {
+        let min = crate::config::default_sidebar_width_min();
+        let body_w = if self.pointer.hit.sidebar_inner.width > 0 {
+            // main + sidebar content + borders
+            self.pointer
+                .hit
+                .main
+                .width
+                .saturating_add(self.pointer.hit.sidebar_inner.width)
+                .saturating_add(2)
+        } else {
+            self.pointer.hit.main.width
+        } as usize;
+        // Mirror sidebar::desired_width: leave at least MIN_MAIN (20) for the list.
+        let max = body_w.saturating_sub(20).max(min);
+        let current = self.config.sidebar_width.max(min).min(max);
+        let next = (current as isize + delta).clamp(min as isize, max as isize) as usize;
+        if next == self.config.sidebar_width && self.config.sidebar {
+            self.status_message = Some(format!("sidebar_width={next}"));
+            return;
+        }
+        self.config.sidebar_width = next;
+        self.config.sidebar = true;
+        self.status_message = Some(format!("sidebar_width={next}"));
+        self.maybe_autosave();
+    }
+
+    pub(crate) fn resize_details_max_height(&mut self, delta: isize) {
+        const MIN: usize = 4;
+        const PIN_BUFFER: usize = 5;
+        let content_lines = if self.details.visible {
+            self.details.content_len
+        } else {
+            self.selected_entry()
+                .map(|entry| {
+                    crate::details::build_lines(
+                        entry,
+                        &self.theme,
+                        &self.config,
+                        &self.details.folded,
+                    )
+                    .len()
+                })
+                .unwrap_or(0)
+        };
+        let content_cap = content_lines.saturating_add(2).max(MIN);
+        let main_h = self.pointer.hit.main.height as usize;
+        let layout_cap = main_h
+            .saturating_sub(self.pin_count())
+            .saturating_sub(PIN_BUFFER)
+            .max(MIN);
+        let max = content_cap.min(layout_cap).max(MIN);
+        let current = self.config.details_max_height.min(max).max(MIN);
+        let next = (current as isize + delta).clamp(MIN as isize, max as isize) as usize;
+        if next == self.config.details_max_height {
+            self.status_message = Some(format!("details_max_height={next} (max {max})"));
+            return;
+        }
+        self.config.details_max_height = next;
+        if !self.details.visible {
+            self.open_details();
+        }
+        self.status_message = Some(format!("details_max_height={next}"));
+        self.maybe_autosave();
     }
 
     pub(crate) fn maybe_autosave(&mut self) {
