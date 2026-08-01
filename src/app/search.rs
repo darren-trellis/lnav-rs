@@ -258,12 +258,7 @@ impl App {
         if viewport == 0 {
             return;
         }
-        if self.details.visible {
-            // Keep the selected log on the last list row, just above details.
-            self.ensure_visible_above_details(viewport);
-        } else {
-            self.ensure_visible(viewport, true);
-        }
+        self.ensure_visible(viewport, true);
     }
 
     pub fn clear_search(&mut self) {
@@ -377,29 +372,9 @@ impl App {
             if body_sel < self.view.scroll {
                 self.view.scroll = body_sel;
             } else if body_sel >= self.view.scroll + body_h {
+                // Last row of the list viewport — just above details when open.
                 self.view.scroll = body_sel + 1 - body_h;
             }
-        }
-        let max_scroll = self.view.visible.len().saturating_sub(body_h);
-        if self.view.scroll > max_scroll {
-            self.view.scroll = max_scroll;
-        }
-    }
-
-    /// Scroll so the selected body row is the last visible list row (just above details).
-    pub fn ensure_visible_above_details(&mut self, viewport_height: usize) {
-        if viewport_height == 0 || self.display_len() == 0 {
-            self.view.scroll = 0;
-            return;
-        }
-        let (_, _, body_h) = self.list_band_layout(viewport_height);
-        if body_h == 0 || self.view.visible.is_empty() {
-            self.view.scroll = 0;
-            return;
-        }
-        if self.view.selected >= self.pin_count() {
-            let body_sel = self.view.selected - self.pin_count();
-            self.view.scroll = body_sel.saturating_sub(body_h.saturating_sub(1));
         }
         let max_scroll = self.view.visible.len().saturating_sub(body_h);
         if self.view.scroll > max_scroll {
