@@ -189,3 +189,64 @@ fn sidebar_delete_line_on_hidden_is_immediate() {
 
     let _ = fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn sidebar_dd_on_filter_deletes_matching_lines() {
+    let (dir, path) = temp_log(
+        "sidebar-filter-del",
+        &[
+            r#"{"level":"info","msg":"keep"}"#,
+            r#"{"level":"error","msg":"boom"}"#,
+            r#"{"level":"warn","msg":"careful"}"#,
+            r#"{"level":"error","msg":"again"}"#,
+        ],
+    );
+    let mut app = app_for(&path);
+    command::execute(&mut app, "filter out error");
+    assert_eq!(app.filters.len(), 1);
+    assert_eq!(app.display_len(), 2);
+
+    command::execute(&mut app, "view sidebar on");
+    app.focus_sidebar();
+    app.select_sidebar_item(SidebarItem::Filter(0));
+
+    command::execute_from_key(&mut app, "delete");
+    command::execute_from_key(&mut app, "delete");
+
+    assert_eq!(app.source.len(), 2);
+    assert!(app.source.entries().iter().all(|e| !e.raw.contains("error")));
+    assert!(app.source.entries().iter().any(|e| e.raw.contains("keep")));
+    assert!(app.source.entries().iter().any(|e| e.raw.contains("careful")));
+    // Filter itself remains; dd still removes the filter definition.
+    assert_eq!(app.filters.len(), 1);
+    let on_disk = fs::read_to_string(&path).unwrap();
+    assert!(!on_disk.contains("boom"));
+    assert!(on_disk.contains("keep"));
+
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn sidebar_dd_on_include_filter_deletes_matches() {
+    let (dir, path) = temp_log(
+        "sidebar-filter-in-del",
+        &[
+            r#"{"level":"info","msg":"noise"}"#,
+            r#"{"level":"error","msg":"keep-me-not"}"#,
+            r#"{"level":"info","msg":"more-noise"}"#,
+        ],
+    );
+    let mut app = app_for(&path);
+    command::execute(&mut app, "filter in error");
+    assert_eq!(app.display_len(), 1);
+
+    command::execute(&mut app, "view sidebar on");
+    app.focus_sidebar();
+    app.select_sidebar_item(SidebarItem::Filter(0));
+    command::execute(&mut app, "delete line");
+
+    assert_eq!(app.source.len(), 2);
+    assert!(app.source.entries().iter().all(|e| !e.raw.contains("error")));
+
+    let _ = fs::remove_dir_all(&dir);
+}

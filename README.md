@@ -61,7 +61,7 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 | `Alt+Shift+←/→` / `h`/`l` | `config set sidebar_width +1` / `-1` (← grows, → shrinks; accepts a count) |
 | `Alt+Shift+↑/↓` / `k`/`j` | `config set details_max_height +1` / `-1` (capped by content/layout; accepts a count) |
 | `p` | `pin` — toggle sticky pin at top of list (accepts a count) |
-| `D` | `delete` operator — `DD` current, `Dj`/`DG`/… range (in-place; safe with `tee -a`); in sidebar `DD` deletes the selected hidden line |
+| `D` | `delete` operator — `DD` current, `Dj`/`DG`/… range (in-place; safe with `tee -a`); in sidebar `DD` deletes the selected hidden line, or all lines matching the selected filter |
 | `?` | `help` (cheatsheet modal; Esc closes; `:help toggle` details border hints when focused) |
 | `q` | `quit` |
 
@@ -76,7 +76,7 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 | `:copy` | | Copy the focused details value to the clipboard |
 | `:hide` | `[line]` \| `clear` \| `unhide [N]` \| `reveal [N]` | Hide current line(s) (`dd`); clear restores; unhide/reveal by sidebar selection or source line N |
 | `:pin` | `[clear]` | Pin/unpin sticky line(s) at the top of the list; `clear` unpins all |
-| `:delete` | `[line]` | Delete current line(s) from the file (`DD` / `D`+motion); with sidebar focused on a hidden line, deletes that line; `line` is immediate |
+| `:delete` | `[line]` | Delete current line(s) from the file (`DD` / `D`+motion); with sidebar focused, deletes the selected hidden line or all lines matching the selected filter; `line` is immediate |
 | `:filter` | `list` \| `in [PATTERN]` \| `out [PATTERN]` \| `on` \| `off` \| `toggle` \| `set on` \| `set off` \| `set toggle` `[N]` \| `clear` \| `delete [N]` | List, add, enable/disable, or remove include/exclude filters (omit PATTERN to use list `/` search) |
 | `:config` | `path` \| `set KEY [VAL]` \| `get KEY` \| `save` \| `load` | Show path, get/set options (picker/editor when VAL omitted), save, or reload — see [config reference](docs/config.md) |
 | `:N` | | Jump to view line `N` |

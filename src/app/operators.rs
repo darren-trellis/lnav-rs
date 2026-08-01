@@ -179,22 +179,18 @@ impl App {
         self.status_message = None;
     }
 
-    /// `DD` in the sidebar: delete the selected hidden line from the file.
+    /// `DD` in the sidebar: delete the selected hidden line, or all lines
+    /// matching the selected filter.
     pub(crate) fn start_or_repeat_sidebar_delete(&mut self) {
         match self.sidebar_selection() {
-            Some(SidebarItem::Hidden(_)) => {
+            Some(SidebarItem::Hidden(_)) | Some(SidebarItem::Filter(_)) => {
                 if self.pending_op == Some(PendingOp::Delete) {
                     self.pending_op = None;
-                    self.delete_sidebar_hidden_selection();
+                    self.delete_sidebar_selection_from_file();
                     return;
                 }
                 self.pending_op = Some(PendingOp::Delete);
                 self.status_message = None;
-            }
-            Some(SidebarItem::Filter(_)) => {
-                self.pending_op = None;
-                self.count = None;
-                self.status_message = Some("select a hidden line".into());
             }
             None => {
                 self.pending_op = None;
@@ -204,8 +200,21 @@ impl App {
         }
     }
 
+    /// Permanently delete from the file based on the sidebar selection:
+    /// hidden row → that line; filter → every line matching the filter.
+    pub fn delete_sidebar_selection_from_file(&mut self) {
+        match self.sidebar_selection() {
+            Some(SidebarItem::Hidden(_)) => self.delete_sidebar_hidden_selection(),
+            Some(SidebarItem::Filter(index)) => {
+                let _ = self.take_count();
+                self.delete_lines_matching_filter(index);
+            }
+            None => self.status_message = Some("sidebar empty".into()),
+        }
+    }
+
     /// Permanently delete the sidebar's selected hidden line(s) from the file.
-    pub fn delete_sidebar_hidden_selection(&mut self) {
+    fn delete_sidebar_hidden_selection(&mut self) {
         let count = self.take_count();
         let items = self.sidebar_items();
         let start = self.sidebar_selected.min(items.len().saturating_sub(1));
@@ -229,7 +238,54 @@ impl App {
         }
         let mut indices: Vec<usize> = indices.into_iter().collect();
         indices.sort_unstable();
-        self.delete_source_indices(&indices, None);
+        self.delete_source_indices(&indices, None, None);
+    }
+
+    /// Delete every source record that matches the filter at `index`.
+    fn delete_lines_matching_filter(&mut self, index: usize) {
+        let (label, pattern, regex) = match self.filters.get(index) {
+            Some(filter) => (
+                filter.label(),
+                filter.pattern.clone(),
+                filter.regex.clone(),
+            ),
+            None => {
+                self.status_message = Some("no such filter".into());
+                return;
+            }
+        };
+        let matched: HashSet<usize> = self
+            .source
+            .entries()
+            .iter()
+            .enumerate()
+            .filter(|(_, entry)| regex.is_match(&entry.raw))
+            .map(|(i, _)| i)
+            .collect();
+        if matched.is_empty() {
+            self.status_message = Some(format!("no lines match filter-{label} /{pattern}/"));
+            return;
+        }
+
+        // Expand matches to whole JSON objects so pretty-printed records stay intact.
+        let entries = self.source.entries();
+        let mut indices = HashSet::new();
+        let mut i = 0usize;
+        while i < entries.len() {
+            let span = object_span::object_span(entries, i);
+            let end = *span.end();
+            if span.clone().any(|idx| matched.contains(&idx)) {
+                indices.extend(span);
+            }
+            i = end + 1;
+        }
+        let mut indices: Vec<usize> = indices.into_iter().collect();
+        indices.sort_unstable();
+        self.delete_source_indices(
+            &indices,
+            None,
+            Some(format!("matching filter-{label} /{pattern}/")),
+        );
     }
 
     pub(crate) fn with_motion<F>(&mut self, motion: F)
@@ -299,7 +355,7 @@ impl App {
                 ));
             }
             PendingOp::Delete => {
-                self.delete_source_indices(&indices, Some(low));
+                self.delete_source_indices(&indices, Some(low), None);
             }
         }
     }
@@ -308,7 +364,13 @@ impl App {
     ///
     /// `prefer_display` selects a list row after rebuild (list `DD`); `None`
     /// keeps the current selection clamped (sidebar delete).
-    fn delete_source_indices(&mut self, indices: &[usize], prefer_display: Option<usize>) {
+    /// `detail` is an optional phrase inserted before `from <path>`.
+    fn delete_source_indices(
+        &mut self,
+        indices: &[usize],
+        prefer_display: Option<usize>,
+        detail: Option<String>,
+    ) {
         if indices.is_empty() {
             return;
         }
@@ -336,8 +398,9 @@ impl App {
                 if !self.search.query.is_empty() {
                     self.run_search();
                 }
+                let detail = detail.map(|d| format!(" {d}")).unwrap_or_default();
                 self.status_message = Some(format!(
-                    "deleted {removed} line{} from {}",
+                    "deleted {removed} line{}{detail} from {}",
                     if removed == 1 { "" } else { "s" },
                     self.source
                         .path()
@@ -367,7 +430,7 @@ impl App {
     pub(crate) fn delete_current(&mut self) {
         if self.is_sidebar_focused() && self.config.sidebar {
             self.pending_op = None;
-            self.delete_sidebar_hidden_selection();
+            self.delete_sidebar_selection_from_file();
             return;
         }
         if self.display_len() == 0 {

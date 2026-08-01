@@ -206,7 +206,7 @@ const CHEATSHEET: &[Entry] = &[
     Entry::Item {
         context: Context::Sidebar,
         groups: &["delete", "delete line"],
-        description: "delete hidden line from file (DD)",
+        description: "delete hidden line or filter matches (DD)",
     },
 ];
 
