@@ -233,7 +233,7 @@ Filters persist under `~/.local/share/lnav-rs/sessions/` (one file per log path 
 
 `[keys]` overrides defaults (merged). Use `key = ""` to unbind. Chain commands with `;` (e.g. `r = "view details on; focus toggle"`). Special key names: `enter`, `esc`, `up`, `down`, `home`, `end`, `pagedown`, `pageup`, `space`, `backspace`, `C-c`. `[keys.details]` overrides `[keys]` while the details overlay is focused (default: `space = "fold toggle"`). `[keys.sidebar]` overrides `[keys]` while the filters sidebar is focused (defaults: `space = "filter set toggle"`, `d = "filter delete"`, `backspace = "filter delete line"`). An empty binding in either contextual section blocks fallback to the same key in `[keys]`. Keybinding-only commands omitted from `:` completions: `nav`, `page`, `match`, `focus`, `search`, `command-mode`.
 
-`?` / `:help` opens a scrollable cheatsheet modal (Esc / `q` / `?` closes).
+`?` / `:help` opens a cheatsheet modal (Esc / `q` / `?` closes; `j`/`k` and `h`/`l` scroll).
 
 Create one with:
 
