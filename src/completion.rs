@@ -349,6 +349,7 @@ const CONFIG_SUBS: &[(&str, &str)] = &[
     ("set", "set option (omit value for picker)"),
     ("get", "show config option value"),
     ("save", "save config to disk"),
+    ("load", "reload settings from config file"),
 ];
 
 pub fn config_suggestions(rest: &str, rest_from: usize) -> Vec<Suggestion> {

@@ -1,5 +1,4 @@
 use crate::app::{App, Focus, InputMode, PendingOp, ToggleAction};
-use crate::config::Config;
 use crate::config_options;
 use crate::filter::{Filter, FilterKind};
 
@@ -538,7 +537,7 @@ fn config_command(app: &mut App, rest: &str) {
     let (sub, arg) = split_cmd(rest);
     match sub.to_ascii_lowercase().as_str() {
         "" | "path" => {
-            app.status_message = Some(format!("config: {}", Config::default_path().display()));
+            app.status_message = Some(format!("config: {}", app.config_path.display()));
         }
         "init" => match app.save_config() {
             Ok(path) => app.status_message = Some(format!("wrote {}", path.display())),
@@ -550,9 +549,13 @@ fn config_command(app: &mut App, rest: &str) {
             Ok(path) => app.status_message = Some(format!("saved {}", path.display())),
             Err(err) => app.status_message = Some(format!("error: {err:#}")),
         },
+        "load" => match app.reload_config() {
+            Ok(()) => app.status_message = Some(format!("loaded {}", app.config_path.display())),
+            Err(err) => app.status_message = Some(format!("error: {err:#}")),
+        },
         other => {
             app.status_message = Some(format!(
-                "usage: :config [path|init|set|get|save]  (unknown: {other})"
+                "usage: :config [path|init|set|get|save|load]  (unknown: {other})"
             ));
         }
     }

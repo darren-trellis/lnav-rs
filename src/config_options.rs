@@ -145,6 +145,13 @@ const OPTIONS: &[ConfigOption] = &[
         setter: set_autosave,
     },
     ConfigOption {
+        name: "autoreload",
+        help: "on|off|toggle",
+        value_kind: ValueKind::Bool,
+        getter: get_autoreload,
+        setter: set_autoreload,
+    },
+    ConfigOption {
         name: "sidebar",
         help: "on|off|toggle",
         value_kind: ValueKind::Bool,
@@ -412,6 +419,21 @@ fn set_autosave(app: &mut App, value: &str) -> bool {
         value,
         |app| app.config.autosave,
         |app, enabled| app.config.autosave = enabled,
+        false,
+    )
+}
+
+fn get_autoreload(app: &App) -> String {
+    on_off(app.config.autoreload)
+}
+
+fn set_autoreload(app: &mut App, value: &str) -> bool {
+    set_bool(
+        app,
+        "autoreload",
+        value,
+        |app| app.config.autoreload,
+        |app, enabled| app.config.autoreload = enabled,
         false,
     )
 }

@@ -1,10 +1,13 @@
 use std::collections::HashSet;
 use std::io::stdout;
+use std::path::{Path, PathBuf};
+use std::sync::mpsc::{self, Receiver};
 use std::time::{Duration, Instant};
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use crossterm::event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyEventKind};
 use crossterm::execute;
+use notify::{EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use ratatui::layout::Rect;
 use regex::Regex;
 
@@ -156,6 +159,7 @@ pub(crate) struct PointerState {
 pub struct App {
     pub source: LogSource,
     pub config: Config,
+    pub config_path: PathBuf,
     pub theme: Theme,
     pub theme_index: usize,
     pub filters: Vec<Filter>,
@@ -178,10 +182,13 @@ pub struct App {
     pub(crate) command_line: CommandLineState,
     pub status_message: Option<String>,
     pub should_quit: bool,
+    _config_watcher: Option<RecommendedWatcher>,
+    config_notify_rx: Receiver<()>,
+    suppress_config_reload_until: Option<Instant>,
 }
 
 impl App {
-    pub fn new(source: LogSource, config: Config) -> Result<Self> {
+    pub fn new(source: LogSource, config: Config, config_path: PathBuf) -> Result<Self> {
         let overrides = config.theme_overrides();
         let theme = Theme::resolve_with_overrides(config.theme.name(), &overrides)?;
         let names = Theme::list_names();
@@ -206,6 +213,18 @@ impl App {
             }
         };
 
+        let (config_watcher, config_notify_rx) = match watch_config_file(&config_path) {
+            Ok((watcher, rx)) => (Some(watcher), rx),
+            Err(err) => {
+                status_message = Some(match status_message {
+                    Some(prev) => format!("{prev}; config watch: {err:#}"),
+                    None => format!("config watch: {err:#}"),
+                });
+                let (_tx, rx) = mpsc::channel();
+                (None, rx)
+            }
+        };
+
         let mut app = Self {
             source,
             view: ViewState {
@@ -226,6 +245,7 @@ impl App {
                 help: false,
             },
             config,
+            config_path,
             theme,
             theme_index,
             filters,
@@ -259,6 +279,9 @@ impl App {
             },
             status_message,
             should_quit: false,
+            _config_watcher: config_watcher,
+            config_notify_rx,
+            suppress_config_reload_until: None,
         };
         app.rebuild_visible(None);
         if app.view.follow && app.display_len() > 0 {
@@ -442,6 +465,13 @@ impl App {
                 Ok(RefreshOutcome::Unchanged) => {}
                 Ok(_) => {}
                 Err(err) => self.status_message = Some(format!("refresh failed: {err:#}")),
+            }
+
+            if self.poll_config_file_changed() {
+                match self.reload_config() {
+                    Ok(()) => self.status_message = Some("config reloaded".into()),
+                    Err(err) => self.status_message = Some(format!("config reload: {err:#}")),
+                }
             }
 
             terminal.draw(|frame| ui::draw(frame, self))?;
@@ -719,11 +749,120 @@ impl App {
         }
     }
 
-    pub(crate) fn save_config(&mut self) -> anyhow::Result<std::path::PathBuf> {
+    pub(crate) fn save_config(&mut self) -> anyhow::Result<PathBuf> {
         self.config.theme.set_name(self.theme.name.clone());
         self.config.follow = self.view.follow;
-        self.config.write()
+        let path = self.config.write_to(&self.config_path)?;
+        self.rebind_config_watcher();
+        self.suppress_config_reload(Duration::from_millis(750));
+        Ok(path)
     }
+
+    fn rebind_config_watcher(&mut self) {
+        match watch_config_file(&self.config_path) {
+            Ok((watcher, rx)) => {
+                self._config_watcher = Some(watcher);
+                self.config_notify_rx = rx;
+            }
+            Err(_) => {}
+        }
+    }
+
+    /// Reload settings from `config_path` and apply them to the running session.
+    pub fn reload_config(&mut self) -> anyhow::Result<()> {
+        if !self.config_path.is_file() {
+            anyhow::bail!("no config file at {}", self.config_path.display());
+        }
+        let (config, _) = Config::load_from(&self.config_path)?;
+        let overrides = config.theme_overrides();
+        let theme = Theme::resolve_with_overrides(config.theme.name(), &overrides)
+            .with_context(|| format!("theme '{}'", config.theme.name()))?;
+        let theme_index = Theme::list_names()
+            .iter()
+            .position(|t| t == config.theme.name() || t == &theme.name)
+            .unwrap_or(0);
+
+        self.close_config_modal(false);
+        self.config = config;
+        self.theme = theme;
+        self.theme_index = theme_index;
+        self.view.follow = self.config.follow;
+        if !self.config.sidebar && self.is_sidebar_focused() {
+            self.focus_list();
+        }
+        if let Some(err) = self.apply_case_mode() {
+            anyhow::bail!("{err}");
+        }
+        Ok(())
+    }
+
+    fn poll_config_file_changed(&mut self) -> bool {
+        let mut changed = false;
+        while self.config_notify_rx.try_recv().is_ok() {
+            changed = true;
+        }
+        if !changed {
+            return false;
+        }
+        if !self.config.autoreload {
+            return false;
+        }
+        if let Some(until) = self.suppress_config_reload_until {
+            if Instant::now() < until {
+                return false;
+            }
+            self.suppress_config_reload_until = None;
+        }
+        true
+    }
+
+    fn suppress_config_reload(&mut self, for_duration: Duration) {
+        self.suppress_config_reload_until = Some(Instant::now() + for_duration);
+        while self.config_notify_rx.try_recv().is_ok() {}
+    }
+}
+
+fn watch_config_file(path: &Path) -> Result<(RecommendedWatcher, Receiver<()>)> {
+    let watch_name = path
+        .file_name()
+        .map(|n| n.to_os_string())
+        .context("config path has no file name")?;
+    let (tx, rx) = mpsc::channel();
+    let mut watcher = notify::recommended_watcher(move |res: notify::Result<notify::Event>| {
+        if let Ok(event) = res
+            && matches!(
+                event.kind,
+                EventKind::Modify(_) | EventKind::Create(_) | EventKind::Remove(_) | EventKind::Any
+            )
+            && event
+                .paths
+                .iter()
+                .any(|p| p.file_name().is_some_and(|n| n == watch_name))
+        {
+            let _ = tx.send(());
+        }
+    })
+    .context("failed to create config file watcher")?;
+
+    let parent = path.parent().filter(|p| !p.as_os_str().is_empty());
+    if let Some(parent) = parent {
+        if parent.is_dir() {
+            watcher
+                .watch(parent, RecursiveMode::NonRecursive)
+                .with_context(|| format!("failed to watch {}", parent.display()))?;
+        } else if path.is_file() {
+            watcher
+                .watch(path, RecursiveMode::NonRecursive)
+                .with_context(|| format!("failed to watch {}", path.display()))?;
+        }
+        // Parent may not exist yet; `:config save` / `init` creates it.
+    } else if path.is_file() {
+        watcher
+            .watch(path, RecursiveMode::NonRecursive)
+            .with_context(|| format!("failed to watch {}", path.display()))?;
+    }
+
+    Ok((watcher, rx))
 }
 
 fn copy_to_clipboard(text: &str) -> anyhow::Result<()> {

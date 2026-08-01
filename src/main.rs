@@ -63,11 +63,11 @@ fn run() -> Result<()> {
         return Ok(());
     }
 
-    let (mut config, loaded_from) = if let Some(path) = &cli.config {
-        Config::load_from(path)?
-    } else {
-        Config::load()?
-    };
+    let config_path = cli
+        .config
+        .clone()
+        .unwrap_or_else(Config::default_path);
+    let (mut config, loaded_from) = Config::load_from(&config_path)?;
 
     if let Some(theme) = &cli.theme {
         config.theme.set_name(theme);
@@ -77,7 +77,7 @@ fn run() -> Result<()> {
 
     let mut terminal = ratatui::init();
     let result = (|| {
-        let mut app = App::new(source, config)?;
+        let mut app = App::new(source, config, config_path)?;
         if let Some(path) = loaded_from {
             app.status_message = Some(format!("config: {}", path.display()));
         }

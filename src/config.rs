@@ -251,6 +251,10 @@ pub struct Config {
     #[serde(default = "default_true")]
     pub autosave: bool,
 
+    /// When true, reload settings when the config file changes on disk.
+    #[serde(default = "default_true")]
+    pub autoreload: bool,
+
     /// Show a filters sidebar listing active filters.
     #[serde(default)]
     pub sidebar: bool,
@@ -319,6 +323,8 @@ struct PersistedConfig<'a> {
     border: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     autosave: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    autoreload: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     sidebar: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -411,6 +417,7 @@ impl<'a> PersistedConfig<'a> {
             scrollbar: (config.scrollbar != defaults.scrollbar).then_some(config.scrollbar),
             border: (config.border != defaults.border).then_some(config.border),
             autosave: (config.autosave != defaults.autosave).then_some(config.autosave),
+            autoreload: (config.autoreload != defaults.autoreload).then_some(config.autoreload),
             sidebar: (config.sidebar != defaults.sidebar).then_some(config.sidebar),
             scroll_lines: (scroll_lines != defaults.scroll_lines).then_some(scroll_lines),
             scroll_moves_selection: (config.scroll_moves_selection
@@ -511,6 +518,7 @@ impl Default for Config {
             scrollbar: true,
             border: true,
             autosave: true,
+            autoreload: true,
             sidebar: false,
             scroll_lines: default_scroll_lines(),
             scroll_moves_selection: true,

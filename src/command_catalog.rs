@@ -43,7 +43,7 @@ const COMMANDS: &[CommandInfo] = &[
     },
     CommandInfo {
         name: "config",
-        help: "path | init | set KEY [VAL] | get KEY | save",
+        help: "path | init | set KEY [VAL] | get KEY | save | load",
     },
 ];
 

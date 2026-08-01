@@ -118,6 +118,7 @@ In `/` mode, **Up/Down** recall search history (shared for list and details sear
 | `:config set scrollbar on\|off\|toggle` | Show a right-side scrollbar (default on) |
 | `:config set border on\|off\|toggle` | Draw vertical rules between list columns (default on) |
 | `:config set autosave on\|off\|toggle` | Auto-save after `:config set` (default on) |
+| `:config set autoreload on\|off\|toggle` | Reload when the config file changes on disk (default on) |
 | `:config set sidebar on\|off\|toggle` | Show filters sidebar (default off; same as `:view sidebar`) |
 | `:config set scroll_lines N` | Mouse wheel step (default 1) |
 | `:config set scroll_moves_selection on\|off\|toggle` | Mouse wheel moves selection in list/details/sidebar (default on; off scrolls the viewport only) |
@@ -127,6 +128,7 @@ In `/` mode, **Up/Down** recall search history (shared for list and details sear
 | `:config set session_stdin on\|off\|toggle` | Persist filters for stdin (default on) |
 | `:config get KEY` | Show current value of a config option |
 | `:config save` | Save current settings to config |
+| `:config load` | Reload settings from the config file |
 | `:config` / `:config path` | Show config path |
 | `:config init` | Create config from current settings |
 | `:hide` | Hide current line / JSON object (immediate) |
@@ -150,6 +152,7 @@ relative_line_numbers = false
 scrollbar = true
 border = true
 autosave = true
+autoreload = true
 sidebar = false
 scroll_lines = 1
 scroll_moves_selection = true
@@ -215,7 +218,7 @@ backspace = "filter delete line"
 
 `case_mode` controls `/` search and `:filter` matching: `smart` / `smartcase` (default; insensitive unless the pattern has an uppercase letter), `insensitive`, or `sensitive`.
 
-Boolean `:config set` values use `on` / `off` / `toggle` only. Bare `:config set KEY` opens a modal: a list for theme/bool/case/timestamp options, or a value editor for numbers. With `autosave` on (default), successful `:config set` (including modal confirms) and sidebar visibility writes `config.toml`; use `:config save` to write manually.
+Boolean `:config set` values use `on` / `off` / `toggle` only. Bare `:config set KEY` opens a modal: a list for theme/bool/case/timestamp options, or a value editor for numbers. With `autosave` on (default), successful `:config set` (including modal confirms) and sidebar visibility writes `config.toml`; use `:config save` to write manually. With `autoreload` on (default), edits to the config file on disk are applied automatically; use `:config load` to reload manually.
 
 Details: `Enter` opens and focuses the overlay — the selection highlight moves into details (`j`/`k` move the cursor; Esc runs `view current off` and closes it). `Tab` / `:focus toggle` cycles focus across the list, details (if open), and the filters sidebar (if open). `Space` folds/unfolds the tree item under the cursor when details is focused (`:fold on|off|toggle`). `?` toggles keybinding hints on the overlay border. `c` / `:copy` copies the focused item’s value (strings without quotes; objects/arrays as pretty JSON). With details focused, `/` searches inside the overlay (`n`/`N` cycle matches). Nested JSON fields render as a tree when `details_json_tree` is on (`details_tab_width` sets indent per level). Overlay height grows with content up to `details_max_height` (and screen space).
 
