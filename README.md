@@ -40,7 +40,7 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 |-----|---------|
 | `j` / `↓` | `nav down` (prefix with a count: `5j`) |
 | `k` / `↑` | `nav up` (`5k`) |
-| `PgDn` / `Space` | `page down` |
+| `PgDn` | `page down` |
 | `PgUp` | `page up` |
 | `g` / `Home` | `nav top` |
 | `G` / `End` | `nav bottom` |
@@ -48,7 +48,7 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 | `l` / `→` | `scroll right` (list; sidebar when focused) |
 | `Enter` | `view details on` (list); in sidebar `hide reveal` (unhide + jump) |
 | `Tab` | `focus toggle` (cycle list → details → sidebar) |
-| `Space` | `page down` (list); `fold toggle` in details; `filter set toggle` in sidebar |
+| `Space` | `fold toggle` in details; `filter set toggle` in sidebar |
 | `c` | `copy` (copy focused details value to clipboard) |
 | `Esc` | `command clear` (list); `view current off` in details/sidebar |
 | `/` | `search` (regex; highlights matched text; Up/Down recall history) |
@@ -159,7 +159,6 @@ source = "annotations.url"
 
 [keys]
 q = "quit"
-space = "page down"
 h = "scroll left"
 l = "scroll right"
 # r = "view details on; focus toggle"

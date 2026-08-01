@@ -49,7 +49,6 @@ pub fn defaults() -> BTreeMap<String, String> {
         ("k".into(), "nav up".into()),
         ("up".into(), "nav up".into()),
         ("pagedown".into(), "page down".into()),
-        ("space".into(), "page down".into()),
         ("pageup".into(), "page up".into()),
         ("g".into(), "nav top".into()),
         ("home".into(), "nav top".into()),
