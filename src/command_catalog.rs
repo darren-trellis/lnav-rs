@@ -49,7 +49,7 @@ const COMMANDS: &[CommandInfo] = &[
 
 /// Keybinding-only commands omitted from `:` completions.
 const HIDDEN_COMMANDS: &[&str] =
-    &["nav", "page", "scroll", "match", "focus", "search", "command-mode"];
+    &["nav", "page", "scroll", "match", "focus", "search", "command"];
 
 pub fn catalog() -> &'static [CommandInfo] {
     COMMANDS

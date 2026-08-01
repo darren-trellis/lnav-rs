@@ -79,7 +79,7 @@ fn default_d_maps_to_hide() {
     );
     assert_eq!(
         defaults().get("esc").map(String::as_str),
-        Some("command-mode clear")
+        Some("command clear")
     );
     assert_eq!(
         details_defaults().get("esc").map(String::as_str),

@@ -72,6 +72,6 @@ Unknown keys, invalid colors, unknown theme names, and unknown keybinding comman
 - `[keys.sidebar]` overrides `[keys]` while the filters sidebar is focused.
 - An empty binding in either contextual section blocks fallback to the same key in `[keys]`.
 
-Keybinding-only commands omitted from `:` completions: `nav`, `page`, `scroll`, `match`, `focus`, `search`, `command-mode`.
+Keybinding-only commands (`nav`, `page`, `scroll`, `match`, `focus`, `search`, `command`) are listed in the README Commands section; they are omitted from `:` completions.
 
 `?` / `:help` opens a cheatsheet modal (Esc / `q` / `?` closes; `j`/`k` and `h`/`l` scroll).

@@ -72,7 +72,7 @@ fn execute_one(app: &mut App, line: &str, invoke: Invoke) {
             app.copy_overlay_value();
         }
         "search" => search_command(app, rest),
-        "command-mode" => command_mode_command(app, rest),
+        "command" => command_command(app, rest),
         "match" => match_command(app, rest),
         "hide" => hide_command(app, rest, invoke),
         "pin" => pin_command(app, rest),
@@ -387,7 +387,7 @@ fn parse_on_off_toggle(sub: &str) -> Option<ToggleAction> {
     }
 }
 
-fn command_mode_command(app: &mut App, rest: &str) {
+fn command_command(app: &mut App, rest: &str) {
     let (sub, _) = split_cmd(rest);
     match sub.to_ascii_lowercase().as_str() {
         "" => {
@@ -400,7 +400,7 @@ fn command_mode_command(app: &mut App, rest: &str) {
         }
         other => {
             app.status_message =
-                Some(format!("usage: :command-mode [clear]  (unknown: {other})"));
+                Some(format!("usage: :command [clear]  (unknown: {other})"));
         }
     }
 }

@@ -60,7 +60,7 @@ fn does_not_suggest_keybinding_only_commands() {
                 | "match"
                 | "focus"
                 | "search"
-                | "command-mode"
+                | "command"
                 | "q"
                 | "d"
                 | "D"

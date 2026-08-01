@@ -53,9 +53,9 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 | `Tab` | `focus toggle` (cycle list → details → sidebar) |
 | `Space` | `page down` (list); `fold toggle` in details; `filter set toggle` in sidebar |
 | `c` | `copy` (copy focused details value to clipboard) |
-| `Esc` | `command-mode clear` (list); `view current off` in details/sidebar |
+| `Esc` | `command clear` (list); `view current off` in details/sidebar |
 | `/` | `search` (regex; highlights matched text; Up/Down recall history) |
-| `:` | `command-mode` |
+| `:` | `command` |
 | `n` / `N` | `match next` / `match prev` |
 | `s` | `view sidebar toggle` (filters + hidden lines) |
 | `d` | `hide` operator — `dd` current, `dj`/`dG`/… range; in sidebar `dd` deletes filter / unhides line |
@@ -79,8 +79,19 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 | `:delete` | | Delete current line(s) from the file (`DD` / `D`+motion) |
 | `:filter` | `list` \| `in [PATTERN]` \| `out [PATTERN]` \| `on` \| `off` \| `toggle` \| `set on` \| `set off` \| `set toggle` `[N]` \| `clear` \| `delete [N]` | List, add, enable/disable, or remove include/exclude filters (omit PATTERN to use list `/` search) |
 | `:config` | `path` \| `set KEY [VAL]` \| `get KEY` \| `save` \| `load` | Show path, get/set options (picker/editor when VAL omitted), save, or reload — see [config reference](docs/config.md) |
-| `:search` | `clear` | Clear search highlights |
 | `:N` | | Jump to view line `N` |
+
+Keybinding commands (used in `[keys]`; omitted from `:` completions):
+
+| Command | Action | Description |
+|---------|--------|-------------|
+| `nav` | `up` \| `down` \| `top` \| `bottom` | Move selection / cursor (accepts a count) |
+| `page` | `up` \| `down` | Page by viewport height or `page_lines` |
+| `scroll` | `left` \| `right` | Horizontal scroll (list, or sidebar when focused) |
+| `match` | `next` \| `prev` | Jump between search matches |
+| `focus` | `on` \| `off` \| `toggle` | Focus details, list, or cycle list → details → sidebar |
+| `search` | `[clear]` | Enter `/` search, or clear highlights |
+| `command` | `[clear]` | Enter `:` mode, or clear status / cancel pending input |
 
 ## Config
 
