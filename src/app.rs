@@ -105,12 +105,15 @@ pub struct HelpModal {
 #[derive(Debug, Default, Clone, Copy)]
 pub(crate) struct HitAreas {
     pub(crate) list_inner: Rect,
-    pub(crate) list_scrollbar: Rect,
+    pub(crate) list_scrollbar_vertical: Rect,
+    pub(crate) list_scrollbar_horizontal: Rect,
     /// Number of sticky pinned rows currently drawn at the top of the list.
     pub(crate) list_pin_rows: usize,
     pub(crate) overlay: Rect,
     pub(crate) overlay_scrollbar: Rect,
     pub(crate) sidebar_inner: Rect,
+    pub(crate) sidebar_scrollbar_vertical: Rect,
+    pub(crate) sidebar_scrollbar_horizontal: Rect,
     pub(crate) suggest_inner: Rect,
     pub(crate) suggest_start: usize,
     pub(crate) status: Rect,
@@ -124,7 +127,10 @@ struct LastClick {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ScrollbarDrag {
-    List,
+    ListVertical,
+    ListHorizontal,
+    SidebarVertical,
+    SidebarHorizontal,
     Overlay,
 }
 

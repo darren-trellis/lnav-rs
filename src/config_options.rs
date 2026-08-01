@@ -124,11 +124,39 @@ const OPTIONS: &[ConfigOption] = &[
         setter: set_relative_line_numbers,
     },
     ConfigOption {
-        name: "scrollbar",
+        name: "list_scrollbar_vertical",
         help: "on|off|toggle",
         value_kind: ValueKind::Bool,
-        getter: get_scrollbar,
-        setter: set_scrollbar,
+        getter: get_list_scrollbar_vertical,
+        setter: set_list_scrollbar_vertical,
+    },
+    ConfigOption {
+        name: "list_scrollbar_horizontal",
+        help: "on|off|toggle",
+        value_kind: ValueKind::Bool,
+        getter: get_list_scrollbar_horizontal,
+        setter: set_list_scrollbar_horizontal,
+    },
+    ConfigOption {
+        name: "sidebar_scrollbar_vertical",
+        help: "on|off|toggle",
+        value_kind: ValueKind::Bool,
+        getter: get_sidebar_scrollbar_vertical,
+        setter: set_sidebar_scrollbar_vertical,
+    },
+    ConfigOption {
+        name: "sidebar_scrollbar_horizontal",
+        help: "on|off|toggle",
+        value_kind: ValueKind::Bool,
+        getter: get_sidebar_scrollbar_horizontal,
+        setter: set_sidebar_scrollbar_horizontal,
+    },
+    ConfigOption {
+        name: "details_scrollbar_vertical",
+        help: "on|off|toggle",
+        value_kind: ValueKind::Bool,
+        getter: get_details_scrollbar_vertical,
+        setter: set_details_scrollbar_vertical,
     },
     ConfigOption {
         name: "border",
@@ -392,17 +420,77 @@ fn set_relative_line_numbers(app: &mut App, value: &str) -> bool {
     )
 }
 
-fn get_scrollbar(app: &App) -> String {
-    on_off(app.config.scrollbar)
+fn get_list_scrollbar_vertical(app: &App) -> String {
+    on_off(app.config.list_scrollbar_vertical)
 }
 
-fn set_scrollbar(app: &mut App, value: &str) -> bool {
+fn set_list_scrollbar_vertical(app: &mut App, value: &str) -> bool {
     set_bool(
         app,
-        "scrollbar",
+        "list_scrollbar_vertical",
         value,
-        |app| app.config.scrollbar,
-        |app, enabled| app.config.scrollbar = enabled,
+        |app| app.config.list_scrollbar_vertical,
+        |app, enabled| app.config.list_scrollbar_vertical = enabled,
+        false,
+    )
+}
+
+fn get_list_scrollbar_horizontal(app: &App) -> String {
+    on_off(app.config.list_scrollbar_horizontal)
+}
+
+fn set_list_scrollbar_horizontal(app: &mut App, value: &str) -> bool {
+    set_bool(
+        app,
+        "list_scrollbar_horizontal",
+        value,
+        |app| app.config.list_scrollbar_horizontal,
+        |app, enabled| app.config.list_scrollbar_horizontal = enabled,
+        false,
+    )
+}
+
+fn get_sidebar_scrollbar_vertical(app: &App) -> String {
+    on_off(app.config.sidebar_scrollbar_vertical)
+}
+
+fn set_sidebar_scrollbar_vertical(app: &mut App, value: &str) -> bool {
+    set_bool(
+        app,
+        "sidebar_scrollbar_vertical",
+        value,
+        |app| app.config.sidebar_scrollbar_vertical,
+        |app, enabled| app.config.sidebar_scrollbar_vertical = enabled,
+        false,
+    )
+}
+
+fn get_sidebar_scrollbar_horizontal(app: &App) -> String {
+    on_off(app.config.sidebar_scrollbar_horizontal)
+}
+
+fn set_sidebar_scrollbar_horizontal(app: &mut App, value: &str) -> bool {
+    set_bool(
+        app,
+        "sidebar_scrollbar_horizontal",
+        value,
+        |app| app.config.sidebar_scrollbar_horizontal,
+        |app, enabled| app.config.sidebar_scrollbar_horizontal = enabled,
+        false,
+    )
+}
+
+fn get_details_scrollbar_vertical(app: &App) -> String {
+    on_off(app.config.details_scrollbar_vertical)
+}
+
+fn set_details_scrollbar_vertical(app: &mut App, value: &str) -> bool {
+    set_bool(
+        app,
+        "details_scrollbar_vertical",
+        value,
+        |app| app.config.details_scrollbar_vertical,
+        |app, enabled| app.config.details_scrollbar_vertical = enabled,
         false,
     )
 }

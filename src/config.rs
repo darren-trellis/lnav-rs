@@ -222,8 +222,16 @@ pub struct Config {
     /// With `line_numbers`, the current line stays absolute.
     pub relative_line_numbers: bool,
 
-    /// Show a vertical scrollbar on the right of the list and details panes.
-    pub scrollbar: bool,
+    /// Vertical scrollbar on the main list.
+    pub list_scrollbar_vertical: bool,
+    /// Horizontal scrollbar on the main list.
+    pub list_scrollbar_horizontal: bool,
+    /// Vertical scrollbar on the filters/hidden sidebar.
+    pub sidebar_scrollbar_vertical: bool,
+    /// Horizontal scrollbar on the filters/hidden sidebar.
+    pub sidebar_scrollbar_horizontal: bool,
+    /// Vertical scrollbar on the details overlay.
+    pub details_scrollbar_vertical: bool,
 
     /// Draw vertical rules between list columns (theme/column width still apply when on).
     pub border: bool,
@@ -288,7 +296,15 @@ struct MainConfig {
     #[serde(default)]
     relative_line_numbers: bool,
     #[serde(default = "default_true")]
-    scrollbar: bool,
+    list_scrollbar_vertical: bool,
+    #[serde(default = "default_true")]
+    list_scrollbar_horizontal: bool,
+    #[serde(default = "default_true")]
+    sidebar_scrollbar_vertical: bool,
+    #[serde(default = "default_true")]
+    sidebar_scrollbar_horizontal: bool,
+    #[serde(default = "default_true")]
+    details_scrollbar_vertical: bool,
     #[serde(default = "default_true")]
     border: bool,
     #[serde(default = "default_true")]
@@ -325,7 +341,11 @@ impl Default for MainConfig {
             details_tab_width: default_details_tab_width(),
             line_numbers: false,
             relative_line_numbers: false,
-            scrollbar: true,
+            list_scrollbar_vertical: true,
+            list_scrollbar_horizontal: true,
+            sidebar_scrollbar_vertical: true,
+            sidebar_scrollbar_horizontal: true,
+            details_scrollbar_vertical: true,
             border: true,
             autosave: true,
             autoreload: true,
@@ -376,7 +396,11 @@ impl ConfigDocument {
             details_tab_width: self.main.details_tab_width,
             line_numbers: self.main.line_numbers,
             relative_line_numbers: self.main.relative_line_numbers,
-            scrollbar: self.main.scrollbar,
+            list_scrollbar_vertical: self.main.list_scrollbar_vertical,
+            list_scrollbar_horizontal: self.main.list_scrollbar_horizontal,
+            sidebar_scrollbar_vertical: self.main.sidebar_scrollbar_vertical,
+            sidebar_scrollbar_horizontal: self.main.sidebar_scrollbar_horizontal,
+            details_scrollbar_vertical: self.main.details_scrollbar_vertical,
             border: self.main.border,
             autosave: self.main.autosave,
             autoreload: self.main.autoreload,
@@ -429,7 +453,15 @@ struct PersistedMain<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     relative_line_numbers: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    scrollbar: Option<bool>,
+    list_scrollbar_vertical: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    list_scrollbar_horizontal: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    sidebar_scrollbar_vertical: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    sidebar_scrollbar_horizontal: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    details_scrollbar_vertical: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     border: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -465,7 +497,11 @@ impl PersistedMain<'_> {
             && self.details_tab_width.is_none()
             && self.line_numbers.is_none()
             && self.relative_line_numbers.is_none()
-            && self.scrollbar.is_none()
+            && self.list_scrollbar_vertical.is_none()
+            && self.list_scrollbar_horizontal.is_none()
+            && self.sidebar_scrollbar_vertical.is_none()
+            && self.sidebar_scrollbar_horizontal.is_none()
+            && self.details_scrollbar_vertical.is_none()
             && self.border.is_none()
             && self.autosave.is_none()
             && self.autoreload.is_none()
@@ -566,7 +602,21 @@ impl<'a> PersistedConfig<'a> {
                 relative_line_numbers: (config.relative_line_numbers
                     != defaults.relative_line_numbers)
                     .then_some(config.relative_line_numbers),
-                scrollbar: (config.scrollbar != defaults.scrollbar).then_some(config.scrollbar),
+                list_scrollbar_vertical: (config.list_scrollbar_vertical
+                    != defaults.list_scrollbar_vertical)
+                    .then_some(config.list_scrollbar_vertical),
+                list_scrollbar_horizontal: (config.list_scrollbar_horizontal
+                    != defaults.list_scrollbar_horizontal)
+                    .then_some(config.list_scrollbar_horizontal),
+                sidebar_scrollbar_vertical: (config.sidebar_scrollbar_vertical
+                    != defaults.sidebar_scrollbar_vertical)
+                    .then_some(config.sidebar_scrollbar_vertical),
+                sidebar_scrollbar_horizontal: (config.sidebar_scrollbar_horizontal
+                    != defaults.sidebar_scrollbar_horizontal)
+                    .then_some(config.sidebar_scrollbar_horizontal),
+                details_scrollbar_vertical: (config.details_scrollbar_vertical
+                    != defaults.details_scrollbar_vertical)
+                    .then_some(config.details_scrollbar_vertical),
                 border: (config.border != defaults.border).then_some(config.border),
                 autosave: (config.autosave != defaults.autosave).then_some(config.autosave),
                 autoreload: (config.autoreload != defaults.autoreload).then_some(config.autoreload),

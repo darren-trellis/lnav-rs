@@ -2,7 +2,7 @@ use ratatui::Frame;
 use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, Borders, Paragraph, Wrap};
+use ratatui::widgets::{Block, Borders, Paragraph, ScrollbarOrientation, Wrap};
 
 use super::{draw_scrollbar, split_scrollbar};
 
@@ -79,7 +79,7 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect, content: &[DetailLine]
 
     let inner = block.inner(area);
     frame.render_widget(block, area);
-    let show_bar = app.config.scrollbar;
+    let show_bar = app.config.details_scrollbar_vertical;
     let (content_area, bar_area) = split_scrollbar(inner, show_bar);
     app.pointer.hit.overlay_scrollbar = bar_area.unwrap_or_default();
     app.details.viewport_height = content_area.height as usize;
@@ -130,7 +130,16 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect, content: &[DetailLine]
     frame.render_widget(paragraph, content_area);
 
     if let Some(bar) = bar_area {
-        draw_scrollbar(frame, bar, content_len, scroll, viewport, thumb, track);
+        draw_scrollbar(
+            frame,
+            bar,
+            content_len,
+            scroll,
+            viewport,
+            ScrollbarOrientation::VerticalRight,
+            thumb,
+            track,
+        );
     }
 }
 

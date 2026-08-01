@@ -2,7 +2,7 @@ use ratatui::Frame;
 use ratatui::layout::Rect;
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, Borders, Paragraph};
+use ratatui::widgets::{Block, Borders, Paragraph, ScrollbarOrientation};
 use unicode_width::UnicodeWidthStr;
 
 use crate::app::App;
@@ -48,9 +48,15 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
 
     let inner = block.inner(area);
     frame.render_widget(block, area);
-    let (content, bar_area) = super::split_scrollbar(inner, app.config.scrollbar);
+    let bars = super::split_scrollbars(
+        inner,
+        app.config.list_scrollbar_vertical,
+        app.config.list_scrollbar_horizontal,
+    );
+    let content = bars.content;
     app.pointer.hit.list_inner = content;
-    app.pointer.hit.list_scrollbar = bar_area.unwrap_or_default();
+    app.pointer.hit.list_scrollbar_vertical = bars.vertical.unwrap_or_default();
+    app.pointer.hit.list_scrollbar_horizontal = bars.horizontal.unwrap_or_default();
     let viewport = content.height as usize;
     app.ensure_visible(viewport, app.config.scroll_moves_selection);
 
@@ -198,17 +204,35 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
     let paragraph = Paragraph::new(lines).style(Style::default().bg(app.theme.background));
     frame.render_widget(paragraph, content);
 
-    if let Some(bar) = bar_area {
-        let theme = &app.theme;
+    let theme = &app.theme;
+    let thumb = theme.tone_fg_style(theme.window_focus_border);
+    let track = theme.tone_fg_style(theme.dim);
+    if let Some(bar) = bars.vertical {
         super::draw_scrollbar(
             frame,
             bar,
             app.view.visible.len(),
             app.view.scroll,
             body_h.max(1),
-            theme.tone_fg_style(theme.window_focus_border),
-            theme.tone_fg_style(theme.dim),
+            ScrollbarOrientation::VerticalRight,
+            thumb,
+            track,
         );
+    }
+    if let Some(bar) = bars.horizontal {
+        super::draw_scrollbar(
+            frame,
+            bar,
+            content_w,
+            scroll_x,
+            viewport_w.max(1),
+            ScrollbarOrientation::HorizontalBottom,
+            thumb,
+            track,
+        );
+    }
+    if let Some(corner) = bars.corner {
+        super::draw_scrollbar_corner(frame, corner, Style::default().bg(theme.background));
     }
 }
 

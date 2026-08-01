@@ -174,6 +174,16 @@ fn rejects_root_level_main_settings() {
 }
 
 #[test]
+fn rejects_legacy_scrollbar_key() {
+    let dir = std::env::temp_dir().join(format!("lnav-rs-legacy-bar-{}", std::process::id()));
+    let _ = fs::create_dir_all(&dir);
+    let path = dir.join("config.toml");
+    fs::write(&path, "[main]\nscrollbar = false\n").unwrap();
+    assert!(Config::load_from(&path).is_err());
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn write_emits_theme_table() {
     let dir = std::env::temp_dir().join(format!("lnav-rs-write-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
@@ -203,6 +213,11 @@ fn write_omits_default_keys() {
     assert!(!raw.contains("details_max_height = "));
     assert!(!raw.contains("details_tab_width = "));
     assert!(!raw.contains("line_numbers = "));
+    assert!(!raw.contains("list_scrollbar_vertical = "));
+    assert!(!raw.contains("list_scrollbar_horizontal = "));
+    assert!(!raw.contains("sidebar_scrollbar_vertical = "));
+    assert!(!raw.contains("sidebar_scrollbar_horizontal = "));
+    assert!(!raw.contains("details_scrollbar_vertical = "));
     assert!(!raw.contains("scrollbar = "));
     assert!(!raw.contains("border = "));
     assert!(!raw.contains("autosave = "));

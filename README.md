@@ -75,8 +75,9 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 | Click a log line | Select it (completes a pending `d`/`D` operator) |
 | Double-click a log line | Toggle details overlay |
 | Scroll wheel | Move selection (or cycle completions / config picker) |
-| Horizontal scroll | Scroll list / sidebar sideways |
-| Click / drag scrollbar | Scroll the list or details |
+| Shift + scroll wheel | Scroll list / sidebar horizontally |
+| Horizontal scroll | Scroll list / sidebar sideways (when the terminal sends it) |
+| Click / drag scrollbar | Scroll the list, sidebar, or details |
 | Click a completion | Insert it |
 | Click details overlay | Focus it / move details cursor |
 | Click filters sidebar | Focus it / select a filter or hidden line |
@@ -121,7 +122,11 @@ In `/` mode, **Up/Down** recall search history (shared for list and details sear
 | `:config set details_tab_width N` | Details tree indent width (default 4, min 2) |
 | `:config set line_numbers on\|off\|toggle` | Show absolute view line numbers |
 | `:config set relative_line_numbers on\|off\|toggle` | Show relative line numbers (vim-style) |
-| `:config set scrollbar on\|off\|toggle` | Show a right-side scrollbar (default on) |
+| `:config set list_scrollbar_vertical on\|off\|toggle` | List vertical scrollbar (default on) |
+| `:config set list_scrollbar_horizontal on\|off\|toggle` | List horizontal scrollbar (default on) |
+| `:config set sidebar_scrollbar_vertical on\|off\|toggle` | Sidebar vertical scrollbar (default on) |
+| `:config set sidebar_scrollbar_horizontal on\|off\|toggle` | Sidebar horizontal scrollbar (default on) |
+| `:config set details_scrollbar_vertical on\|off\|toggle` | Details vertical scrollbar (default on) |
 | `:config set border on\|off\|toggle` | Draw vertical rules between list columns (default on) |
 | `:config set autosave on\|off\|toggle` | Auto-save after `:config set` (default on) |
 | `:config set autoreload on\|off\|toggle` | Reload when the config file changes on disk (default on) |
@@ -157,7 +162,11 @@ details_max_height = 24
 details_tab_width = 4
 line_numbers = false
 relative_line_numbers = false
-scrollbar = true
+list_scrollbar_vertical = true
+list_scrollbar_horizontal = true
+sidebar_scrollbar_vertical = true
+sidebar_scrollbar_horizontal = true
+details_scrollbar_vertical = true
 border = true
 autosave = true
 autoreload = true
@@ -239,7 +248,7 @@ Boolean `:config set` values use `on` / `off` / `toggle` only. Bare `:config set
 
 Details: `Enter` (`view details on`) opens and focuses the overlay — the selection highlight moves into details (`j`/`k` move the cursor; Esc runs `view current off` and closes it). `Tab` / `:focus toggle` cycles focus across the list, details (if open), and the filters sidebar (if open). `Space` folds/unfolds the tree item under the cursor when details is focused (`:fold on|off|toggle`). `:help toggle` (when details focused) toggles keybinding hints on the overlay border. `c` / `:copy` copies the focused item’s value (strings without quotes; objects/arrays as pretty JSON). With details focused, `/` searches inside the overlay (`n`/`N` cycle matches). Nested JSON fields render as a tree when `details_json_tree` is on (`details_tab_width` sets indent per level). Overlay height grows with content up to `details_max_height` (and screen space).
 
-Filters sidebar: `s` / `:view sidebar toggle` shows a right-hand list of filters, then manually hidden lines (`·N` with a preview). Width is `sidebar_width` (default 28; clamped to leave room for the list). When focused, `j`/`k` move the selection, `h`/`l` (or ←/→) scroll horizontally, `Space` toggles the selected filter on/off, `dd` / Backspace deletes a filter or unhides a hidden line, and Enter reveals a hidden line and jumps to it (`[keys.sidebar]` defaults: `space = "filter set toggle"`, `d = "filter delete"`, `backspace = "filter delete line"`, `enter = "hide reveal"`, `h`/`left = "scroll left"`, `l`/`right = "scroll right"`, `esc = "view current off"`). Enabled filters are marked with `*`; disabled ones are ignored. Esc hides the sidebar; Tab cycles focus without closing it.
+Filters sidebar: `s` / `:view sidebar toggle` shows a right-hand list of filters, then manually hidden lines (`·N` with a preview). Width is `sidebar_width` (default 28; clamped to leave room for the list). Vertical/horizontal scrollbars are controlled by `sidebar_scrollbar_*` (same idea as `list_scrollbar_*`). When focused, `j`/`k` move the selection, `h`/`l` (or ←/→ / Shift+wheel) scroll horizontally, `Space` toggles the selected filter on/off, `dd` / Backspace deletes a filter or unhides a hidden line, and Enter reveals a hidden line and jumps to it (`[keys.sidebar]` defaults: `space = "filter set toggle"`, `d = "filter delete"`, `backspace = "filter delete line"`, `enter = "hide reveal"`, `h`/`left = "scroll left"`, `l`/`right = "scroll right"`, `esc = "view current off"`). Enabled filters are marked with `*`; disabled ones are ignored. Esc hides the sidebar; Tab cycles focus without closing it.
 
 Filters persist under `~/.local/share/lnav-rs/sessions/` (one file per log path hash; stdin uses `stdin.toml`). `session_filters` / `session_stdin` control that (both default on). Turn `session_stdin` off if you don’t want every pipe to share one filter set.
 
