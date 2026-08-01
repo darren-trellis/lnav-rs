@@ -20,6 +20,10 @@ pub struct CompletionState {
     pub selected: Option<usize>,
     /// True after ↑↓ / mouse highlight without applying — Tab/Enter apply current.
     pub browsed: bool,
+    /// Scroll offset into `items` (stable across mouse clicks).
+    pub scroll: usize,
+    /// Last drawn viewport height; used to recenter on keyboard/wheel nav.
+    pub viewport_h: usize,
 }
 
 impl CompletionState {
@@ -27,6 +31,8 @@ impl CompletionState {
         self.items.clear();
         self.selected = None;
         self.browsed = false;
+        self.scroll = 0;
+        self.viewport_h = 0;
     }
 
     pub fn selected(&self) -> Option<&Suggestion> {
@@ -41,6 +47,7 @@ impl CompletionState {
             None => 0,
             Some(i) => (i + 1) % self.items.len(),
         });
+        self.center_on_selection();
     }
 
     pub fn select_prev(&mut self) {
@@ -51,6 +58,51 @@ impl CompletionState {
             None | Some(0) => self.items.len() - 1,
             Some(i) => i - 1,
         });
+        self.center_on_selection();
+    }
+
+    pub fn ensure_visible(&mut self) {
+        let viewport = self.viewport_h.max(1);
+        if self.items.is_empty() {
+            self.scroll = 0;
+            return;
+        }
+        let Some(selected) = self.selected else {
+            let max_start = self.items.len().saturating_sub(viewport);
+            if self.scroll > max_start {
+                self.scroll = max_start;
+            }
+            return;
+        };
+        if selected < self.scroll {
+            self.scroll = selected;
+        } else if selected >= self.scroll + viewport {
+            self.scroll = selected + 1 - viewport;
+        }
+        let max_start = self.items.len().saturating_sub(viewport);
+        if self.scroll > max_start {
+            self.scroll = max_start;
+        }
+    }
+
+    pub fn center_on_selection(&mut self) {
+        let viewport = if self.viewport_h > 0 {
+            self.viewport_h
+        } else {
+            8
+        };
+        let Some(selected) = self.selected else {
+            return;
+        };
+        if self.items.is_empty() {
+            self.scroll = 0;
+            return;
+        }
+        self.scroll = selected.saturating_sub(viewport / 2);
+        let max_start = self.items.len().saturating_sub(viewport);
+        if self.scroll > max_start {
+            self.scroll = max_start;
+        }
     }
 }
 
@@ -60,6 +112,7 @@ pub fn refresh(app: &mut App) {
     app.command_line.completions.items = suggestions_for(&buffer, app);
     app.command_line.completions.selected = None;
     app.command_line.completions.browsed = false;
+    app.command_line.completions.scroll = 0;
 }
 
 /// Insert the selected suggestion into the buffer. Keeps the current suggestion

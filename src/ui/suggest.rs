@@ -38,8 +38,10 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
     let inner = block.inner(area);
     frame.render_widget(block, area);
 
-    let selected_idx = app.command_line.completions.selected.unwrap_or(0);
-    let start = selected_idx.saturating_sub(inner.height as usize / 2);
+    app.command_line.completions.viewport_h = inner.height as usize;
+    // Keep scroll stable across clicks; keyboard/wheel recenters via select_*.
+    app.command_line.completions.ensure_visible();
+    let start = app.command_line.completions.scroll;
     let end = (start + inner.height as usize).min(app.command_line.completions.items.len());
     app.pointer.hit.suggest_inner = inner;
     app.pointer.hit.suggest_start = start;
