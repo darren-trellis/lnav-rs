@@ -102,12 +102,9 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
             } else if app.count.is_some() {
                 spans.push(Span::styled(" ", style));
             }
-            spans.push(Span::styled(
-                app.status_message
-                    .clone()
-                    .unwrap_or_else(|| ":help · 5j · dd/DD · d{{motion}}".into()),
-                style,
-            ));
+            if let Some(message) = &app.status_message {
+                spans.push(Span::styled(message.clone(), style));
+            }
             spans
         }
     };
