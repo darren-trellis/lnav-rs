@@ -196,6 +196,7 @@ const FOLLOW_SUBS: &[(&str, &str)] = &[
 const VIEW_SUBS: &[(&str, &str)] = &[
     ("details", "open/close/toggle details overlay"),
     ("sidebar", "show/hide/toggle filters sidebar"),
+    ("current", "control the focused details/sidebar pane"),
 ];
 
 const DETAILS_SUBS: &[(&str, &str)] = &[
@@ -208,6 +209,12 @@ const SIDEBAR_SUBS: &[(&str, &str)] = &[
     ("on", "show filters sidebar"),
     ("off", "hide filters sidebar"),
     ("toggle", "toggle filters sidebar"),
+];
+
+const CURRENT_SUBS: &[(&str, &str)] = &[
+    ("on", "show/focus the focused pane"),
+    ("off", "close the focused details or sidebar pane"),
+    ("toggle", "toggle the focused details or sidebar pane"),
 ];
 
 const HELP_SUBS: &[(&str, &str)] = &[
@@ -258,6 +265,7 @@ fn view_suggestions(rest: &str, rest_from: usize) -> Vec<Suggestion> {
     match target.to_ascii_lowercase().as_str() {
         "details" => on_off_toggle_suggestions(arg, arg_from, DETAILS_SUBS),
         "sidebar" => on_off_toggle_suggestions(arg, arg_from, SIDEBAR_SUBS),
+        "current" => on_off_toggle_suggestions(arg, arg_from, CURRENT_SUBS),
         _ => Vec::new(),
     }
 }

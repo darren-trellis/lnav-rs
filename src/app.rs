@@ -464,6 +464,23 @@ impl App {
         }
     }
 
+    /// Apply a view action to the focused pane (details or sidebar).
+    /// Returns true when the sidebar visibility may have changed (for autosave).
+    pub fn set_current_view(&mut self, action: ToggleAction) -> bool {
+        if self.is_sidebar_focused() && self.config.sidebar {
+            self.set_sidebar(action);
+            return true;
+        }
+        if self.is_details_focused() && self.details.visible {
+            self.set_details(action);
+            return false;
+        }
+        if !matches!(action, ToggleAction::Off) {
+            self.status_message = Some("no focused view".into());
+        }
+        false
+    }
+
     pub fn set_overlay_focus(&mut self, action: ToggleAction) {
         self.cancel_pending_op();
         match action {

@@ -55,7 +55,7 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect, content: &[DetailLine]
         binding("focus toggle", "focus"),
         binding("copy", "copy"),
         binding("search", "search"),
-        binding("view details off", "Esc"),
+        binding("view current off", "Esc"),
         binding("help", "help"),
     );
 

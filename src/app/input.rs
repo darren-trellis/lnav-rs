@@ -53,10 +53,17 @@ impl App {
                             self.theme_picker_select(last);
                         }
                     }
-                    Some("view details" | "view details toggle" | "view details on") => {
-                        self.close_theme_picker(true)
+                    Some(
+                        "view details"
+                        | "view details toggle"
+                        | "view details on"
+                        | "view current"
+                        | "view current toggle"
+                        | "view current on",
+                    ) => self.close_theme_picker(true),
+                    Some("view details off" | "view current off") => {
+                        self.close_theme_picker(false)
                     }
-                    Some("view details off") => self.close_theme_picker(false),
                     _ => {}
                 }
             }
@@ -355,10 +362,6 @@ impl App {
 
     fn handle_overlay_key(&mut self, key: KeyEvent) -> bool {
         match key.code {
-            KeyCode::Esc => {
-                self.close_details();
-                true
-            }
             KeyCode::Char(':') | KeyCode::Char('q') => {
                 self.focus_list();
                 self.details.help = false;

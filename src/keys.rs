@@ -28,7 +28,7 @@ pub fn defaults() -> BTreeMap<String, String> {
         ("enter".into(), "view details".into()),
         ("tab".into(), "focus toggle".into()),
         ("c".into(), "copy".into()),
-        ("esc".into(), "view details off".into()),
+        ("esc".into(), "view current off".into()),
         ("/".into(), "search".into()),
         (":".into(), "command-mode".into()),
         ("n".into(), "match next".into()),
@@ -54,8 +54,6 @@ pub fn sidebar_defaults() -> BTreeMap<String, String> {
     BTreeMap::from([
         ("d".into(), "filter delete".into()),
         ("backspace".into(), "filter delete line".into()),
-        // Block list Esc (`view details off`); use Tab to leave sidebar focus.
-        ("esc".into(), "".into()),
     ])
 }
 

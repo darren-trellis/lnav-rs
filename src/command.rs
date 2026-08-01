@@ -453,9 +453,22 @@ fn view_command(app: &mut App, rest: &str) {
                 ));
             }
         },
+        "current" => match parse_on_off_toggle(arg) {
+            Some(action) => {
+                let closed_sidebar = app.set_current_view(action);
+                if closed_sidebar {
+                    maybe_autosave(app);
+                }
+            }
+            None => {
+                app.status_message = Some(format!(
+                    "usage: :view current [on|off|toggle]  (unknown: {arg})"
+                ));
+            }
+        },
         other => {
             app.status_message = Some(format!(
-                "usage: :view [details|sidebar] [on|off|toggle]  (unknown: {other})"
+                "usage: :view [details|sidebar|current] [on|off|toggle]  (unknown: {other})"
             ));
         }
     }
