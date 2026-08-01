@@ -56,6 +56,7 @@ fn does_not_suggest_keybinding_only_commands() {
             s.text.as_str(),
             "nav"
                 | "page"
+                | "scroll"
                 | "match"
                 | "focus"
                 | "search"

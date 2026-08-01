@@ -184,9 +184,10 @@ pub struct App {
     pub(crate) view: ViewState,
     pub(crate) details: DetailsState,
     focus: Focus,
-    /// Selected filter index in the sidebar.
+    /// Selected row index in the sidebar (filters + hidden lines).
     pub sidebar_selected: usize,
     pub sidebar_scroll: usize,
+    pub sidebar_scroll_x: usize,
     pub input_mode: InputMode,
     pub pending_op: Option<PendingOp>,
     /// Visible-row anchor when the pending operator was started.
@@ -273,6 +274,7 @@ impl App {
             focus: Focus::List,
             sidebar_selected: 0,
             sidebar_scroll: 0,
+            sidebar_scroll_x: 0,
             input_mode: InputMode::Normal,
             pending_op: None,
             op_anchor: 0,
@@ -648,9 +650,53 @@ impl App {
         if len == 0 {
             self.sidebar_selected = 0;
             self.sidebar_scroll = 0;
+            self.sidebar_scroll_x = 0;
         } else if self.sidebar_selected >= len {
             self.sidebar_selected = len - 1;
         }
+    }
+
+    pub fn sidebar_item_text(&self, item: SidebarItem) -> String {
+        match item {
+            SidebarItem::Filter(fi) => {
+                let filter = &self.filters[fi];
+                let mark = if filter.enabled { "*" } else { " " };
+                format!("{mark}{fi}:{} /{}/", filter.label(), filter.pattern)
+            }
+            SidebarItem::Hidden(src) => {
+                let preview = self
+                    .source
+                    .entries()
+                    .get(src)
+                    .map(|e| e.raw.replace('\n', " "))
+                    .unwrap_or_default();
+                format!("·{} {preview}", src + 1)
+            }
+        }
+    }
+
+    pub fn sidebar_content_width(&self) -> usize {
+        use unicode_width::UnicodeWidthStr;
+        self.sidebar_items()
+            .into_iter()
+            .map(|item| UnicodeWidthStr::width(self.sidebar_item_text(item).as_str()))
+            .max()
+            .unwrap_or(0)
+    }
+
+    pub fn clamp_sidebar_scroll_x(&mut self, viewport_width: usize, content_width: usize) {
+        let max = content_width.saturating_sub(viewport_width.max(1));
+        if self.sidebar_scroll_x > max {
+            self.sidebar_scroll_x = max;
+        }
+    }
+
+    pub fn scroll_sidebar_x(&mut self, delta: isize) {
+        let viewport = self.pointer.hit.sidebar_inner.width.max(1) as usize;
+        let content_w = self.sidebar_content_width();
+        let max = content_w.saturating_sub(viewport);
+        self.sidebar_scroll_x =
+            (self.sidebar_scroll_x as isize + delta).clamp(0, max as isize) as usize;
     }
 
     pub fn toggle_details(&mut self) {

@@ -54,6 +54,7 @@ fn execute_one(app: &mut App, line: &str, invoke: Invoke) {
         }
         "nav" => nav_command(app, rest),
         "page" => page_command(app, rest),
+        "scroll" => scroll_command(app, rest),
         "view" => {
             app.cancel_pending_op();
             view_command(app, rest);
@@ -321,6 +322,27 @@ fn page_command(app: &mut App, rest: &str) {
         other => {
             app.status_message =
                 Some(format!("usage: page [up|down]  (unknown: {other})"));
+        }
+    }
+}
+
+fn scroll_command(app: &mut App, rest: &str) {
+    let (sub, _) = split_cmd(rest);
+    let n = app.take_count() as isize;
+    match sub.to_ascii_lowercase().as_str() {
+        "left" => {
+            if app.is_sidebar_focused() && app.config.sidebar {
+                app.scroll_sidebar_x(-n);
+            }
+        }
+        "right" => {
+            if app.is_sidebar_focused() && app.config.sidebar {
+                app.scroll_sidebar_x(n);
+            }
+        }
+        other => {
+            app.status_message =
+                Some(format!("usage: scroll [left|right]  (unknown: {other})"));
         }
     }
 }

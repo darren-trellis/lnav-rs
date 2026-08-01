@@ -6,12 +6,16 @@ use ratatui::widgets::{Block, Borders, Paragraph};
 use unicode_width::UnicodeWidthStr;
 
 use crate::app::{App, SidebarItem};
+use crate::config;
 use crate::text;
 
-const WIDTH: u16 = 28;
+const MIN_MAIN: u16 = 20;
 
-pub fn desired_width(area_width: u16) -> u16 {
-    WIDTH.min(area_width.saturating_sub(20).max(12))
+pub fn desired_width(area_width: u16, configured: usize) -> u16 {
+    let min = config::default_sidebar_width_min() as u16;
+    let configured = (configured as u16).max(min);
+    let available = area_width.saturating_sub(MIN_MAIN).max(min);
+    configured.min(available)
 }
 
 pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
@@ -66,29 +70,19 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
     let end = (app.sidebar_scroll + viewport).min(items.len());
     let mut lines = Vec::with_capacity(end.saturating_sub(app.sidebar_scroll));
     let width = inner.width as usize;
+    let content_w = app.sidebar_content_width();
+    app.clamp_sidebar_scroll_x(width, content_w);
+    let scroll_x = app.sidebar_scroll_x;
 
     for idx in app.sidebar_scroll..end {
         let selected = focused && idx == app.sidebar_selected;
-        let (text, dim) = match items[idx] {
-            SidebarItem::Filter(fi) => {
-                let filter = &app.filters[fi];
-                let mark = if filter.enabled { "*" } else { " " };
-                (
-                    format!("{mark}{fi}:{} /{}/", filter.label(), filter.pattern),
-                    !filter.enabled,
-                )
-            }
-            SidebarItem::Hidden(src) => {
-                let preview = app
-                    .source
-                    .entries()
-                    .get(src)
-                    .map(|e| e.raw.replace('\n', " "))
-                    .unwrap_or_default();
-                (format!("·{} {preview}", src + 1), true)
-            }
+        let item = items[idx];
+        let text = app.sidebar_item_text(item);
+        let dim = match item {
+            SidebarItem::Filter(fi) => !app.filters[fi].enabled,
+            SidebarItem::Hidden(_) => true,
         };
-        let display = text::truncate_width(&text, width);
+        let display = text::slice_width(&text, scroll_x, width);
         let style = if selected {
             app.theme.selection_style()
         } else if dim {

@@ -159,6 +159,13 @@ const OPTIONS: &[ConfigOption] = &[
         setter: set_sidebar,
     },
     ConfigOption {
+        name: "sidebar_width",
+        help: "sidebar columns",
+        value_kind: ValueKind::Unsigned,
+        getter: get_sidebar_width,
+        setter: set_sidebar_width,
+    },
+    ConfigOption {
         name: "scroll_lines",
         help: "mouse wheel step",
         value_kind: ValueKind::Unsigned,
@@ -468,6 +475,29 @@ fn set_sidebar(app: &mut App, value: &str) -> bool {
         },
         false,
     )
+}
+
+fn get_sidebar_width(app: &App) -> String {
+    app.config
+        .sidebar_width
+        .max(crate::config::default_sidebar_width_min())
+        .to_string()
+}
+
+fn set_sidebar_width(app: &mut App, value: &str) -> bool {
+    let min = crate::config::default_sidebar_width_min();
+    match value.parse::<usize>() {
+        Ok(width) if width >= min => {
+            app.config.sidebar_width = width;
+            app.status_message = Some(format!("sidebar_width={width}"));
+            true
+        }
+        _ => {
+            app.status_message =
+                Some(format!("usage: :config set sidebar_width N (N >= {min})"));
+            false
+        }
+    }
 }
 
 fn get_scroll_lines(app: &App) -> String {

@@ -259,6 +259,10 @@ pub struct Config {
     #[serde(default)]
     pub sidebar: bool,
 
+    /// Preferred sidebar width in columns (clamped to fit the terminal).
+    #[serde(default = "default_sidebar_width")]
+    pub sidebar_width: usize,
+
     /// Lines to move per mouse-wheel notch in the log list.
     #[serde(default = "default_scroll_lines")]
     pub scroll_lines: usize,
@@ -323,6 +327,8 @@ struct PersistedConfig<'a> {
     autoreload: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     sidebar: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    sidebar_width: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
     scroll_lines: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -398,6 +404,7 @@ impl<'a> PersistedConfig<'a> {
         let defaults = Config::default();
         let details_max_height = config.details_max_height.max(4);
         let details_tab_width = config.details_tab_width.max(2);
+        let sidebar_width = config.sidebar_width.max(default_sidebar_width_min());
         let scroll_lines = config.scroll_lines.max(1);
         let columns = if config.columns == defaults.columns {
             Vec::new()
@@ -437,6 +444,7 @@ impl<'a> PersistedConfig<'a> {
             autosave: (config.autosave != defaults.autosave).then_some(config.autosave),
             autoreload: (config.autoreload != defaults.autoreload).then_some(config.autoreload),
             sidebar: (config.sidebar != defaults.sidebar).then_some(config.sidebar),
+            sidebar_width: (sidebar_width != defaults.sidebar_width).then_some(sidebar_width),
             scroll_lines: (scroll_lines != defaults.scroll_lines).then_some(scroll_lines),
             page_lines: (config.page_lines != defaults.page_lines).then_some(config.page_lines),
             scroll_moves_selection: (config.scroll_moves_selection
@@ -469,6 +477,14 @@ fn default_true() -> bool {
 
 fn default_scroll_lines() -> usize {
     1
+}
+
+fn default_sidebar_width() -> usize {
+    28
+}
+
+pub fn default_sidebar_width_min() -> usize {
+    12
 }
 
 fn default_details_max_height() -> usize {
@@ -537,6 +553,7 @@ impl Default for Config {
             autosave: true,
             autoreload: true,
             sidebar: false,
+            sidebar_width: default_sidebar_width(),
             scroll_lines: default_scroll_lines(),
             page_lines: 0,
             scroll_moves_selection: true,
@@ -609,6 +626,12 @@ impl Config {
     fn validate(&self) -> Result<()> {
         if self.scroll_lines == 0 {
             bail!("scroll_lines must be >= 1");
+        }
+        if self.sidebar_width < default_sidebar_width_min() {
+            bail!(
+                "sidebar_width must be >= {}",
+                default_sidebar_width_min()
+            );
         }
         if self.details_max_height < 4 {
             bail!("details_max_height must be >= 4");

@@ -46,6 +46,22 @@ fn default_d_maps_to_hide() {
         Some("hide reveal")
     );
     assert_eq!(
+        sidebar_defaults().get("h").map(String::as_str),
+        Some("scroll left")
+    );
+    assert_eq!(
+        sidebar_defaults().get("l").map(String::as_str),
+        Some("scroll right")
+    );
+    assert_eq!(
+        sidebar_defaults().get("left").map(String::as_str),
+        Some("scroll left")
+    );
+    assert_eq!(
+        sidebar_defaults().get("right").map(String::as_str),
+        Some("scroll right")
+    );
+    assert_eq!(
         defaults().get("esc").map(String::as_str),
         Some("command-mode clear")
     );

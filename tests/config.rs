@@ -150,6 +150,16 @@ fn rejects_zero_scroll_lines() {
 }
 
 #[test]
+fn rejects_narrow_sidebar_width() {
+    let dir = std::env::temp_dir().join(format!("lnav-rs-sidebar-w-{}", std::process::id()));
+    let _ = fs::create_dir_all(&dir);
+    let path = dir.join("config.toml");
+    fs::write(&path, "sidebar_width = 8\n").unwrap();
+    assert!(Config::load_from(&path).is_err());
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn write_emits_theme_table() {
     let dir = std::env::temp_dir().join(format!("lnav-rs-write-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
@@ -183,6 +193,7 @@ fn write_omits_default_keys() {
     assert!(!raw.contains("autosave = "));
     assert!(!raw.contains("autoreload = "));
     assert!(!raw.contains("page_lines = "));
+    assert!(!raw.contains("sidebar_width = "));
     assert!(!raw.contains("session_filters = "));
     assert!(!raw.contains("session_stdin = "));
     assert!(!raw.contains("case_mode = "));

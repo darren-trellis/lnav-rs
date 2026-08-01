@@ -87,6 +87,10 @@ pub fn sidebar_defaults() -> BTreeMap<String, String> {
         ("backspace".into(), "filter delete line".into()),
         ("space".into(), "filter set toggle".into()),
         ("enter".into(), "hide reveal".into()),
+        ("h".into(), "scroll left".into()),
+        ("left".into(), "scroll left".into()),
+        ("l".into(), "scroll right".into()),
+        ("right".into(), "scroll right".into()),
         ("esc".into(), "view current off".into()),
     ])
 }

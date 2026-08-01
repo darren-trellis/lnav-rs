@@ -66,7 +66,7 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
     let body = chunks[0];
     let show_sidebar = app.config.sidebar && !modal_open;
     let sidebar_w = if show_sidebar {
-        sidebar::desired_width(body.width)
+        sidebar::desired_width(body.width, app.config.sidebar_width)
     } else {
         0
     };
