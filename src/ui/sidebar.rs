@@ -32,11 +32,14 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
 
     let n_filters = app.filters.len();
     let n_hidden = app.view.hidden.len();
-    let title = match (n_filters, n_hidden) {
-        (0, 0) => " sidebar ".to_string(),
-        (f, 0) => format!(" filters ({f}) "),
-        (0, h) => format!(" hidden ({h}) "),
-        (f, h) => format!(" F{f} · H{h} "),
+    let filters_off = !app.filtering_enabled && n_filters > 0;
+    let title = match (n_filters, n_hidden, filters_off) {
+        (0, 0, _) => " sidebar ".to_string(),
+        (_, 0, true) => " filters (disabled) ".to_string(),
+        (f, 0, false) => format!(" filters ({f}) "),
+        (0, h, _) => format!(" hidden ({h}) "),
+        (_, h, true) => format!(" filters (disabled) · H{h} "),
+        (f, h, false) => format!(" F{f} · H{h} "),
     };
 
     let block = Block::default()
@@ -86,7 +89,9 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
             let item = items[idx];
             let text = app.sidebar_item_text(item);
             let dim = match item {
-                SidebarItem::Filter(fi) => !app.filters[fi].enabled,
+                SidebarItem::Filter(fi) => {
+                    !app.filtering_enabled || !app.filters[fi].enabled
+                }
                 SidebarItem::Hidden(_) => true,
             };
             let display = text::slice_width(&text, scroll_x, width);
