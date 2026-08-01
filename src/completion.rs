@@ -141,7 +141,6 @@ fn suggestions_for(buffer: &str, app: &App) -> Vec<Suggestion> {
             "filter" => filter_suggestions(rest, rest_from, app.filters.len()),
             "fold" => on_off_toggle_suggestions(rest, rest_from, FOLD_SUBS),
             "focus" => on_off_toggle_suggestions(rest, rest_from, FOCUS_SUBS),
-            "follow" => on_off_toggle_suggestions(rest, rest_from, FOLLOW_SUBS),
             "view" => view_suggestions(rest, rest_from),
             "search" => on_off_toggle_suggestions(rest, rest_from, SEARCH_SUBS),
             "hide" => on_off_toggle_suggestions(rest, rest_from, HIDE_SUBS),
@@ -185,12 +184,6 @@ const FOCUS_SUBS: &[(&str, &str)] = &[
     ("on", "focus details overlay"),
     ("off", "focus log list"),
     ("toggle", "cycle list/details/sidebar focus"),
-];
-
-const FOLLOW_SUBS: &[(&str, &str)] = &[
-    ("on", "enable live follow"),
-    ("off", "pause live follow"),
-    ("toggle", "toggle live follow"),
 ];
 
 const VIEW_SUBS: &[(&str, &str)] = &[

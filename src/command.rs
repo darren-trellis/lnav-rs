@@ -70,10 +70,6 @@ fn execute_inner(app: &mut App, raw: &str, invoke: Invoke) {
             app.begin_command_mode();
         }
         "match" => match_command(app, rest),
-        "follow" => {
-            app.cancel_pending_op();
-            follow_command(app, rest);
-        }
         "hide" => hide_command(app, rest, invoke),
         "pin" => pin_command(app, rest),
         "delete" => match invoke {
@@ -480,18 +476,6 @@ fn focus_command(app: &mut App, rest: &str) {
         Some(action) => app.set_overlay_focus(action),
         None => {
             app.status_message = Some(format!("usage: :focus [on|off|toggle]  (unknown: {sub})"));
-        }
-    }
-}
-
-fn follow_command(app: &mut App, rest: &str) {
-    let (sub, _) = split_cmd(rest);
-    match parse_on_off_toggle(sub) {
-        Some(ToggleAction::On) => app.set_follow(true),
-        Some(ToggleAction::Off) => app.set_follow(false),
-        Some(ToggleAction::Toggle) => app.set_follow(!app.view.follow),
-        None => {
-            app.status_message = Some(format!("usage: :follow [on|off|toggle]  (unknown: {sub})"));
         }
     }
 }

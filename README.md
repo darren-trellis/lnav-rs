@@ -58,7 +58,6 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 | `/` | `search` (regex; highlights matched text; Up/Down recall history) |
 | `:` | `command-mode` |
 | `n` / `N` | `match next` / `match prev` |
-| `f` | `follow toggle` |
 | `s` | `view sidebar toggle` (filters sidebar) |
 | `t` | `theme cycle` |
 | `d` | `hide` operator — `dd` current, `dj`/`dG`/… range; in sidebar `dd` deletes filter |
@@ -100,7 +99,6 @@ In `/` mode, **Up/Down** recall search history (shared for list and details sear
 | `:filter clear` | Remove all filters |
 | `:filter delete [N]` | Remove filter by index (or selected sidebar filter) |
 | `:fold on\|off\|toggle` | Fold/unfold details tree item under cursor |
-| `:follow on\|off\|toggle` | Enable/disable/toggle live follow |
 | `:view details [on\|off\|toggle]` | Open/close/toggle details overlay |
 | `:view sidebar [on\|off\|toggle]` | Show/hide/toggle filters sidebar |
 | `:view current [on\|off\|toggle]` | Same for the focused details or sidebar pane |

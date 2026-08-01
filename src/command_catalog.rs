@@ -26,10 +26,6 @@ const COMMANDS: &[CommandInfo] = &[
         help: "copy focused details value to clipboard",
     },
     CommandInfo {
-        name: "follow",
-        help: "on|off|toggle live follow",
-    },
-    CommandInfo {
         name: "hide",
         help: "hide line(s): dd or d{{motion}} | line | clear",
     },
