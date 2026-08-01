@@ -27,8 +27,8 @@ fn draw_picker(frame: &mut Frame, app: &mut App, area: Rect) {
         .max()
         .unwrap_or(8)
         .saturating_add(8)
-        .max(picker.option_name.len() + 28)
-        .clamp(28, 56) as u16;
+        .max(picker.option_name.len() + 4)
+        .clamp(16, 56) as u16;
     let h = rows + 2;
     if width == 0 || h == 0 || area.width < 10 || area.height < 4 {
         return;
@@ -46,7 +46,7 @@ fn draw_picker(frame: &mut Frame, app: &mut App, area: Rect) {
     let selected = picker.selected;
     let values = picker.values.clone();
     let committed = picker.previous_value.clone();
-    let title = format!(" {} · ↑↓ · click/Enter · Esc ", picker.option_name);
+    let title = format!(" {} ", picker.option_name);
     let block = {
         let theme = &app.theme;
         Block::default()
@@ -103,14 +103,14 @@ fn draw_editor(frame: &mut Frame, app: &mut App, area: Rect) {
     let Some(ConfigModal::Editor(editor)) = &app.config_modal else {
         return;
     };
-    let title = format!(" {} · Enter set · Esc ", editor.option_name);
+    let title = format!(" {} ", editor.option_name);
     let content_w = editor
         .buffer
         .len()
         .max(editor.previous_value.len())
         .saturating_add(4)
-        .max(title.len().saturating_sub(2))
-        .clamp(28, 56);
+        .max(editor.option_name.len() + 4)
+        .clamp(16, 56);
     let width = content_w as u16;
     let h = 3u16;
     if area.width < 10 || area.height < 3 {
