@@ -127,13 +127,35 @@ impl App {
                 if let Some(ConfigModal::Editor(editor)) = &mut self.config_modal {
                     editor.buffer.pop();
                 }
+                self.preview_config_editor();
             }
-            KeyCode::Char(c) if !key.modifiers.contains(KeyModifiers::CONTROL) => {
+            KeyCode::Char(c)
+                if c.is_ascii_digit() && !key.modifiers.contains(KeyModifiers::CONTROL) =>
+            {
                 if let Some(ConfigModal::Editor(editor)) = &mut self.config_modal {
                     editor.buffer.push(c);
                 }
+                self.preview_config_editor();
             }
-            _ => {}
+            _ => {
+                let command = keys::encode(key)
+                    .and_then(|spec| self.config.keys.bindings.get(&spec))
+                    .map(|raw| raw.trim().to_ascii_lowercase());
+                match command.as_deref() {
+                    Some("nav up") => self.adjust_config_editor(1),
+                    Some("nav down") => self.adjust_config_editor(-1),
+                    Some(
+                        "view details"
+                        | "view details toggle"
+                        | "view details on"
+                        | "view current"
+                        | "view current toggle"
+                        | "view current on",
+                    ) => self.close_config_modal(true),
+                    Some("view details off" | "view current off") => self.close_config_modal(false),
+                    _ => {}
+                }
+            }
         }
     }
 
@@ -211,37 +233,52 @@ impl App {
     }
 
     pub(super) fn handle_config_modal_mouse(&mut self, mouse: MouseEvent) {
-        let Some(ConfigModal::Picker(picker)) = &self.config_modal else {
-            return;
-        };
-        let popup = picker.popup_area;
-        let area = picker.list_area;
-        let col = mouse.column;
-        let row = mouse.row;
+        match &self.config_modal {
+            Some(ConfigModal::Editor(editor)) => {
+                let popup = editor.popup_area;
+                match mouse.kind {
+                    MouseEventKind::ScrollUp => self.adjust_config_editor(1),
+                    MouseEventKind::ScrollDown => self.adjust_config_editor(-1),
+                    MouseEventKind::Down(MouseButton::Left)
+                        if !contains(popup, mouse.column, mouse.row) =>
+                    {
+                        self.close_config_modal(false);
+                    }
+                    _ => {}
+                }
+            }
+            Some(ConfigModal::Picker(picker)) => {
+                let popup = picker.popup_area;
+                let area = picker.list_area;
+                let col = mouse.column;
+                let row = mouse.row;
 
-        match mouse.kind {
-            MouseEventKind::ScrollUp => self.config_picker_move(-1),
-            MouseEventKind::ScrollDown => self.config_picker_move(1),
-            MouseEventKind::Moved => {
-                if contains(area, col, row) {
-                    let idx = picker.list_start + (row - area.y) as usize;
-                    if idx < picker.values.len() {
-                        self.config_picker_select(idx);
+                match mouse.kind {
+                    MouseEventKind::ScrollUp => self.config_picker_move(-1),
+                    MouseEventKind::ScrollDown => self.config_picker_move(1),
+                    MouseEventKind::Moved => {
+                        if contains(area, col, row) {
+                            let idx = picker.list_start + (row - area.y) as usize;
+                            if idx < picker.values.len() {
+                                self.config_picker_select(idx);
+                            }
+                        }
                     }
+                    MouseEventKind::Down(MouseButton::Left) => {
+                        if contains(area, col, row) {
+                            let idx = picker.list_start + (row - area.y) as usize;
+                            if idx < picker.values.len() {
+                                self.config_picker_select(idx);
+                                self.close_config_modal(true);
+                            }
+                        } else if !contains(popup, col, row) {
+                            self.close_config_modal(false);
+                        }
+                    }
+                    _ => {}
                 }
             }
-            MouseEventKind::Down(MouseButton::Left) => {
-                if contains(area, col, row) {
-                    let idx = picker.list_start + (row - area.y) as usize;
-                    if idx < picker.values.len() {
-                        self.config_picker_select(idx);
-                        self.close_config_modal(true);
-                    }
-                } else if !contains(popup, col, row) {
-                    self.close_config_modal(false);
-                }
-            }
-            _ => {}
+            None => {}
         }
     }
 
@@ -263,10 +300,7 @@ impl App {
                     buffer: previous_value,
                     popup_area: Rect::default(),
                 }));
-                self.status_message = Some(format!(
-                    "{} · type value · Enter to set · Esc to cancel",
-                    option.name
-                ));
+                self.preview_config_editor();
             }
             ValueKind::Theme | ValueKind::Bool | ValueKind::CaseMode | ValueKind::TimestampFormat => {
                 let values = option.value_kind.suggestions();
@@ -345,6 +379,66 @@ impl App {
         ));
     }
 
+    fn adjust_config_editor(&mut self, delta: isize) {
+        let Some(ConfigModal::Editor(editor)) = &self.config_modal else {
+            return;
+        };
+        let name = editor.option_name;
+        let min = config_options::unsigned_min(name);
+        let current = editor
+            .buffer
+            .parse::<usize>()
+            .or_else(|_| editor.previous_value.parse::<usize>())
+            .unwrap_or(min);
+        let next = if delta >= 0 {
+            current.saturating_add(delta as usize)
+        } else {
+            current
+                .saturating_sub(delta.unsigned_abs())
+                .max(min)
+        };
+        if let Some(ConfigModal::Editor(editor)) = &mut self.config_modal {
+            editor.buffer = next.to_string();
+        }
+        self.preview_config_editor();
+    }
+
+    fn preview_config_editor(&mut self) {
+        let Some(ConfigModal::Editor(editor)) = &self.config_modal else {
+            return;
+        };
+        let name = editor.option_name;
+        let value = editor.buffer.clone();
+        let Some(option) = config_options::find(name) else {
+            return;
+        };
+        let confirm = keys::binding_for_command(
+            &self.config.keys.bindings,
+            None,
+            "view details on",
+        )
+        .or_else(|| keys::binding_for_command(&self.config.keys.bindings, None, "view details"))
+        .unwrap_or("enter");
+        if value.is_empty() {
+            self.status_message = Some(format!(
+                "{name}= · ↑/↓ adjust · {confirm} to set · Esc to cancel"
+            ));
+            return;
+        }
+        self.config_preview = true;
+        let ok = option.set(self, &value);
+        self.config_preview = false;
+        if ok {
+            self.status_message = Some(format!(
+                "preview: {name}={value} · ↑/↓ adjust · {confirm} to set · Esc to cancel"
+            ));
+        } else {
+            // Setter already left a usage message; keep a short cancel hint.
+            let usage = self.status_message.clone().unwrap_or_default();
+            self.status_message = Some(format!("{usage} · Esc cancels"));
+        }
+    }
+
     pub(crate) fn close_config_modal(&mut self, confirm: bool) {
         let Some(modal) = self.config_modal.take() else {
             return;
@@ -371,6 +465,11 @@ impl App {
                     self.commit_config_value(editor.option_name, &editor.buffer);
                     return;
                 }
+                self.config_preview = true;
+                if let Some(option) = config_options::find(editor.option_name) {
+                    let _ = option.set(self, &editor.previous_value);
+                }
+                self.config_preview = false;
                 self.status_message = Some(format!(
                     "{}={}",
                     editor.option_name, editor.previous_value

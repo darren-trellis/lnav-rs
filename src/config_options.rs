@@ -254,6 +254,18 @@ pub fn find(name: &str) -> Option<&'static ConfigOption> {
         .find(|option| option.name.eq_ignore_ascii_case(name))
 }
 
+/// Minimum accepted value for unsigned config options (for spinner adjust).
+pub fn unsigned_min(name: &str) -> usize {
+    match name {
+        "details_max_height" => 4,
+        "details_tab_width" => 2,
+        "sidebar_width" => crate::config::default_sidebar_width_min(),
+        "scroll_lines" => 1,
+        "page_lines" => 0,
+        _ => 0,
+    }
+}
+
 pub fn usage() -> String {
     OPTIONS
         .iter()
