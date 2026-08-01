@@ -536,9 +536,13 @@ fn delete_command(app: &mut App, rest: &str, invoke: Invoke) {
             Invoke::Line => app.delete_current(),
         },
         "line" => app.delete_current(),
+        "all" => {
+            app.cancel_pending_op();
+            app.delete_all_lines();
+        }
         other => {
             app.status_message =
-                Some(format!("usage: :delete | :delete line  (unknown: {other})"));
+                Some(format!("usage: :delete | :delete line | :delete all  (unknown: {other})"));
         }
     }
 }

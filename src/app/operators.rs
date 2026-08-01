@@ -530,6 +530,23 @@ impl App {
         self.apply_op_display_range(PendingOp::Delete, at, end);
     }
 
+    /// Delete every line from the on-disk log (clear the file).
+    pub fn delete_all_lines(&mut self) {
+        self.pending_op = None;
+        self.count = None;
+        if !self.source.is_file() {
+            self.status_message = Some("cannot delete from stdin".into());
+            return;
+        }
+        let n = self.source.len();
+        if n == 0 {
+            self.status_message = Some("no lines to delete".into());
+            return;
+        }
+        let indices: Vec<usize> = (0..n).collect();
+        self.delete_source_indices(&indices, Some(0), None);
+    }
+
     pub(crate) fn pin_current(&mut self) {
         if self.display_len() == 0 {
             self.pending_op = None;

@@ -326,6 +326,32 @@ fn sidebar_d5k_unhides_range() {
 }
 
 #[test]
+fn delete_all_clears_the_file() {
+    let (dir, path) = temp_log(
+        "delete-all",
+        &[
+            r#"{"level":"info","msg":"a"}"#,
+            r#"{"level":"error","msg":"b"}"#,
+            r#"{"level":"info","msg":"c"}"#,
+        ],
+    );
+    let mut app = app_for(&path);
+    command::execute(&mut app, "filter out error");
+    assert_eq!(app.source.len(), 3);
+    assert_eq!(app.display_len(), 2);
+
+    command::execute_from_key(&mut app, "delete all");
+
+    assert_eq!(app.source.len(), 0);
+    assert_eq!(app.display_len(), 0);
+    assert!(fs::read_to_string(&path).unwrap().is_empty());
+    // Filter definition remains.
+    assert_eq!(app.filters.len(), 1);
+
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn sidebar_dg_on_filters_deletes_all_matches() {
     let (dir, path) = temp_log(
         "sidebar-dg-filters",

@@ -71,6 +71,8 @@ pub fn defaults() -> BTreeMap<String, String> {
         ("backspace".into(), "hide line".into()),
         ("D".into(), "delete".into()),
         ("S-backspace".into(), "delete line".into()),
+        // Clear the log file (same idea as gDG on an unfiltered list).
+        ("C-l".into(), "delete all".into()),
         ("p".into(), "pin".into()),
         ("?".into(), "help".into()),
         ("s".into(), "view sidebar toggle".into()),

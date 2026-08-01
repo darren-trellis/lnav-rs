@@ -66,6 +66,10 @@ fn default_d_maps_to_hide() {
         defaults().get("S-backspace").map(String::as_str),
         Some("delete line")
     );
+    assert_eq!(
+        defaults().get("C-l").map(String::as_str),
+        Some("delete all")
+    );
     assert_eq!(defaults().get("p").map(String::as_str), Some("pin"));
     assert_eq!(
         defaults().get("enter").map(String::as_str),

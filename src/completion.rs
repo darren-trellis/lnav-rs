@@ -197,6 +197,7 @@ fn suggestions_for(buffer: &str, app: &App) -> Vec<Suggestion> {
             "hide" => on_off_toggle_suggestions(rest, rest_from, HIDE_SUBS),
             "pin" => on_off_toggle_suggestions(rest, rest_from, PIN_SUBS),
             "help" => on_off_toggle_suggestions(rest, rest_from, HELP_SUBS),
+            "delete" => on_off_toggle_suggestions(rest, rest_from, DELETE_SUBS),
             "config" => config_suggestions(rest, rest_from),
             _ => Vec::new(),
         }
@@ -284,6 +285,11 @@ const HIDE_SUBS: &[(&str, &str)] = &[
 ];
 
 const PIN_SUBS: &[(&str, &str)] = &[("clear", "unpin all sticky lines")];
+
+const DELETE_SUBS: &[(&str, &str)] = &[
+    ("line", "delete current line(s) immediately"),
+    ("all", "delete every line from the file"),
+];
 
 fn on_off_toggle_suggestions(
     rest: &str,
