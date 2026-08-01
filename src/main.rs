@@ -8,7 +8,6 @@ use clap::Parser;
 use lnav_rs::app::App;
 use lnav_rs::config::Config;
 use lnav_rs::tail::LogSource;
-use lnav_rs::theme::Theme;
 use lnav_rs::tty;
 
 #[derive(Debug, Parser)]
@@ -21,10 +20,6 @@ struct Cli {
     /// Log file to open, or `-` for stdin (also: `prog | lnav-rs`)
     file: Option<PathBuf>,
 
-    /// Theme name (overrides config)
-    #[arg(short, long)]
-    theme: Option<String>,
-
     /// Path to config file
     #[arg(long)]
     config: Option<PathBuf>,
@@ -32,10 +27,6 @@ struct Cli {
     /// Write a default config file and exit
     #[arg(long)]
     init_config: bool,
-
-    /// List themes (built-in + user) and exit
-    #[arg(long)]
-    list_themes: bool,
 }
 
 fn main() -> ExitCode {
@@ -56,22 +47,11 @@ fn run() -> Result<()> {
         return Ok(());
     }
 
-    if cli.list_themes {
-        for name in Theme::list_names() {
-            println!("{name}");
-        }
-        return Ok(());
-    }
-
     let config_path = cli
         .config
         .clone()
         .unwrap_or_else(Config::default_path);
-    let (mut config, loaded_from) = Config::load_from(&config_path)?;
-
-    if let Some(theme) = &cli.theme {
-        config.theme.set_name(theme);
-    }
+    let (config, loaded_from) = Config::load_from(&config_path)?;
 
     let source = open_source(cli.file.as_ref())?;
 

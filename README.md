@@ -12,8 +12,7 @@ cargo install --path .
 
 ```bash
 lnav-rs examples/sample.jsonl
-lnav-rs examples/sample.logfmt --theme nord
-lnav-rs --list-themes
+lnav-rs examples/sample.logfmt
 lnav-rs --init-config
 
 # Pipe JSON / log lines from a program (keyboard still works via /dev/tty)
@@ -27,10 +26,8 @@ lnav-rs - < app.jsonl
 | Flag | Description |
 |------|-------------|
 | `[FILE]` | Log file to open, or `-` for stdin (also: `prog \| lnav-rs`) |
-| `-t`, `--theme <THEME>` | Theme name (overrides config) |
 | `--config <PATH>` | Path to config file |
 | `--init-config` | Write a default config file and exit |
-| `--list-themes` | List themes (built-in + user) and exit |
 | `-h`, `--help` | Print help |
 | `-V`, `--version` | Print version |
 
@@ -65,7 +62,7 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 | `?` | `help` (cheatsheet modal; Esc closes; `:help toggle` details border hints when focused) |
 | `q` | `quit` |
 
-### Commands (`:`)
+### Commands
 
 | Command | Action | Description |
 |---------|--------|-------------|
@@ -81,7 +78,7 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 | `:config` | `path` \| `set KEY [VAL]` \| `get KEY` \| `save` \| `load` | Show path, get/set options (picker/editor when VAL omitted), save, or reload — see [config reference](docs/config.md) |
 | `:N` | | Jump to view line `N` |
 
-Keybinding commands (used in `[keys]`; omitted from `:` completions):
+Hidden commands (these are mainly used internally for keybindings):
 
 | Command | Action | Description |
 |---------|--------|-------------|
@@ -180,18 +177,37 @@ h = "scroll left"
 l = "scroll right"
 ```
 
-Create one with `lnav-rs --init-config` or `:config save`. CLI flags override the file (`--theme`, `--config PATH`).
+## Options
 
-More detail:
-
-- [Config reference](docs/config.md) — options, columns, themes, keybindings
-- [Details overlay](docs/details.md)
-- [Filters & sidebar](docs/filters.md)
-- [Mouse](docs/mouse.md)
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `theme` | name | `catppuccin` | Color theme (see [Themes](#themes)) |
+| `follow` | `on` \| `off` \| `toggle` | `on` | Live-tail as the file or pipe grows |
+| `wrap_details` | `on` \| `off` \| `toggle` | `on` | Wrap text in the details overlay |
+| `details_json_tree` | `on` \| `off` \| `toggle` | `on` | Tree-view nested JSON in details |
+| `details_max_height` | number | `24` | Max details overlay height in rows |
+| `details_tab_width` | number | `4` | Details tree indent width (min `2`) |
+| `line_numbers` | `on` \| `off` \| `toggle` | `off` | Absolute view line numbers in the gutter |
+| `relative_line_numbers` | `on` \| `off` \| `toggle` | `off` | Relative (vim-style) line numbers |
+| `list_scrollbar_vertical` | `on` \| `off` \| `toggle` | `on` | List vertical scrollbar |
+| `list_scrollbar_horizontal` | `on` \| `off` \| `toggle` | `on` | List horizontal scrollbar |
+| `sidebar_scrollbar_vertical` | `on` \| `off` \| `toggle` | `on` | Sidebar vertical scrollbar |
+| `sidebar_scrollbar_horizontal` | `on` \| `off` \| `toggle` | `on` | Sidebar horizontal scrollbar |
+| `details_scrollbar_vertical` | `on` \| `off` \| `toggle` | `on` | Details vertical scrollbar |
+| `border` | `on` \| `off` \| `toggle` | `on` | Draw vertical rules between list columns |
+| `autosave` | `on` \| `off` \| `toggle` | `on` | Write `config.toml` after successful `:config set` |
+| `autoreload` | `on` \| `off` \| `toggle` | `on` | Reload when the config file changes on disk |
+| `sidebar` | `on` \| `off` \| `toggle` | `off` | Show filters/hidden sidebar (same as `:view sidebar`) |
+| `sidebar_width` | number | `28` | Preferred sidebar width in columns (min `12`) |
+| `scroll_lines` | number | `1` | Mouse wheel step |
+| `page_lines` | number | `0` | Page up/down step (`0` = viewport height) |
+| `scroll_moves_selection` | `on` \| `off` \| `toggle` | `on` | Wheel moves selection (`off` scrolls the viewport only) |
+| `timestamp_format` | strftime \| `raw` | `%H:%M:%S` | Timestamp column format (`raw` keeps the log string) |
+| `case_mode` | `sensitive` \| `insensitive` \| `smart` | `smart` | Case matching for `/` search and `:filter` |
+| `session_filters` | `on` \| `off` \| `toggle` | `on` | Persist filters per log file |
+| `session_stdin` | `on` \| `off` \| `toggle` | `on` | Persist filters for stdin |
 
 ## Themes
-
-Set with `:config set theme <name>` or `[theme] name = "..."`:
 
 - `ayu`
 - `catppuccin` (default)
