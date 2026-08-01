@@ -12,180 +12,180 @@ use crate::keys::{self, KeysConfig};
 use crate::text;
 
 #[derive(Clone, Copy)]
-enum CheatContext {
+enum Context {
     Base,
     Details,
     Sidebar,
 }
 
-enum CheatEntry {
+enum Entry {
     Heading(&'static str),
     Blank,
     /// Look up keys for each command group; join keys in a group with `/`,
     /// groups with ` · `, then ` — description`.
     Item {
-        context: CheatContext,
+        context: Context,
         groups: &'static [&'static str],
         description: &'static str,
     },
 }
 
 /// Cheatsheet rows. Key columns are resolved from the live `[keys]` config.
-const CHEATSHEET: &[CheatEntry] = &[
-    CheatEntry::Heading("Navigation"),
-    CheatEntry::Item {
-        context: CheatContext::Base,
+const CHEATSHEET: &[Entry] = &[
+    Entry::Heading("Navigation"),
+    Entry::Item {
+        context: Context::Base,
         groups: &["nav down", "nav up"],
         description: "move (accepts a count)",
     },
-    CheatEntry::Item {
-        context: CheatContext::Base,
+    Entry::Item {
+        context: Context::Base,
         groups: &["page down", "page up"],
         description: "page (page_lines)",
     },
-    CheatEntry::Item {
-        context: CheatContext::Base,
+    Entry::Item {
+        context: Context::Base,
         groups: &["nav top"],
         description: "top",
     },
-    CheatEntry::Item {
-        context: CheatContext::Base,
+    Entry::Item {
+        context: Context::Base,
         groups: &["nav bottom"],
         description: "bottom (follow on list)",
     },
-    CheatEntry::Item {
-        context: CheatContext::Base,
+    Entry::Item {
+        context: Context::Base,
         groups: &["scroll left", "scroll right"],
         description: "scroll horizontally",
     },
-    CheatEntry::Item {
-        context: CheatContext::Base,
+    Entry::Item {
+        context: Context::Base,
         groups: &["focus toggle"],
         description: "cycle focus: list → details → sidebar",
     },
-    CheatEntry::Blank,
-    CheatEntry::Heading("List"),
-    CheatEntry::Item {
-        context: CheatContext::Base,
+    Entry::Blank,
+    Entry::Heading("List"),
+    Entry::Item {
+        context: Context::Base,
         groups: &["view details on"],
         description: "open details",
     },
-    CheatEntry::Item {
-        context: CheatContext::Base,
+    Entry::Item {
+        context: Context::Base,
         groups: &["command clear"],
         description: "clear status / cancel",
     },
-    CheatEntry::Item {
-        context: CheatContext::Base,
+    Entry::Item {
+        context: Context::Base,
         groups: &["view sidebar toggle"],
         description: "toggle filters/hidden sidebar",
     },
-    CheatEntry::Item {
-        context: CheatContext::Base,
+    Entry::Item {
+        context: Context::Base,
         groups: &["search"],
         description: "search (regex)",
     },
-    CheatEntry::Item {
-        context: CheatContext::Base,
+    Entry::Item {
+        context: Context::Base,
         groups: &["match next", "match prev"],
         description: "next/prev match",
     },
-    CheatEntry::Item {
-        context: CheatContext::Base,
+    Entry::Item {
+        context: Context::Base,
         groups: &["hide"],
         description: "hide (dd, dj, …)",
     },
-    CheatEntry::Item {
-        context: CheatContext::Base,
+    Entry::Item {
+        context: Context::Base,
         groups: &["hide line"],
         description: "hide line (same as dd)",
     },
-    CheatEntry::Item {
-        context: CheatContext::Base,
+    Entry::Item {
+        context: Context::Base,
         groups: &["delete"],
         description: "delete from file (DD, Dj, …)",
     },
-    CheatEntry::Item {
-        context: CheatContext::Base,
+    Entry::Item {
+        context: Context::Base,
         groups: &["delete line"],
         description: "delete line (same as DD)",
     },
-    CheatEntry::Item {
-        context: CheatContext::Base,
+    Entry::Item {
+        context: Context::Base,
         groups: &["pin"],
         description: "pin/unpin sticky line",
     },
-    CheatEntry::Item {
-        context: CheatContext::Base,
+    Entry::Item {
+        context: Context::Base,
         groups: &["command"],
         description: "command mode",
     },
-    CheatEntry::Item {
-        context: CheatContext::Base,
+    Entry::Item {
+        context: Context::Base,
         groups: &["help"],
         description: "this help",
     },
-    CheatEntry::Item {
-        context: CheatContext::Base,
+    Entry::Item {
+        context: Context::Base,
         groups: &["quit"],
         description: "quit",
     },
-    CheatEntry::Blank,
-    CheatEntry::Heading("Details"),
-    CheatEntry::Item {
-        context: CheatContext::Details,
+    Entry::Blank,
+    Entry::Heading("Details"),
+    Entry::Item {
+        context: Context::Details,
         groups: &["fold toggle"],
         description: "fold/unfold tree item",
     },
-    CheatEntry::Item {
-        context: CheatContext::Details,
+    Entry::Item {
+        context: Context::Details,
         groups: &["view current off"],
         description: "close details",
     },
-    CheatEntry::Item {
-        context: CheatContext::Details,
+    Entry::Item {
+        context: Context::Details,
         groups: &["search"],
         description: "search in overlay",
     },
-    CheatEntry::Item {
-        context: CheatContext::Details,
+    Entry::Item {
+        context: Context::Details,
         groups: &["match next", "match prev"],
         description: "next/prev match",
     },
-    CheatEntry::Item {
-        context: CheatContext::Details,
+    Entry::Item {
+        context: Context::Details,
         groups: &["copy"],
         description: "copy focused value",
     },
-    CheatEntry::Item {
-        context: CheatContext::Details,
+    Entry::Item {
+        context: Context::Details,
         groups: &["hide", "delete"],
         description: "hide / delete (same as list)",
     },
-    CheatEntry::Blank,
-    CheatEntry::Heading("Sidebar"),
-    CheatEntry::Item {
-        context: CheatContext::Sidebar,
+    Entry::Blank,
+    Entry::Heading("Sidebar"),
+    Entry::Item {
+        context: Context::Sidebar,
         groups: &["filter set toggle"],
         description: "toggle selected filter",
     },
-    CheatEntry::Item {
-        context: CheatContext::Sidebar,
+    Entry::Item {
+        context: Context::Sidebar,
         groups: &["hide reveal"],
         description: "reveal hidden line and jump",
     },
-    CheatEntry::Item {
-        context: CheatContext::Sidebar,
+    Entry::Item {
+        context: Context::Sidebar,
         groups: &["view current off"],
         description: "close sidebar",
     },
-    CheatEntry::Item {
-        context: CheatContext::Sidebar,
+    Entry::Item {
+        context: Context::Sidebar,
         groups: &["filter delete"],
         description: "delete filter / unhide line (dd)",
     },
-    CheatEntry::Item {
-        context: CheatContext::Sidebar,
+    Entry::Item {
+        context: Context::Sidebar,
         groups: &["filter delete line"],
         description: "delete filter / unhide line",
     },
@@ -195,9 +195,9 @@ pub fn render(keys: &KeysConfig) -> Vec<String> {
     let mut lines = Vec::with_capacity(CHEATSHEET.len());
     for entry in CHEATSHEET {
         match entry {
-            CheatEntry::Heading(title) => lines.push((*title).to_string()),
-            CheatEntry::Blank => lines.push(String::new()),
-            CheatEntry::Item {
+            Entry::Heading(title) => lines.push((*title).to_string()),
+            Entry::Blank => lines.push(String::new()),
+            Entry::Item {
                 context,
                 groups,
                 description,
@@ -213,7 +213,7 @@ pub fn render(keys: &KeysConfig) -> Vec<String> {
 
 fn render_item(
     keys: &KeysConfig,
-    context: CheatContext,
+    context: Context,
     groups: &[&str],
     description: &str,
 ) -> Option<String> {
@@ -235,12 +235,12 @@ fn render_item(
 
 fn maps_for(
     keys: &KeysConfig,
-    context: CheatContext,
+    context: Context,
 ) -> (&BTreeMap<String, String>, Option<&BTreeMap<String, String>>) {
     match context {
-        CheatContext::Base => (&keys.bindings, None),
-        CheatContext::Details => (&keys.bindings, Some(&keys.details)),
-        CheatContext::Sidebar => (&keys.bindings, Some(&keys.sidebar)),
+        Context::Base => (&keys.bindings, None),
+        Context::Details => (&keys.bindings, Some(&keys.details)),
+        Context::Sidebar => (&keys.bindings, Some(&keys.sidebar)),
     }
 }
 
