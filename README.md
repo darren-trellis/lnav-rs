@@ -50,7 +50,7 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 | `Tab` | `focus toggle` (cycle list → details → sidebar) |
 | `Space` | `fold toggle` in details; `filter set toggle` in sidebar |
 | `c` | `copy` (copy focused details value to clipboard) |
-| `Esc` | `command clear` (list); `view current off` in details/sidebar |
+| `Esc` | `command clear` (list); in details/sidebar `view current off` (cancels pending `d`/`D` first, else closes the pane) |
 | `/` | `search` (regex; highlights matched text; Up/Down recall history) |
 | `:` | `command` |
 | `n` / `N` | `match next` / `match prev` |

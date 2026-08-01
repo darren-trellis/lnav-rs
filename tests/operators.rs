@@ -1,7 +1,7 @@
 use std::fs;
 use std::io::Write;
 
-use lnav_rs::app::{App, Focus, SidebarItem};
+use lnav_rs::app::{App, Focus, PendingOp, SidebarItem, ToggleAction};
 use lnav_rs::command;
 use lnav_rs::config::Config;
 use lnav_rs::tail::LogSource;
@@ -321,6 +321,73 @@ fn sidebar_d5k_unhides_range() {
 
     assert_eq!(app.hidden_count(), 0);
     assert_eq!(app.display_len(), 6);
+
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn esc_cancels_sidebar_pending_op_without_closing() {
+    let (dir, path) = temp_log(
+        "esc-sidebar",
+        &[r#"{"level":"info","msg":"a"}"#, r#"{"level":"info","msg":"b"}"#],
+    );
+    let mut app = app_for(&path);
+    command::execute(&mut app, "hide");
+    command::execute(&mut app, "view sidebar on");
+    app.focus_sidebar();
+    assert!(app.sidebar_len() > 0);
+    command::execute_from_key(&mut app, "filter delete"); // d
+    assert_eq!(app.pending_op, Some(PendingOp::DeleteFilter));
+
+    command::execute_from_key(&mut app, "view current off"); // Esc
+
+    assert!(app.pending_op.is_none());
+    assert!(app.config.sidebar, "sidebar should stay open");
+    assert_eq!(app.focus(), Focus::Sidebar);
+
+    // Second Esc closes.
+    command::execute_from_key(&mut app, "view current off");
+    assert!(!app.config.sidebar);
+
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn esc_cancels_details_pending_op_without_closing() {
+    let (dir, path) = temp_log(
+        "esc-details",
+        &[r#"{"level":"info","msg":"a"}"#, r#"{"level":"info","msg":"b"}"#],
+    );
+    let mut app = app_for(&path);
+    command::execute(&mut app, "view details on");
+    assert_eq!(app.focus(), Focus::Details);
+    // Pending ops from details still use the list operator (d/D fall through).
+    app.pending_op = Some(PendingOp::Delete);
+    app.op_anchor = 0;
+
+    command::execute_from_key(&mut app, "view current off");
+
+    assert!(app.pending_op.is_none());
+    assert_eq!(app.focus(), Focus::Details, "details should stay focused/open");
+
+    command::execute_from_key(&mut app, "view current off");
+    assert_eq!(app.focus(), Focus::List);
+
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn esc_clears_count_prefix_without_closing_sidebar() {
+    let (dir, path) = temp_log("esc-count", &[r#"{"level":"info","msg":"a"}"#]);
+    let mut app = app_for(&path);
+    command::execute(&mut app, "view sidebar on");
+    app.focus_sidebar();
+    app.count = Some(5);
+
+    app.set_current_view(ToggleAction::Off);
+
+    assert!(app.count.is_none());
+    assert!(app.config.sidebar);
 
     let _ = fs::remove_dir_all(&dir);
 }

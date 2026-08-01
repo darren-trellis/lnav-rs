@@ -56,7 +56,8 @@ fn execute_one(app: &mut App, line: &str, invoke: Invoke) {
         "page" => page_command(app, rest),
         "scroll" => scroll_command(app, rest),
         "view" => {
-            app.cancel_pending_op();
+            // Do not cancel here: `view current off` (Esc in details/sidebar)
+            // needs to see a pending operator so it can cancel without closing.
             view_command(app, rest);
         }
         "focus" => {

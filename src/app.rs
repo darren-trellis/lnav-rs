@@ -580,6 +580,15 @@ impl App {
     /// Apply a view action to the focused pane (details or sidebar).
     /// Returns true when the sidebar visibility may have changed (for autosave).
     pub fn set_current_view(&mut self, action: ToggleAction) -> bool {
+        // Esc (`view current off`) cancels a pending operator / count first,
+        // matching list `command clear`, instead of also closing the pane.
+        if matches!(action, ToggleAction::Off)
+            && (self.pending_op.is_some() || self.count.is_some())
+        {
+            self.cancel_pending_op();
+            self.status_message = None;
+            return false;
+        }
         if self.is_sidebar_focused() && self.config.sidebar {
             self.set_sidebar(action);
             return true;

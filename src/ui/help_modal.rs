@@ -159,7 +159,7 @@ const CHEATSHEET: &[Entry] = &[
     Entry::Item {
         context: Context::Details,
         groups: &["view current off"],
-        description: "close details",
+        description: "cancel op / close details",
     },
     Entry::Item {
         context: Context::Details,
@@ -196,7 +196,7 @@ const CHEATSHEET: &[Entry] = &[
     Entry::Item {
         context: Context::Sidebar,
         groups: &["view current off"],
-        description: "close sidebar",
+        description: "cancel op / close sidebar",
     },
     Entry::Item {
         context: Context::Sidebar,
