@@ -257,6 +257,23 @@ fn delete_filter(app: &mut App, rest: &str) {
     app.delete_selected_filter();
 }
 
+fn set_filter_item(app: &mut App, rest: &str) {
+    let (action_str, idx_str) = split_cmd(rest);
+    let Some(action) = parse_on_off_toggle(action_str) else {
+        app.status_message = Some("usage: :filter set on|off|toggle [INDEX]".into());
+        return;
+    };
+    if idx_str.is_empty() {
+        app.set_selected_filter_enabled(action);
+        return;
+    }
+    let Ok(idx) = idx_str.parse::<usize>() else {
+        app.status_message = Some("usage: :filter set on|off|toggle [INDEX]".into());
+        return;
+    };
+    app.set_filter_enabled(idx, action);
+}
+
 fn nav_command(app: &mut App, rest: &str) {
     let (sub, _) = split_cmd(rest);
     match sub.to_ascii_lowercase().as_str() {
@@ -513,6 +530,7 @@ fn filter_command(app: &mut App, rest: &str, invoke: Invoke) {
                 "on" => set_filtering(app, true),
                 "off" => set_filtering(app, false),
                 "toggle" => set_filtering(app, !app.filtering_enabled),
+                "set" => set_filter_item(app, arg),
                 "clear" => {
                     let n = app.filters.len();
                     app.filters.clear();
@@ -522,7 +540,7 @@ fn filter_command(app: &mut App, rest: &str, invoke: Invoke) {
                 }
                 unknown => {
                     app.status_message = Some(format!(
-                        "usage: :filter [list|in|out|on|off|toggle|clear|delete]  (unknown: {unknown})"
+                        "usage: :filter [list|in|out|on|off|toggle|set|clear|delete]  (unknown: {unknown})"
                     ));
                 }
             }

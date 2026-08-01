@@ -168,8 +168,15 @@ const FILTER_SUBS: &[(&str, &str)] = &[
     ("on", "enable filtering"),
     ("off", "disable filtering"),
     ("toggle", "toggle filtering on/off"),
+    ("set", "enable/disable one filter"),
     ("clear", "remove all filters"),
     ("delete", "delete filter by index"),
+];
+
+const FILTER_SET_SUBS: &[(&str, &str)] = &[
+    ("on", "enable filter"),
+    ("off", "disable filter"),
+    ("toggle", "toggle filter on/off"),
 ];
 
 const FOLD_SUBS: &[(&str, &str)] = &[
@@ -296,6 +303,22 @@ pub fn filter_suggestions(rest: &str, rest_from: usize, filter_count: usize) -> 
             let idxs: Vec<String> = (0..filter_count).map(|i| i.to_string()).collect();
             items.extend(value_suggestions(value, value_from, &idxs, "index"));
             items
+        }
+        "set" => {
+            if !value.contains(char::is_whitespace) {
+                return on_off_toggle_suggestions(value, value_from, FILTER_SET_SUBS);
+            }
+            let (action, idx_raw) = split_once_ws(value);
+            if !matches!(
+                action.to_ascii_lowercase().as_str(),
+                "on" | "off" | "toggle"
+            ) {
+                return Vec::new();
+            }
+            let idx = idx_raw.trim_start();
+            let idx_from = value_from + (value.len() - idx.len());
+            let idxs: Vec<String> = (0..filter_count).map(|i| i.to_string()).collect();
+            value_suggestions(idx, idx_from, &idxs, "index")
         }
         _ => Vec::new(),
     }

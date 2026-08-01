@@ -39,7 +39,7 @@ const COMMANDS: &[CommandInfo] = &[
     },
     CommandInfo {
         name: "filter",
-        help: "list | in|out [PATTERN] | on|off|toggle | clear | delete [N]",
+        help: "list | in|out [PATTERN] | on|off|toggle | set on|off|toggle [N] | clear | delete [N]",
     },
     CommandInfo {
         name: "config",

@@ -52,6 +52,7 @@ pub fn sidebar_defaults() -> BTreeMap<String, String> {
     BTreeMap::from([
         ("d".into(), "filter delete".into()),
         ("backspace".into(), "filter delete line".into()),
+        ("space".into(), "filter set toggle".into()),
     ])
 }
 

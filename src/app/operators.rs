@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use super::{App, PendingOp};
+use super::{App, PendingOp, ToggleAction};
 use crate::object_span;
 
 impl App {
@@ -40,6 +40,37 @@ impl App {
             removed.label(),
             removed.pattern
         ));
+    }
+
+    pub fn set_filter_enabled(&mut self, index: usize, action: ToggleAction) {
+        if index >= self.filters.len() {
+            self.status_message = Some("no such filter".into());
+            return;
+        }
+        self.sidebar_selected = index;
+        let enabled = match action {
+            ToggleAction::On => true,
+            ToggleAction::Off => false,
+            ToggleAction::Toggle => !self.filters[index].enabled,
+        };
+        self.filters[index].enabled = enabled;
+        let label = self.filters[index].label();
+        let pattern = self.filters[index].pattern.clone();
+        self.rebuild_visible(None);
+        self.persist_session();
+        self.status_message = Some(format!(
+            "filter-{label} /{pattern}/: {}",
+            if enabled { "on" } else { "off" },
+        ));
+    }
+
+    pub fn set_selected_filter_enabled(&mut self, action: ToggleAction) {
+        if self.filters.is_empty() {
+            self.status_message = Some("no filters".into());
+            return;
+        }
+        let index = self.sidebar_selected.min(self.filters.len() - 1);
+        self.set_filter_enabled(index, action);
     }
 
     pub(crate) fn take_count(&mut self) -> usize {

@@ -35,8 +35,12 @@ fn completes_filter_subcommands() {
     assert!(items.iter().any(|s| s.text == "in"));
     assert!(items.iter().any(|s| s.text == "out"));
     assert!(items.iter().any(|s| s.text == "toggle"));
+    assert!(items.iter().any(|s| s.text == "set"));
     assert!(items.iter().any(|s| s.text == "clear"));
     assert!(items.iter().any(|s| s.text == "delete"));
+    let set = filter_suggestions("set ", 4, 2);
+    assert!(set.iter().any(|s| s.text == "toggle"));
+    assert!(set.iter().any(|s| s.text == "on"));
 }
 
 #[test]

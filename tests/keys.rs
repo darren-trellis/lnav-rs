@@ -34,6 +34,10 @@ fn default_d_maps_to_hide() {
         Some("filter delete line")
     );
     assert_eq!(
+        sidebar_defaults().get("space").map(String::as_str),
+        Some("filter set toggle")
+    );
+    assert_eq!(
         defaults().get("esc").map(String::as_str),
         Some("view current off")
     );

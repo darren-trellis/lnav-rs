@@ -45,6 +45,19 @@ fn include_and_exclude_combine() {
 }
 
 #[test]
+fn disabled_filter_is_ignored() {
+    let mut filters = vec![
+        Filter::new(FilterKind::Include, "http", CaseMode::Insensitive).unwrap(),
+        Filter::new(FilterKind::Exclude, "health", CaseMode::Insensitive).unwrap(),
+    ];
+    filters[0].enabled = false;
+    assert!(entry_passes(&filters, true, &entry("db query")));
+    assert!(!entry_passes(&filters, true, &entry("http health")));
+    filters[1].enabled = false;
+    assert!(entry_passes(&filters, true, &entry("http health")));
+}
+
+#[test]
 fn smartcase_sensitive_when_uppercase() {
     let f = Filter::new(FilterKind::Include, "ERROR", CaseMode::Smart).unwrap();
     assert!(f.matches(&entry("got ERROR here")));

@@ -52,7 +52,7 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 | `G` / `End` | `nav bottom` |
 | `Enter` | `view details` (open/focus; again to close when focused) |
 | `Tab` | `focus toggle` (cycle list → details → sidebar) |
-| `Space` | `page down` (list); `fold toggle` via `[details_keys]` when details focused |
+| `Space` | `page down` (list); `fold toggle` in details; `filter set toggle` in sidebar |
 | `c` | `copy` (copy focused details value to clipboard) |
 | `Esc` | `view current off` (close focused details/sidebar, or clear status on the list) |
 | `/` | `search` (regex; highlights matched text; Up/Down recall history) |
@@ -94,7 +94,8 @@ In `/` mode, **Up/Down** recall search history (shared for list and details sear
 | `:filter` / `:filter list` | List active filters |
 | `:filter in [PATTERN]` | Keep only lines matching regex (omit PATTERN to use list `/` search, not details search) |
 | `:filter out [PATTERN]` | Hide lines matching regex (omit PATTERN to use list `/` search, not details search) |
-| `:filter on\|off\|toggle` | Enable/disable/toggle filtering |
+| `:filter on\|off\|toggle` | Enable/disable/toggle filtering (all filters) |
+| `:filter set on\|off\|toggle [N]` | Enable/disable/toggle one filter (selected sidebar filter if N omitted) |
 | `:filter clear` | Remove all filters |
 | `:filter delete [N]` | Remove filter by index (or selected sidebar filter) |
 | `:fold on\|off\|toggle` | Fold/unfold details tree item under cursor |
@@ -209,6 +210,7 @@ D = "delete"
 [sidebar_keys]
 d = "filter delete"
 backspace = "filter delete line"
+space = "filter set toggle"
 ```
 
 `line_numbers` / `relative_line_numbers` show a gutter for the visible list (not file line numbers). With both on, the current line is absolute and others are relative. Counts work like vim (`5j`, `3dd`, `10G`). `:N` jumps to view line `N`.
@@ -223,13 +225,13 @@ Boolean `:config set` values use `on` / `off` / `toggle` only. Bare `:config set
 
 Details: `Enter` opens and focuses the overlay — the selection highlight moves into details (`j`/`k` move the cursor; Esc runs `view current off` and closes it). `Tab` / `:focus toggle` cycles focus across the list, details (if open), and the filters sidebar (if open). `Space` folds/unfolds the tree item under the cursor when details is focused (`:fold on|off|toggle`). `?` toggles keybinding hints on the overlay border. `c` / `:copy` copies the focused item’s value (strings without quotes; objects/arrays as pretty JSON). With details focused, `/` searches inside the overlay (`n`/`N` cycle matches). Nested JSON fields render as a tree when `details_json_tree` is on (`details_tab_width` sets indent per level). Overlay height grows with content up to `details_max_height` (and screen space).
 
-Filters sidebar: `s` / `:view sidebar toggle` shows a right-hand list of current filters. When focused, `j`/`k` move the selection and `dd` / Backspace deletes the selected filter (`[sidebar_keys]` defaults: `d = "filter delete"`, `backspace = "filter delete line"`). Esc (`view current off`) hides the sidebar; Tab cycles focus without closing it.
+Filters sidebar: `s` / `:view sidebar toggle` shows a right-hand list of current filters. When focused, `j`/`k` move the selection, `Space` toggles the selected filter on/off, and `dd` / Backspace deletes it (`[sidebar_keys]` defaults: `space = "filter set toggle"`, `d = "filter delete"`, `backspace = "filter delete line"`). Disabled filters show as `off` and are ignored. Esc (`view current off`) hides the sidebar; Tab cycles focus without closing it.
 
 Filters persist under `~/.local/share/lnav-rs/sessions/` (one file per log path hash; stdin uses `stdin.toml`). `session_filters` / `session_stdin` control that (both default on). Turn `session_stdin` off if you don’t want every pipe to share one filter set.
 
 `[theme]` selects the theme name. Optional `[colors]` / `[levels]` / `[ui]` patches at the config root use the same keys as `themes/*.toml` (not nested under `[theme]`). Text colors (`foreground`, `border`, `window_focus_border`, `search_match`, `dim`, levels, and `[ui]` color keys) accept a hex string (fg only) or `{ fg = "...", bg = "..." }`. Surface keys (`background`, `overlay_bg`, `selection_*`, `status_*`) stay plain color strings. Focused chrome: `window_focus_border` is the border of the focused pane (list or details); unfocused panes use `[colors].border`. List column separators: `[ui].border_color`, `[ui].border_width` (`0` = space between columns; `N` draws `N`× `│`), and `[ui].border_padding` (`1` or `{ left, right }`, like column `padding`), gated by top-level `border` unless a column sets `border = true|false`. The same rule is drawn between line numbers and the first column when line numbers are on. Unknown keys, invalid colors, unknown theme names, and unknown keybinding commands are rejected.
 
-`[keys]` overrides defaults (merged). Use `key = ""` to unbind. Chain commands with `;` (e.g. `r = "view details; focus toggle"`). Special key names: `enter`, `esc`, `up`, `down`, `home`, `end`, `pagedown`, `pageup`, `space`, `backspace`, `C-c`. `[details_keys]` overrides `[keys]` while the details overlay is focused (default: `space = "fold toggle"`). `[sidebar_keys]` overrides `[keys]` while the filters sidebar is focused (defaults: `d = "filter delete"`, `backspace = "filter delete line"`). An empty binding in either contextual section blocks fallback to the same key in `[keys]`. Keybinding-only commands omitted from `:` completions: `nav`, `page`, `match`, `focus`, `search`, `command-mode`.
+`[keys]` overrides defaults (merged). Use `key = ""` to unbind. Chain commands with `;` (e.g. `r = "view details; focus toggle"`). Special key names: `enter`, `esc`, `up`, `down`, `home`, `end`, `pagedown`, `pageup`, `space`, `backspace`, `C-c`. `[details_keys]` overrides `[keys]` while the details overlay is focused (default: `space = "fold toggle"`). `[sidebar_keys]` overrides `[keys]` while the filters sidebar is focused (defaults: `space = "filter set toggle"`, `d = "filter delete"`, `backspace = "filter delete line"`). An empty binding in either contextual section blocks fallback to the same key in `[keys]`. Keybinding-only commands omitted from `:` completions: `nav`, `page`, `match`, `focus`, `search`, `command-mode`.
 
 Create one with:
 
