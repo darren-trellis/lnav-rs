@@ -1,0 +1,35 @@
+name = "neovim"
+
+[colors]
+background = "#14161b"
+foreground = "#e0e2ea"
+selection_bg = "#4f5258"
+selection_fg = "#e0e2ea"
+overlay_bg = "#07080d"
+status_bg = "#4f5258"
+status_fg = "#e0e2ea"
+border = "#4f5258"
+window_focus_border = "#8cf8f7"
+search_match = { fg = "#07080d", bg = "#fce094" }
+dim = "#9b9ea4"
+
+[levels]
+trace = "#9b9ea4"
+debug = "#a6dbff"
+info = "#8cf8f7"
+warn = "#fce094"
+error = "#ffc0b9"
+fatal = "#ffcaff"
+unknown = "#e0e2ea"
+
+[ui]
+timestamp = "#8cf8f7"
+key = "#a6dbff"
+string = "#b3f6c0"
+number = "#fce094"
+bool = "#ffcaff"
+null = "#9b9ea4"
+# column_border = { fg = "#4f5258", bg = "#14161b" }
+# column_border_width = 1
+# column_border_padding = 1
+# column_border_padding = { left = 1, right = 2 }
