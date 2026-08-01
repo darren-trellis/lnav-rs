@@ -84,9 +84,22 @@ pub fn build_visible(
     filtering_enabled: bool,
     hidden: &HashSet<usize>,
 ) -> Vec<usize> {
+    build_visible_from(entries, 0, filters, filtering_enabled, hidden)
+}
+
+/// Filter entries starting at `from` (inclusive). Used to extend the visible
+/// index on append without rescanning earlier lines.
+pub fn build_visible_from(
+    entries: &[LogEntry],
+    from: usize,
+    filters: &[Filter],
+    filtering_enabled: bool,
+    hidden: &HashSet<usize>,
+) -> Vec<usize> {
     entries
         .iter()
         .enumerate()
+        .skip(from)
         .filter(|(i, e)| !hidden.contains(i) && entry_passes(filters, filtering_enabled, e))
         .map(|(i, _)| i)
         .collect()

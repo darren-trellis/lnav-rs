@@ -70,3 +70,32 @@ fn smartcase_insensitive_when_lowercase() {
     assert!(f.matches(&entry("got ERROR here")));
     assert!(f.matches(&entry("got error here")));
 }
+
+#[test]
+fn build_visible_from_matches_full_suffix() {
+    use std::collections::HashSet;
+
+    let entries = vec![
+        entry("alpha"),
+        entry("error one"),
+        entry("bravo"),
+        entry("error two"),
+        entry("charlie"),
+    ];
+    let filters =
+        vec![Filter::new(FilterKind::Include, "error", CaseMode::Insensitive).unwrap()];
+    let hidden = HashSet::new();
+    let full = build_visible(&entries, &filters, true, &hidden);
+    assert_eq!(full, vec![1, 3]);
+
+    let from_2 = build_visible_from(&entries, 2, &filters, true, &hidden);
+    assert_eq!(from_2, vec![3]);
+    assert_eq!(from_2.as_slice(), &full[1..]);
+
+    let mut hidden = HashSet::new();
+    hidden.insert(3);
+    assert_eq!(
+        build_visible_from(&entries, 1, &filters, true, &hidden),
+        vec![1]
+    );
+}

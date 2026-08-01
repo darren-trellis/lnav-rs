@@ -1,18 +1,26 @@
+use std::time::{Duration, Instant};
+
 use crossterm::event::{KeyCode, KeyEvent};
 
 use super::{App, InputMode};
 use crate::details;
 use crate::filter;
 
+/// Debounce live `/` scans on large views so each keystroke is not O(n).
+const LIVE_SEARCH_DEBOUNCE: Duration = Duration::from_millis(75);
+const LIVE_SEARCH_DEBOUNCE_MIN_ROWS: usize = 5_000;
+
 impl App {
     pub(super) fn handle_search_key(&mut self, key: KeyEvent) {
         match key.code {
             KeyCode::Esc => {
+                self.live_search_after = None;
                 self.input_mode = InputMode::Normal;
                 self.search.history.reset_navigation();
                 self.status_message = None;
             }
             KeyCode::Enter => {
+                self.flush_live_search();
                 if !self.search.query.trim().is_empty() {
                     self.search.history.push(&self.search.query);
                     let _ = self.search.history.save();
@@ -64,8 +72,54 @@ impl App {
         }
     }
 
+    fn should_debounce_live_search(&self) -> bool {
+        if self.search.in_details {
+            self.details.content_len >= LIVE_SEARCH_DEBOUNCE_MIN_ROWS
+        } else {
+            self.display_len() >= LIVE_SEARCH_DEBOUNCE_MIN_ROWS
+        }
+    }
+
     fn refresh_search_live(&mut self) {
+        if self.search.query.is_empty() {
+            self.live_search_after = None;
+            self.apply_live_search();
+            return;
+        }
+
+        match filter::compile_regex(&self.search.query, self.config.case_mode) {
+            Err(err) => {
+                self.live_search_after = None;
+                self.search.regex = None;
+                self.search.error = Some(format!("invalid regex: {err}"));
+                self.search.matches.clear();
+                self.search.cursor = None;
+                return;
+            }
+            Ok(regex) => {
+                self.search.error = None;
+                self.search.regex = Some(regex);
+            }
+        }
+
+        if self.should_debounce_live_search() {
+            self.live_search_after = Some(Instant::now() + LIVE_SEARCH_DEBOUNCE);
+            self.search.matches.clear();
+            self.search.cursor = None;
+            return;
+        }
+
+        self.live_search_after = None;
+        self.collect_search_matches();
+        self.jump_to_live_match();
+    }
+
+    fn apply_live_search(&mut self) {
         self.run_search();
+        self.jump_to_live_match();
+    }
+
+    fn jump_to_live_match(&mut self) {
         if self.search.matches.is_empty() {
             self.search.cursor = None;
             return;
@@ -90,6 +144,24 @@ impl App {
             self.ensure_overlay_cursor_visible(true);
         } else {
             self.jump_to(self.search.matches[cursor]);
+        }
+    }
+
+    pub(crate) fn flush_live_search_if_due(&mut self) {
+        let Some(deadline) = self.live_search_after else {
+            return;
+        };
+        if Instant::now() >= deadline {
+            self.live_search_after = None;
+            self.collect_search_matches();
+            self.jump_to_live_match();
+        }
+    }
+
+    fn flush_live_search(&mut self) {
+        if self.live_search_after.take().is_some() {
+            self.collect_search_matches();
+            self.jump_to_live_match();
         }
     }
 
@@ -262,6 +334,7 @@ impl App {
     }
 
     pub fn clear_search(&mut self) {
+        self.live_search_after = None;
         self.search.query.clear();
         self.search.regex = None;
         self.search.error = None;
@@ -285,6 +358,7 @@ impl App {
     }
 
     pub fn run_search(&mut self) {
+        self.live_search_after = None;
         if self.search.query.is_empty() {
             self.search.regex = None;
             self.search.error = None;
@@ -303,6 +377,16 @@ impl App {
             }
         };
         self.search.error = None;
+        self.search.regex = Some(regex);
+        self.collect_search_matches();
+    }
+
+    fn collect_search_matches(&mut self) {
+        let Some(regex) = self.search.regex.clone() else {
+            self.search.matches.clear();
+            self.search.cursor = None;
+            return;
+        };
         if self.search.in_details {
             self.search.matches = if let Some(entry) = self.selected_entry() {
                 details::build_lines(entry, &self.theme, &self.config, &self.details.folded)
@@ -314,22 +398,38 @@ impl App {
             } else {
                 Vec::new()
             };
-        } else {
-            let mut matches = Vec::new();
-            for (display, &source) in self.view.pinned.iter().enumerate() {
-                if regex.is_match(&self.source.entries()[source].raw) {
-                    matches.push(display);
-                }
-            }
-            let pin_count = self.view.pinned.len();
-            for (body, &source) in self.view.visible.iter().enumerate() {
-                if regex.is_match(&self.source.entries()[source].raw) {
-                    matches.push(pin_count + body);
-                }
-            }
-            self.search.matches = matches;
+            return;
         }
-        self.search.regex = Some(regex);
+        let mut matches = Vec::new();
+        for (display, &source) in self.view.pinned.iter().enumerate() {
+            if regex.is_match(&self.source.entries()[source].raw) {
+                matches.push(display);
+            }
+        }
+        let pin_count = self.view.pinned.len();
+        for (body, &source) in self.view.visible.iter().enumerate() {
+            if regex.is_match(&self.source.entries()[source].raw) {
+                matches.push(pin_count + body);
+            }
+        }
+        self.search.matches = matches;
+    }
+
+    /// Append matches for newly added visible rows after a source append.
+    pub(crate) fn extend_search_matches(&mut self, prev_visible_len: usize) {
+        if self.search.in_details {
+            return;
+        }
+        let Some(regex) = self.search.regex.clone() else {
+            self.run_search();
+            return;
+        };
+        let pin_count = self.view.pinned.len();
+        for (body, &source) in self.view.visible.iter().enumerate().skip(prev_visible_len) {
+            if regex.is_match(&self.source.entries()[source].raw) {
+                self.search.matches.push(pin_count + body);
+            }
+        }
     }
 
     pub(crate) fn next_match(&mut self, direction: isize) {

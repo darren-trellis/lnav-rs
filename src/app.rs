@@ -222,6 +222,8 @@ pub struct App {
     pub(crate) command_line: CommandLineState,
     pub status_message: Option<String>,
     pub should_quit: bool,
+    /// When set, live `/` search scan runs at or after this instant.
+    live_search_after: Option<Instant>,
     _config_watcher: Option<RecommendedWatcher>,
     config_notify_rx: Receiver<()>,
     suppress_config_reload_until: Option<Instant>,
@@ -324,6 +326,7 @@ impl App {
             },
             status_message,
             should_quit: false,
+            live_search_after: None,
             _config_watcher: config_watcher,
             config_notify_rx,
             suppress_config_reload_until: None,
@@ -473,6 +476,51 @@ impl App {
         self.view.selected = self.view.selected.min(self.display_len() - 1);
     }
 
+    /// Append-only update of the visible index for newly added source entries.
+    pub(crate) fn extend_visible(&mut self, from: usize) {
+        let pinned: HashSet<usize> = self.view.pinned.iter().copied().collect();
+        let added = filter::build_visible_from(
+            self.source.entries(),
+            from,
+            &self.filters,
+            self.filtering_enabled,
+            &self.view.hidden,
+        )
+        .into_iter()
+        .filter(|index| !pinned.contains(index));
+        self.view.visible.extend(added);
+    }
+
+    pub(crate) fn apply_refresh_outcome(&mut self, outcome: RefreshOutcome) {
+        if !outcome.changed() {
+            return;
+        }
+        if outcome.reset() {
+            self.view.hidden.clear();
+            self.view.pinned.clear();
+            self.view.selected = 0;
+            self.view.scroll = 0;
+            self.reset_overlay_for_selection_change();
+            self.rebuild_visible(None);
+            if !self.search.query.is_empty() {
+                self.run_search();
+            }
+        } else if let RefreshOutcome::Appended(n) = outcome {
+            let from = self.source.len().saturating_sub(n);
+            let prev_visible = self.view.visible.len();
+            self.extend_visible(from);
+            if !self.search.query.is_empty() && !self.search.in_details {
+                self.extend_search_matches(prev_visible);
+            }
+        }
+        if self.view.follow && self.display_len() > 0 {
+            self.view.selected = self.display_len() - 1;
+        }
+        if self.display_len() == 0 {
+            self.close_details();
+        }
+    }
+
     pub fn run(&mut self, terminal: &mut ratatui::DefaultTerminal) -> Result<()> {
         let _ = execute!(stdout(), EnableMouseCapture);
         let result = self.run_loop(terminal);
@@ -485,33 +533,10 @@ impl App {
     fn run_loop(&mut self, terminal: &mut ratatui::DefaultTerminal) -> Result<()> {
         loop {
             match self.source.refresh() {
-                Ok(outcome) if outcome.changed() => {
-                    let reset = outcome.reset();
-                    let prefer = if reset {
-                        self.view.hidden.clear();
-                        self.view.pinned.clear();
-                        self.view.selected = 0;
-                        self.view.scroll = 0;
-                        self.reset_overlay_for_selection_change();
-                        None
-                    } else {
-                        self.source_at_display(self.view.selected)
-                    };
-                    self.rebuild_visible(prefer);
-                    if self.view.follow && self.display_len() > 0 {
-                        self.view.selected = self.display_len() - 1;
-                    }
-                    if self.display_len() == 0 {
-                        self.close_details();
-                    }
-                    if !self.search.query.is_empty() {
-                        self.run_search();
-                    }
-                }
-                Ok(RefreshOutcome::Unchanged) => {}
-                Ok(_) => {}
+                Ok(outcome) => self.apply_refresh_outcome(outcome),
                 Err(err) => self.status_message = Some(format!("refresh failed: {err:#}")),
             }
+            self.flush_live_search_if_due();
 
             if self.poll_config_file_changed() {
                 match self.reload_config() {
@@ -1051,4 +1076,147 @@ fn copy_to_clipboard(text: &str) -> anyhow::Result<()> {
     let mut clipboard = arboard::Clipboard::new()?;
     clipboard.set_text(text)?;
     Ok(())
+}
+
+#[cfg(test)]
+mod refresh_tests {
+    use std::fs;
+    use std::io::Write;
+    use std::thread;
+    use std::time::Duration;
+
+    use super::*;
+    use crate::filter::{Filter, FilterKind};
+    use crate::tail::RefreshOutcome;
+
+    fn temp_log(name: &str, lines: &[&str]) -> (PathBuf, PathBuf) {
+        let dir = std::env::temp_dir().join(format!(
+            "lnav-rs-refresh-{}-{}",
+            name,
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("log.jsonl");
+        {
+            let mut f = fs::File::create(&path).unwrap();
+            for line in lines {
+                writeln!(f, "{line}").unwrap();
+            }
+        }
+        (dir, path)
+    }
+
+    fn app_for(path: &Path) -> App {
+        let mut config = Config::default();
+        config.follow = false;
+        config.session_filters = false;
+        let source = LogSource::open_file(path).unwrap();
+        let config_path = path.parent().unwrap().join("config.toml");
+        App::new(source, config, config_path).unwrap()
+    }
+
+    fn wait_appended(app: &mut App) -> usize {
+        for _ in 0..100 {
+            match app.source.refresh().unwrap() {
+                RefreshOutcome::Appended(n) if n > 0 => {
+                    app.apply_refresh_outcome(RefreshOutcome::Appended(n));
+                    return n;
+                }
+                other if other.changed() => {
+                    app.apply_refresh_outcome(other);
+                }
+                _ => {}
+            }
+            thread::sleep(Duration::from_millis(20));
+        }
+        panic!("timed out waiting for Appended");
+    }
+
+    #[test]
+    fn append_extends_visible_with_filters() {
+        let (dir, path) = temp_log(
+            "vis",
+            &[
+                r#"{"level":"info","msg":"keep-a"}"#,
+                r#"{"level":"error","msg":"err-a"}"#,
+            ],
+        );
+        let mut app = app_for(&path);
+        app.filters = vec![
+            Filter::new(FilterKind::Include, "error", app.config.case_mode).unwrap(),
+        ];
+        app.rebuild_visible(None);
+        assert_eq!(app.display_len(), 1);
+
+        {
+            let mut f = fs::OpenOptions::new().append(true).open(&path).unwrap();
+            writeln!(f, r#"{{"level":"info","msg":"keep-b"}}"#).unwrap();
+            writeln!(f, r#"{{"level":"error","msg":"err-b"}}"#).unwrap();
+        }
+
+        let added = wait_appended(&mut app);
+        assert_eq!(added, 2);
+        assert_eq!(app.source.len(), 4);
+        assert_eq!(app.display_len(), 2);
+        assert!(
+            app.source_at_display(1)
+                .is_some_and(|i| app.source.entries()[i].raw.contains("err-b"))
+        );
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn append_extends_search_matches() {
+        let (dir, path) = temp_log(
+            "search",
+            &[
+                r#"{"level":"info","msg":"alpha"}"#,
+                r#"{"level":"info","msg":"match-one"}"#,
+            ],
+        );
+        let mut app = app_for(&path);
+        app.search.query = "match".into();
+        app.run_search();
+        assert_eq!(app.search.matches, vec![1]);
+
+        {
+            let mut f = fs::OpenOptions::new().append(true).open(&path).unwrap();
+            writeln!(f, r#"{{"level":"info","msg":"bravo"}}"#).unwrap();
+            writeln!(f, r#"{{"level":"info","msg":"match-two"}}"#).unwrap();
+        }
+
+        let added = wait_appended(&mut app);
+        assert_eq!(added, 2);
+        assert_eq!(app.display_len(), 4);
+        assert_eq!(app.search.matches, vec![1, 3]);
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn append_keeps_selection_without_follow() {
+        let (dir, path) = temp_log(
+            "sel",
+            &[
+                r#"{"level":"info","msg":"one"}"#,
+                r#"{"level":"info","msg":"two"}"#,
+            ],
+        );
+        let mut app = app_for(&path);
+        app.view.selected = 0;
+        app.view.follow = false;
+
+        {
+            let mut f = fs::OpenOptions::new().append(true).open(&path).unwrap();
+            writeln!(f, r#"{{"level":"info","msg":"three"}}"#).unwrap();
+        }
+
+        wait_appended(&mut app);
+        assert_eq!(app.view.selected, 0);
+        assert_eq!(app.display_len(), 3);
+
+        let _ = fs::remove_dir_all(&dir);
+    }
 }
