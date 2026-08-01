@@ -166,6 +166,13 @@ const OPTIONS: &[ConfigOption] = &[
         setter: set_scroll_lines,
     },
     ConfigOption {
+        name: "page_lines",
+        help: "page up/down step (0 = viewport)",
+        value_kind: ValueKind::Unsigned,
+        getter: get_page_lines,
+        setter: set_page_lines,
+    },
+    ConfigOption {
         name: "scroll_moves_selection",
         help: "on|off|toggle",
         value_kind: ValueKind::Bool,
@@ -476,6 +483,29 @@ fn set_scroll_lines(app: &mut App, value: &str) -> bool {
         Ok(lines) => {
             app.config.scroll_lines = lines;
             app.status_message = Some(format!("scroll_lines={lines}"));
+            true
+        }
+    }
+}
+
+fn get_page_lines(app: &App) -> String {
+    app.config.page_lines.to_string()
+}
+
+fn set_page_lines(app: &mut App, value: &str) -> bool {
+    match value.parse::<usize>() {
+        Err(_) => {
+            app.status_message =
+                Some("usage: :config set page_lines N (0 = viewport height)".into());
+            false
+        }
+        Ok(lines) => {
+            app.config.page_lines = lines;
+            app.status_message = Some(if lines == 0 {
+                "page_lines=0 (viewport)".into()
+            } else {
+                format!("page_lines={lines}")
+            });
             true
         }
     }

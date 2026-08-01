@@ -95,14 +95,23 @@ fn execute_one(app: &mut App, line: &str, invoke: Invoke) {
     }
 }
 
+fn page_step(app: &App, viewport: usize) -> isize {
+    let lines = if app.config.page_lines == 0 {
+        viewport.max(1)
+    } else {
+        app.config.page_lines
+    };
+    lines as isize
+}
+
 fn navigate(app: &mut App, navigation: Navigation) {
     let focus = app.focus();
     match focus {
         Focus::Sidebar if app.config.sidebar => match navigation {
             Navigation::Lines(delta) => app.move_sidebar_cursor(delta),
             Navigation::Pages(pages) => {
-                let height = app.pointer.hit.sidebar_inner.height.max(1) as isize;
-                app.move_sidebar_cursor(height * pages);
+                let step = page_step(app, app.pointer.hit.sidebar_inner.height as usize);
+                app.move_sidebar_cursor(step * pages);
             }
             Navigation::Top(line) => {
                 app.jump_sidebar_cursor(line.unwrap_or(1).saturating_sub(1));
@@ -117,8 +126,8 @@ fn navigate(app: &mut App, navigation: Navigation) {
         Focus::Details if app.details.visible => match navigation {
             Navigation::Lines(delta) => app.move_overlay_cursor(delta),
             Navigation::Pages(pages) => {
-                let height = app.details.viewport_height.max(1) as isize;
-                app.move_overlay_cursor(height * pages);
+                let step = page_step(app, app.details.viewport_height);
+                app.move_overlay_cursor(step * pages);
             }
             Navigation::Top(line) => {
                 app.jump_overlay_cursor(line.unwrap_or(1).saturating_sub(1));
@@ -135,7 +144,7 @@ fn navigate(app: &mut App, navigation: Navigation) {
 }
 
 fn navigate_list(app: &mut App, navigation: Navigation) {
-    let page_height = app.pointer.hit.list_inner.height.max(1) as isize;
+    let page_height = page_step(app, app.pointer.hit.list_inner.height as usize);
     app.with_motion(|app| match navigation {
         Navigation::Lines(delta) => app.move_selection(delta),
         Navigation::Pages(pages) => app.move_selection(page_height * pages),

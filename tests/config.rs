@@ -182,6 +182,7 @@ fn write_omits_default_keys() {
     assert!(!raw.contains("border = "));
     assert!(!raw.contains("autosave = "));
     assert!(!raw.contains("autoreload = "));
+    assert!(!raw.contains("page_lines = "));
     assert!(!raw.contains("session_filters = "));
     assert!(!raw.contains("session_stdin = "));
     assert!(!raw.contains("case_mode = "));

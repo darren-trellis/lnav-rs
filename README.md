@@ -122,6 +122,7 @@ In `/` mode, **Up/Down** recall search history (shared for list and details sear
 | `:config set autoreload on\|off\|toggle` | Reload when the config file changes on disk (default on) |
 | `:config set sidebar on\|off\|toggle` | Show filters sidebar (default off; same as `:view sidebar`) |
 | `:config set scroll_lines N` | Mouse wheel step (default 1) |
+| `:config set page_lines N` | Page up/down step (default 0 = viewport height) |
 | `:config set scroll_moves_selection on\|off\|toggle` | Mouse wheel moves selection in list/details/sidebar (default on; off scrolls the viewport only) |
 | `:config set timestamp_format …` | strftime for timestamp columns (`raw` = original) |
 | `:config set case_mode …` | `sensitive` / `insensitive` / `smart` (search + filters) |
@@ -156,6 +157,7 @@ autosave = true
 autoreload = true
 sidebar = false
 scroll_lines = 1
+page_lines = 0
 scroll_moves_selection = true
 timestamp_format = "%H:%M:%S"
 case_mode = "smart"   # or "sensitive" | "insensitive"

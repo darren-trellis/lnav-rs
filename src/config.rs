@@ -263,6 +263,10 @@ pub struct Config {
     #[serde(default = "default_scroll_lines")]
     pub scroll_lines: usize,
 
+    /// Lines to move per page up/down. `0` (default) uses the current viewport height.
+    #[serde(default)]
+    pub page_lines: usize,
+
     /// When true, mouse-wheel scrolling moves the selection/cursor.
     /// When false, the wheel scrolls the viewport only (list, details, sidebar).
     #[serde(default = "default_true")]
@@ -321,6 +325,8 @@ struct PersistedConfig<'a> {
     sidebar: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     scroll_lines: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    page_lines: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
     scroll_moves_selection: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -432,6 +438,7 @@ impl<'a> PersistedConfig<'a> {
             autoreload: (config.autoreload != defaults.autoreload).then_some(config.autoreload),
             sidebar: (config.sidebar != defaults.sidebar).then_some(config.sidebar),
             scroll_lines: (scroll_lines != defaults.scroll_lines).then_some(scroll_lines),
+            page_lines: (config.page_lines != defaults.page_lines).then_some(config.page_lines),
             scroll_moves_selection: (config.scroll_moves_selection
                 != defaults.scroll_moves_selection)
                 .then_some(config.scroll_moves_selection),
@@ -531,6 +538,7 @@ impl Default for Config {
             autoreload: true,
             sidebar: false,
             scroll_lines: default_scroll_lines(),
+            page_lines: 0,
             scroll_moves_selection: true,
             timestamp_format: default_timestamp_format(),
             case_mode: CaseMode::default(),

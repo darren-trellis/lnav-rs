@@ -11,7 +11,7 @@ use crate::text;
 pub const HELP_LINES: &[&str] = &[
     "Navigation",
     "  j/↓  k/↑     move selection (count: 5j)",
-    "  PgDn/Space   page down          PgUp  page up",
+    "  PgDn/Space   page down          PgUp  page up  (page_lines)",
     "  g/Home       top                G/End  bottom (follow)",
     "  Tab          cycle focus: list → details → sidebar",
     "",
