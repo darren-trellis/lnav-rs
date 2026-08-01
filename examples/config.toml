@@ -1,3 +1,4 @@
+[main]
 line_numbers = true
 # details_json_tree = true
 # details_max_height = 24
@@ -7,6 +8,7 @@ line_numbers = true
 # case_mode = "insensitive"
 # session_filters = true
 # session_stdin = true
+# border = true
 
 [theme]
 name = "catppuccin"
@@ -14,7 +16,6 @@ name = "catppuccin"
 # [levels]
 # error = { fg = "#1e1e2e", bg = "#f38ba8" }
 
-# border = true
 # [ui]
 # border_color = { fg = "#585b70", bg = "#1e1e2e" }
 # border_width = 1

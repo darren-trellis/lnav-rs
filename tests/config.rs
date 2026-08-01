@@ -4,12 +4,16 @@ use lnav_rs::config::*;
 
 #[test]
 fn roundtrip_defaults() {
+    let dir = std::env::temp_dir().join(format!("lnav-rs-roundtrip-{}", std::process::id()));
+    let _ = fs::create_dir_all(&dir);
+    let path = dir.join("config.toml");
     let cfg = Config::default();
-    let raw = toml::to_string(&cfg).unwrap();
-    let parsed: Config = toml::from_str(&raw).unwrap();
+    cfg.write_to(&path).unwrap();
+    let (parsed, _) = Config::load_from(&path).unwrap();
     assert_eq!(cfg.theme.name(), parsed.theme.name());
     assert_eq!(cfg.timestamp_format, parsed.timestamp_format);
     assert_eq!(cfg.columns, parsed.columns);
+    let _ = fs::remove_dir_all(&dir);
 }
 
 #[test]
@@ -144,7 +148,7 @@ fn rejects_zero_scroll_lines() {
     let dir = std::env::temp_dir().join(format!("lnav-rs-scroll-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
-    fs::write(&path, "scroll_lines = 0\n").unwrap();
+    fs::write(&path, "[main]\nscroll_lines = 0\n").unwrap();
     assert!(Config::load_from(&path).is_err());
     let _ = fs::remove_dir_all(&dir);
 }
@@ -154,7 +158,17 @@ fn rejects_narrow_sidebar_width() {
     let dir = std::env::temp_dir().join(format!("lnav-rs-sidebar-w-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
-    fs::write(&path, "sidebar_width = 8\n").unwrap();
+    fs::write(&path, "[main]\nsidebar_width = 8\n").unwrap();
+    assert!(Config::load_from(&path).is_err());
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn rejects_root_level_main_settings() {
+    let dir = std::env::temp_dir().join(format!("lnav-rs-root-main-{}", std::process::id()));
+    let _ = fs::create_dir_all(&dir);
+    let path = dir.join("config.toml");
+    fs::write(&path, "follow = true\nline_numbers = true\n").unwrap();
     assert!(Config::load_from(&path).is_err());
     let _ = fs::remove_dir_all(&dir);
 }
@@ -182,6 +196,7 @@ fn write_omits_default_keys() {
     Config::default().write_to(&path).unwrap();
     let raw = fs::read_to_string(&path).unwrap();
     assert!(!raw.contains("[keys]"));
+    assert!(!raw.contains("[main]"));
     assert!(!raw.contains("follow = "));
     assert!(!raw.contains("wrap_details = "));
     assert!(!raw.contains("details_json_tree = "));
@@ -209,12 +224,17 @@ fn case_mode_smartcase_and_aliases() {
     assert!(CaseMode::Smart.ignore_case("error"));
     assert!(!CaseMode::Smart.ignore_case("Error"));
     assert_eq!(CaseMode::parse("smartcase"), Some(CaseMode::Smart));
-    let cfg: Config = toml::from_str("case_mode = \"smartcase\"\n").unwrap();
+    let dir = std::env::temp_dir().join(format!("lnav-rs-case-{}", std::process::id()));
+    let _ = fs::create_dir_all(&dir);
+    let path = dir.join("config.toml");
+    fs::write(&path, "[main]\ncase_mode = \"smartcase\"\n").unwrap();
+    let (cfg, _) = Config::load_from(&path).unwrap();
     assert_eq!(cfg.case_mode, CaseMode::Smart);
+    let _ = fs::remove_dir_all(&dir);
 }
 
 #[test]
-fn write_root_scalars_before_theme_tables_roundtrip() {
+fn write_main_section_before_theme_tables_roundtrip() {
     let dir = std::env::temp_dir().join(format!("lnav-rs-write-order-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
@@ -249,13 +269,14 @@ fn write_root_scalars_before_theme_tables_roundtrip() {
 
     cfg.write_to(&path).unwrap();
     let raw = fs::read_to_string(&path).unwrap();
+    let main_pos = raw.find("[main]").expect("[main] in file");
     let line_nums_pos = raw
         .find("line_numbers = true")
         .expect("line_numbers in file");
     let levels_pos = raw.find("[levels]").expect("[levels] in file");
     assert!(
-        line_nums_pos < levels_pos,
-        "line_numbers must appear before [levels]\n{raw}"
+        main_pos < line_nums_pos && line_nums_pos < levels_pos,
+        "[main] line_numbers must appear before [levels]\n{raw}"
     );
 
     let (loaded, _) = Config::load_from(&path).unwrap();

@@ -82,7 +82,7 @@ pub struct Column {
     pub align: Align,
     #[serde(default)]
     pub padding: Padding,
-    /// Leading separator on/off (`None` → top-level `border`).
+    /// Leading separator on/off (`None` → `[main].border`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub border: Option<bool>,
     /// Leading separator color (`None` → theme `ui.border_color`).
@@ -187,122 +187,233 @@ impl CaseMode {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(deny_unknown_fields)]
+/// Runtime config. File format nests scalars under `[main]`; see `ConfigDocument`.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Config {
-    #[serde(default)]
     pub theme: ThemeConfig,
 
     /// Patches for theme `[colors]` (config root `[colors]`).
-    #[serde(
-        default,
-        skip_serializing_if = "crate::theme::ColorOverrides::is_empty"
-    )]
     pub colors: crate::theme::ColorOverrides,
 
     /// Patches for theme `[levels]` (config root `[levels]`).
-    #[serde(
-        default,
-        skip_serializing_if = "crate::theme::LevelOverrides::is_empty"
-    )]
     pub levels: crate::theme::LevelOverrides,
 
     /// Patches for theme `[ui]` (config root `[ui]`).
-    #[serde(default, skip_serializing_if = "crate::theme::UiOverrides::is_empty")]
     pub ui: crate::theme::UiOverrides,
 
-    #[serde(default = "default_true")]
     pub follow: bool,
 
     /// When true, wrap the details overlay content.
-    #[serde(default = "default_true")]
     pub wrap_details: bool,
 
     /// Render nested JSON fields as an indented tree in the details overlay.
-    #[serde(default = "default_true")]
     pub details_json_tree: bool,
 
     /// Maximum height of the details overlay (rows, including border).
-    #[serde(default = "default_details_max_height")]
     pub details_max_height: usize,
 
     /// Indent width (columns) per nesting level in the details JSON tree.
-    #[serde(default = "default_details_tab_width")]
     pub details_tab_width: usize,
 
     /// Show 1-based view line numbers in the list (not file line numbers).
-    #[serde(default)]
     pub line_numbers: bool,
 
     /// Show distances from the cursor instead of absolute numbers (vim `relativenumber`).
     /// With `line_numbers`, the current line stays absolute.
-    #[serde(default)]
     pub relative_line_numbers: bool,
 
     /// Show a vertical scrollbar on the right of the list and details panes.
-    #[serde(default = "default_true")]
     pub scrollbar: bool,
 
     /// Draw vertical rules between list columns (theme/column width still apply when on).
-    #[serde(default = "default_true")]
     pub border: bool,
 
     /// When true, `:config set` writes the config file after a successful change.
-    #[serde(default = "default_true")]
     pub autosave: bool,
 
     /// When true, reload settings when the config file changes on disk.
-    #[serde(default = "default_true")]
     pub autoreload: bool,
 
     /// Show a filters sidebar listing active filters.
-    #[serde(default)]
     pub sidebar: bool,
 
     /// Preferred sidebar width in columns (clamped to fit the terminal).
-    #[serde(default = "default_sidebar_width")]
     pub sidebar_width: usize,
 
     /// Lines to move per mouse-wheel notch in the log list.
-    #[serde(default = "default_scroll_lines")]
     pub scroll_lines: usize,
 
     /// Lines to move per page up/down. `0` (default) uses the current viewport height.
-    #[serde(default)]
     pub page_lines: usize,
 
     /// When true, mouse-wheel scrolling moves the selection/cursor.
     /// When false, the wheel scrolls the viewport only (list, details, sidebar).
-    #[serde(default = "default_true")]
     pub scroll_moves_selection: bool,
 
     /// strftime format for timestamp columns (chrono syntax), or `"raw"`.
-    #[serde(default = "default_timestamp_format")]
     pub timestamp_format: String,
 
     /// Case matching for search and filters: `sensitive`, `insensitive`, or `smart`.
-    #[serde(default)]
     pub case_mode: CaseMode,
 
     /// List-view columns. Empty / missing → default level / timestamp / message.
-    #[serde(default)]
     pub columns: Vec<Column>,
 
     /// Keybindings: `[keys]`, `[keys.details]`, `[keys.sidebar]`.
-    #[serde(default)]
     pub keys: KeysConfig,
 
     /// Persist filters per log file under `~/.local/share/lnav-rs/sessions/`.
-    #[serde(default = "default_true")]
     pub session_filters: bool,
 
     /// Persist filters for stdin under a shared `sessions/stdin.toml`.
-    #[serde(default = "default_true")]
     pub session_stdin: bool,
+}
+
+/// Scalar settings stored under `[main]` in `config.toml`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+struct MainConfig {
+    #[serde(default = "default_true")]
+    follow: bool,
+    #[serde(default = "default_true")]
+    wrap_details: bool,
+    #[serde(default = "default_true")]
+    details_json_tree: bool,
+    #[serde(default = "default_details_max_height")]
+    details_max_height: usize,
+    #[serde(default = "default_details_tab_width")]
+    details_tab_width: usize,
+    #[serde(default)]
+    line_numbers: bool,
+    #[serde(default)]
+    relative_line_numbers: bool,
+    #[serde(default = "default_true")]
+    scrollbar: bool,
+    #[serde(default = "default_true")]
+    border: bool,
+    #[serde(default = "default_true")]
+    autosave: bool,
+    #[serde(default = "default_true")]
+    autoreload: bool,
+    #[serde(default)]
+    sidebar: bool,
+    #[serde(default = "default_sidebar_width")]
+    sidebar_width: usize,
+    #[serde(default = "default_scroll_lines")]
+    scroll_lines: usize,
+    #[serde(default)]
+    page_lines: usize,
+    #[serde(default = "default_true")]
+    scroll_moves_selection: bool,
+    #[serde(default = "default_timestamp_format")]
+    timestamp_format: String,
+    #[serde(default)]
+    case_mode: CaseMode,
+    #[serde(default = "default_true")]
+    session_filters: bool,
+    #[serde(default = "default_true")]
+    session_stdin: bool,
+}
+
+impl Default for MainConfig {
+    fn default() -> Self {
+        Self {
+            follow: true,
+            wrap_details: true,
+            details_json_tree: true,
+            details_max_height: default_details_max_height(),
+            details_tab_width: default_details_tab_width(),
+            line_numbers: false,
+            relative_line_numbers: false,
+            scrollbar: true,
+            border: true,
+            autosave: true,
+            autoreload: true,
+            sidebar: false,
+            sidebar_width: default_sidebar_width(),
+            scroll_lines: default_scroll_lines(),
+            page_lines: 0,
+            scroll_moves_selection: true,
+            timestamp_format: default_timestamp_format(),
+            case_mode: CaseMode::default(),
+            session_filters: true,
+            session_stdin: true,
+        }
+    }
+}
+
+/// On-disk TOML shape: scalars live under `[main]`.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ConfigDocument {
+    #[serde(default)]
+    main: MainConfig,
+    #[serde(default)]
+    theme: ThemeConfig,
+    #[serde(default)]
+    colors: crate::theme::ColorOverrides,
+    #[serde(default)]
+    levels: crate::theme::LevelOverrides,
+    #[serde(default)]
+    ui: crate::theme::UiOverrides,
+    #[serde(default)]
+    columns: Vec<Column>,
+    #[serde(default)]
+    keys: KeysConfig,
+}
+
+impl ConfigDocument {
+    fn into_config(self) -> Config {
+        Config {
+            theme: self.theme,
+            colors: self.colors,
+            levels: self.levels,
+            ui: self.ui,
+            follow: self.main.follow,
+            wrap_details: self.main.wrap_details,
+            details_json_tree: self.main.details_json_tree,
+            details_max_height: self.main.details_max_height,
+            details_tab_width: self.main.details_tab_width,
+            line_numbers: self.main.line_numbers,
+            relative_line_numbers: self.main.relative_line_numbers,
+            scrollbar: self.main.scrollbar,
+            border: self.main.border,
+            autosave: self.main.autosave,
+            autoreload: self.main.autoreload,
+            sidebar: self.main.sidebar,
+            sidebar_width: self.main.sidebar_width,
+            scroll_lines: self.main.scroll_lines,
+            page_lines: self.main.page_lines,
+            scroll_moves_selection: self.main.scroll_moves_selection,
+            timestamp_format: self.main.timestamp_format,
+            case_mode: self.main.case_mode,
+            columns: self.columns,
+            keys: self.keys,
+            session_filters: self.main.session_filters,
+            session_stdin: self.main.session_stdin,
+        }
+    }
 }
 
 #[derive(Serialize)]
 struct PersistedConfig<'a> {
+    #[serde(skip_serializing_if = "PersistedMain::is_empty")]
+    main: PersistedMain<'a>,
+    theme: &'a ThemeConfig,
+    #[serde(skip_serializing_if = "crate::theme::ColorOverrides::is_empty")]
+    colors: &'a crate::theme::ColorOverrides,
+    #[serde(skip_serializing_if = "crate::theme::LevelOverrides::is_empty")]
+    levels: &'a crate::theme::LevelOverrides,
+    #[serde(skip_serializing_if = "crate::theme::UiOverrides::is_empty")]
+    ui: &'a crate::theme::UiOverrides,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    columns: Vec<PersistedColumn<'a>>,
+    #[serde(skip_serializing_if = "PersistedKeys::is_empty")]
+    keys: PersistedKeys,
+}
+
+#[derive(Serialize)]
+struct PersistedMain<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     follow: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -343,17 +454,31 @@ struct PersistedConfig<'a> {
     session_filters: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     session_stdin: Option<bool>,
-    theme: &'a ThemeConfig,
-    #[serde(skip_serializing_if = "crate::theme::ColorOverrides::is_empty")]
-    colors: &'a crate::theme::ColorOverrides,
-    #[serde(skip_serializing_if = "crate::theme::LevelOverrides::is_empty")]
-    levels: &'a crate::theme::LevelOverrides,
-    #[serde(skip_serializing_if = "crate::theme::UiOverrides::is_empty")]
-    ui: &'a crate::theme::UiOverrides,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    columns: Vec<PersistedColumn<'a>>,
-    #[serde(skip_serializing_if = "PersistedKeys::is_empty")]
-    keys: PersistedKeys,
+}
+
+impl PersistedMain<'_> {
+    fn is_empty(&self) -> bool {
+        self.follow.is_none()
+            && self.wrap_details.is_none()
+            && self.details_json_tree.is_none()
+            && self.details_max_height.is_none()
+            && self.details_tab_width.is_none()
+            && self.line_numbers.is_none()
+            && self.relative_line_numbers.is_none()
+            && self.scrollbar.is_none()
+            && self.border.is_none()
+            && self.autosave.is_none()
+            && self.autoreload.is_none()
+            && self.sidebar.is_none()
+            && self.sidebar_width.is_none()
+            && self.scroll_lines.is_none()
+            && self.page_lines.is_none()
+            && self.scroll_moves_selection.is_none()
+            && self.timestamp_format.is_none()
+            && self.case_mode.is_none()
+            && self.session_filters.is_none()
+            && self.session_stdin.is_none()
+    }
 }
 
 #[derive(Serialize)]
@@ -426,37 +551,40 @@ impl<'a> PersistedConfig<'a> {
         };
 
         Self {
-            follow: (config.follow != defaults.follow).then_some(config.follow),
-            wrap_details: (config.wrap_details != defaults.wrap_details)
-                .then_some(config.wrap_details),
-            details_json_tree: (config.details_json_tree != defaults.details_json_tree)
-                .then_some(config.details_json_tree),
-            details_max_height: (details_max_height != defaults.details_max_height)
-                .then_some(details_max_height),
-            details_tab_width: (details_tab_width != defaults.details_tab_width)
-                .then_some(details_tab_width),
-            line_numbers: (config.line_numbers != defaults.line_numbers)
-                .then_some(config.line_numbers),
-            relative_line_numbers: (config.relative_line_numbers != defaults.relative_line_numbers)
-                .then_some(config.relative_line_numbers),
-            scrollbar: (config.scrollbar != defaults.scrollbar).then_some(config.scrollbar),
-            border: (config.border != defaults.border).then_some(config.border),
-            autosave: (config.autosave != defaults.autosave).then_some(config.autosave),
-            autoreload: (config.autoreload != defaults.autoreload).then_some(config.autoreload),
-            sidebar: (config.sidebar != defaults.sidebar).then_some(config.sidebar),
-            sidebar_width: (sidebar_width != defaults.sidebar_width).then_some(sidebar_width),
-            scroll_lines: (scroll_lines != defaults.scroll_lines).then_some(scroll_lines),
-            page_lines: (config.page_lines != defaults.page_lines).then_some(config.page_lines),
-            scroll_moves_selection: (config.scroll_moves_selection
-                != defaults.scroll_moves_selection)
-                .then_some(config.scroll_moves_selection),
-            timestamp_format: (config.timestamp_format != defaults.timestamp_format)
-                .then_some(config.timestamp_format.as_str()),
-            case_mode: (config.case_mode != defaults.case_mode).then_some(config.case_mode),
-            session_filters: (config.session_filters != defaults.session_filters)
-                .then_some(config.session_filters),
-            session_stdin: (config.session_stdin != defaults.session_stdin)
-                .then_some(config.session_stdin),
+            main: PersistedMain {
+                follow: (config.follow != defaults.follow).then_some(config.follow),
+                wrap_details: (config.wrap_details != defaults.wrap_details)
+                    .then_some(config.wrap_details),
+                details_json_tree: (config.details_json_tree != defaults.details_json_tree)
+                    .then_some(config.details_json_tree),
+                details_max_height: (details_max_height != defaults.details_max_height)
+                    .then_some(details_max_height),
+                details_tab_width: (details_tab_width != defaults.details_tab_width)
+                    .then_some(details_tab_width),
+                line_numbers: (config.line_numbers != defaults.line_numbers)
+                    .then_some(config.line_numbers),
+                relative_line_numbers: (config.relative_line_numbers
+                    != defaults.relative_line_numbers)
+                    .then_some(config.relative_line_numbers),
+                scrollbar: (config.scrollbar != defaults.scrollbar).then_some(config.scrollbar),
+                border: (config.border != defaults.border).then_some(config.border),
+                autosave: (config.autosave != defaults.autosave).then_some(config.autosave),
+                autoreload: (config.autoreload != defaults.autoreload).then_some(config.autoreload),
+                sidebar: (config.sidebar != defaults.sidebar).then_some(config.sidebar),
+                sidebar_width: (sidebar_width != defaults.sidebar_width).then_some(sidebar_width),
+                scroll_lines: (scroll_lines != defaults.scroll_lines).then_some(scroll_lines),
+                page_lines: (config.page_lines != defaults.page_lines).then_some(config.page_lines),
+                scroll_moves_selection: (config.scroll_moves_selection
+                    != defaults.scroll_moves_selection)
+                    .then_some(config.scroll_moves_selection),
+                timestamp_format: (config.timestamp_format != defaults.timestamp_format)
+                    .then_some(config.timestamp_format.as_str()),
+                case_mode: (config.case_mode != defaults.case_mode).then_some(config.case_mode),
+                session_filters: (config.session_filters != defaults.session_filters)
+                    .then_some(config.session_filters),
+                session_stdin: (config.session_stdin != defaults.session_stdin)
+                    .then_some(config.session_stdin),
+            },
             theme: &config.theme,
             colors: &config.colors,
             levels: &config.levels,
@@ -536,34 +664,16 @@ pub fn default_columns() -> Vec<Column> {
 
 impl Default for Config {
     fn default() -> Self {
-        Self {
+        ConfigDocument {
+            main: MainConfig::default(),
             theme: ThemeConfig::default(),
             colors: crate::theme::ColorOverrides::default(),
             levels: crate::theme::LevelOverrides::default(),
             ui: crate::theme::UiOverrides::default(),
-            follow: true,
-            wrap_details: true,
-            details_json_tree: true,
-            details_max_height: default_details_max_height(),
-            details_tab_width: default_details_tab_width(),
-            line_numbers: false,
-            relative_line_numbers: false,
-            scrollbar: true,
-            border: true,
-            autosave: true,
-            autoreload: true,
-            sidebar: false,
-            sidebar_width: default_sidebar_width(),
-            scroll_lines: default_scroll_lines(),
-            page_lines: 0,
-            scroll_moves_selection: true,
-            timestamp_format: default_timestamp_format(),
-            case_mode: CaseMode::default(),
             columns: default_columns(),
             keys: KeysConfig::with_defaults(),
-            session_filters: true,
-            session_stdin: true,
         }
+        .into_config()
     }
 }
 
@@ -612,8 +722,9 @@ impl Config {
         }
         let raw = fs::read_to_string(path)
             .with_context(|| format!("failed to read config {}", path.display()))?;
-        let mut cfg: Self =
+        let doc: ConfigDocument =
             toml::from_str(&raw).with_context(|| format!("invalid config {}", path.display()))?;
+        let mut cfg = doc.into_config();
         cfg.validate()
             .with_context(|| format!("invalid config {}", path.display()))?;
         cfg.keys = KeysConfig::merge_user(std::mem::take(&mut cfg.keys));
