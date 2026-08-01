@@ -58,7 +58,12 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
     app.pointer.hit.list_scrollbar_vertical = bars.vertical.unwrap_or_default();
     app.pointer.hit.list_scrollbar_horizontal = bars.horizontal.unwrap_or_default();
     let viewport = content.height as usize;
-    app.ensure_visible(viewport, app.config.scroll_moves_selection);
+    if app.details.visible {
+        // After details opens/resizes, keep the selection on the seam above it.
+        app.ensure_visible_above_details(viewport);
+    } else {
+        app.ensure_visible(viewport, app.config.scroll_moves_selection);
+    }
 
     let (pin_rows, sep_rows, body_h) = app.list_band_layout(viewport);
     app.pointer.hit.list_pin_rows = pin_rows;
