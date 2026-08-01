@@ -368,7 +368,6 @@ pub fn command_suggestions(prefix: &str, replace_from: usize) -> Vec<Suggestion>
 
 const CONFIG_SUBS: &[(&str, &str)] = &[
     ("path", "show config file path"),
-    ("init", "write config from current settings"),
     ("set", "set option (omit value for picker)"),
     ("get", "show config option value"),
     ("save", "save config to disk"),

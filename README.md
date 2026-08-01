@@ -132,7 +132,6 @@ In `/` mode, **Up/Down** recall search history (shared for list and details sear
 | `:config save` | Save current settings to config |
 | `:config load` | Reload settings from the config file |
 | `:config` / `:config path` | Show config path |
-| `:config init` | Create config from current settings |
 | `:hide` | Hide current line / JSON object (immediate) |
 | `:pin` | Pin/unpin current line / JSON object (sticky at top) |
 | `:delete` | Delete current line / JSON object from file (immediate) |
@@ -242,7 +241,7 @@ Create one with:
 ```bash
 lnav-rs --init-config
 # or inside the TUI:
-:config init
+:config save
 ```
 
 CLI flags override the config file (`--theme`, `--config PATH`).

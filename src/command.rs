@@ -587,10 +587,6 @@ fn config_command(app: &mut App, rest: &str) {
         "" | "path" => {
             app.status_message = Some(format!("config: {}", app.config_path.display()));
         }
-        "init" => match app.save_config() {
-            Ok(path) => app.status_message = Some(format!("wrote {}", path.display())),
-            Err(err) => app.status_message = Some(format!("error: {err:#}")),
-        },
         "set" => set_option(app, arg),
         "get" => get_option(app, arg),
         "save" => match app.save_config() {
@@ -603,7 +599,7 @@ fn config_command(app: &mut App, rest: &str) {
         },
         other => {
             app.status_message = Some(format!(
-                "usage: :config [path|init|set|get|save|load]  (unknown: {other})"
+                "usage: :config [path|set|get|save|load]  (unknown: {other})"
             ));
         }
     }
