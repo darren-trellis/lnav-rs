@@ -54,7 +54,7 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 | `Tab` | `focus toggle` (cycle list → details → sidebar) |
 | `Space` | `page down` (list); `fold toggle` via `[details_keys]` when details focused |
 | `c` | `copy` (copy focused details value to clipboard) |
-| `Esc` | `view current off` (close focused details or sidebar) |
+| `Esc` | `view current off` (close focused details/sidebar, or clear status on the list) |
 | `/` | `search` (regex; highlights matched text; Up/Down recall history) |
 | `:` | `command-mode` |
 | `n` / `N` | `match next` / `match prev` |

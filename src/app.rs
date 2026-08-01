@@ -517,7 +517,10 @@ impl App {
             self.set_details(action);
             return false;
         }
-        if !matches!(action, ToggleAction::Off) {
+        if matches!(action, ToggleAction::Off) {
+            self.cancel_pending_op();
+            self.status_message = None;
+        } else {
             self.status_message = Some("no focused view".into());
         }
         false
