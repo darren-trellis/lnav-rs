@@ -370,11 +370,6 @@ impl App {
 
     fn handle_sidebar_key(&mut self, key: KeyEvent) -> bool {
         match key.code {
-            KeyCode::Esc => {
-                self.focus_list();
-                self.cancel_pending_op();
-                true
-            }
             KeyCode::Char(':') | KeyCode::Char('q') => {
                 self.focus_list();
                 false

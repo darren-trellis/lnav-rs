@@ -33,4 +33,5 @@ fn default_d_maps_to_hide() {
         sidebar_defaults().get("backspace").map(String::as_str),
         Some("filter delete line")
     );
+    assert_eq!(sidebar_defaults().get("esc").map(String::as_str), Some(""));
 }

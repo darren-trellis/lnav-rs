@@ -54,6 +54,8 @@ pub fn sidebar_defaults() -> BTreeMap<String, String> {
     BTreeMap::from([
         ("d".into(), "filter delete".into()),
         ("backspace".into(), "filter delete line".into()),
+        // Block list Esc (`view details off`); use Tab to leave sidebar focus.
+        ("esc".into(), "".into()),
     ])
 }
 
