@@ -62,7 +62,7 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 | `Alt+Shift+↑/↓` / `k`/`j` | `config set details_max_height +1` / `-1` (capped by content/layout; accepts a count) |
 | `p` | `pin` — toggle sticky pin at top of list (accepts a count) |
 | `D` | `delete` operator — `DD` current, `Dj`/`DG`/… range (in-place; safe with `tee -a`); in sidebar `DD`/`Dj`/`DG`/… deletes hidden lines or lines matching selected filter(s) |
-| `Ctrl+L` | `delete all` — clear every line from the log file |
+| `Ctrl+L` | `delete all` — clear every line (rewrites the file, or drops the in-memory stdin buffer) |
 | `?` | `help` (cheatsheet modal; Esc closes; `:help toggle` details border hints when focused) |
 | `q` | `quit` |
 
@@ -77,7 +77,7 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 | `:copy` | | Copy the focused details value to the clipboard |
 | `:hide` | `[line]` \| `clear` \| `unhide [N]` \| `reveal [N]` | Hide current line(s) (`dd`); clear restores; unhide/reveal by sidebar selection or source line N |
 | `:pin` | `[clear]` | Pin/unpin sticky line(s) at the top of the list; `clear` unpins all |
-| `:delete` | `[line]` \| `all` | Delete current line(s) from the file (`DD` / `D`+motion); with sidebar focused, deletes the selected hidden line or all lines matching the selected filter; `line` is immediate; `all` clears the file (`Ctrl+L`) |
+| `:delete` | `[line]` \| `all` | Delete current line(s) from the file (`DD` / `D`+motion); with sidebar focused, deletes the selected hidden line or all lines matching the selected filter; `line` is immediate; `all` clears the file or the stdin buffer (`Ctrl+L`) |
 | `:filter` | `list` \| `in [PATTERN]` \| `out [PATTERN]` \| `on` \| `off` \| `toggle` \| `set on` \| `set off` \| `set toggle` `[N]` \| `clear` \| `delete [N]` | List, add, enable/disable, or remove include/exclude filters (omit PATTERN to use list `/` search) |
 | `:config` | `path` \| `set KEY [VAL]` \| `get KEY` \| `save` \| `load` | Show path, get/set options (picker/editor when VAL omitted), save, or reload — see [config reference](docs/config.md) |
 | `:N` | | Jump to view line `N` |

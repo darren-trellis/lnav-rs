@@ -153,6 +153,16 @@ impl LogSource {
         matches!(self.backend, Backend::File { .. })
     }
 
+    /// Drop all buffered entries. Used to clear a stdin/pipe view in memory;
+    /// the reader keeps running so later lines still append.
+    pub fn clear_entries(&mut self) -> usize {
+        let n = self.entries.len();
+        self.entries.clear();
+        self.source_ranges.clear();
+        self.next_line_no = 1;
+        n
+    }
+
     pub fn path(&self) -> Option<&Path> {
         match &self.backend {
             Backend::File { path, .. } => Some(path.as_path()),

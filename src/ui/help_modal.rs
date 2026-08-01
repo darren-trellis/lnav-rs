@@ -127,7 +127,7 @@ const CHEATSHEET: &[Entry] = &[
     Entry::Item {
         context: Context::Base,
         groups: &["delete all"],
-        description: "clear all logs from file",
+        description: "clear all logs (file or stdin)",
     },
     Entry::Item {
         context: Context::Base,

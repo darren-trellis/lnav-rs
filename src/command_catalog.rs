@@ -35,7 +35,7 @@ const COMMANDS: &[CommandInfo] = &[
     },
     CommandInfo {
         name: "delete",
-        help: "delete line(s): DD or D{{motion}} | line | all",
+        help: "delete line(s): DD or D{{motion}} | line | all (file or stdin)",
     },
     CommandInfo {
         name: "filter",

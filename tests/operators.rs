@@ -449,6 +449,69 @@ fn delete_all_clears_the_file() {
     let _ = fs::remove_dir_all(&dir);
 }
 
+#[cfg(unix)]
+#[test]
+fn delete_all_clears_stdin_buffer() {
+    use std::os::fd::FromRawFd;
+    use std::thread;
+    use std::time::Duration;
+
+    use lnav_rs::tail::RefreshOutcome;
+
+    let mut fds = [0; 2];
+    assert_eq!(unsafe { libc::pipe(fds.as_mut_ptr()) }, 0);
+    let mut writer = unsafe { std::fs::File::from_raw_fd(fds[1]) };
+    let reader = unsafe { std::fs::File::from_raw_fd(fds[0]) };
+    writeln!(writer, r#"{{"level":"info","msg":"one"}}"#).unwrap();
+    writeln!(writer, r#"{{"level":"info","msg":"two"}}"#).unwrap();
+
+    let source = LogSource::open_stdin(reader).unwrap();
+    let mut config = Config::default();
+    config.follow = false;
+    config.session_stdin = false;
+    let mut app = App::new(source, config, std::env::temp_dir().join("lnav-rs-stdin-cfg.toml"))
+        .unwrap();
+
+    let mut added = 0;
+    for _ in 0..50 {
+        if let RefreshOutcome::Appended(n) = app.source.refresh().unwrap() {
+            added += n;
+            app.rebuild_visible(None);
+        }
+        if added >= 2 {
+            break;
+        }
+        thread::sleep(Duration::from_millis(10));
+    }
+    assert_eq!(app.source.len(), 2);
+
+    command::execute_from_key(&mut app, "delete all");
+    assert_eq!(app.source.len(), 0);
+    assert_eq!(app.display_len(), 0);
+    assert!(
+        app.status_message
+            .as_deref()
+            .is_some_and(|m| m.contains("cleared") && m.contains("memory"))
+    );
+
+    // Pipe still accepts new lines after the clear.
+    writeln!(writer, r#"{{"level":"info","msg":"three"}}"#).unwrap();
+    let mut added = 0;
+    for _ in 0..50 {
+        if let RefreshOutcome::Appended(n) = app.source.refresh().unwrap() {
+            added += n;
+            app.rebuild_visible(None);
+        }
+        if added >= 1 {
+            break;
+        }
+        thread::sleep(Duration::from_millis(10));
+    }
+    assert_eq!(app.source.len(), 1);
+    assert!(app.source.entries()[0].raw.contains("three"));
+    drop(writer);
+}
+
 #[test]
 fn sidebar_dg_on_filters_deletes_all_matches() {
     let (dir, path) = temp_log(

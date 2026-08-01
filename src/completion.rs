@@ -288,7 +288,7 @@ const PIN_SUBS: &[(&str, &str)] = &[("clear", "unpin all sticky lines")];
 
 const DELETE_SUBS: &[(&str, &str)] = &[
     ("line", "delete current line(s) immediately"),
-    ("all", "delete every line from the file"),
+    ("all", "clear every line (file or stdin buffer)"),
 ];
 
 fn on_off_toggle_suggestions(

@@ -530,21 +530,41 @@ impl App {
         self.apply_op_display_range(PendingOp::Delete, at, end);
     }
 
-    /// Delete every line from the on-disk log (clear the file).
+    /// Clear every line: rewrite an empty file, or drop the in-memory stdin buffer.
     pub fn delete_all_lines(&mut self) {
         self.pending_op = None;
         self.count = None;
-        if !self.source.is_file() {
-            self.status_message = Some("cannot delete from stdin".into());
+        if self.source.is_file() {
+            let n = self.source.len();
+            if n == 0 {
+                self.status_message = Some("no lines to delete".into());
+                return;
+            }
+            let indices: Vec<usize> = (0..n).collect();
+            self.delete_source_indices(&indices, Some(0), None);
             return;
         }
-        let n = self.source.len();
+
+        let n = self.source.clear_entries();
         if n == 0 {
-            self.status_message = Some("no lines to delete".into());
+            self.status_message = Some("no lines to clear".into());
             return;
         }
-        let indices: Vec<usize> = (0..n).collect();
-        self.delete_source_indices(&indices, Some(0), None);
+        self.view.hidden.clear();
+        self.view.pinned.clear();
+        self.view.selected = 0;
+        self.view.scroll = 0;
+        self.reset_overlay_for_selection_change();
+        self.rebuild_visible(None);
+        self.close_details();
+        self.clamp_sidebar_selection();
+        if !self.search.query.is_empty() {
+            self.run_search();
+        }
+        self.status_message = Some(format!(
+            "cleared {n} line{} from memory",
+            if n == 1 { "" } else { "s" }
+        ));
     }
 
     pub(crate) fn pin_current(&mut self) {
