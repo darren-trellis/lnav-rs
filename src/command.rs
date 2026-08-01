@@ -232,8 +232,8 @@ fn list_filters(app: &mut App) {
         .iter()
         .enumerate()
         .map(|(i, f)| {
-            let on = if f.enabled { "" } else { " off" };
-            format!("{i}:{}{on} /{}/", f.label(), f.pattern)
+            let mark = if f.enabled { "*" } else { " " };
+            format!("{mark}{i}:{} /{}/", f.label(), f.pattern)
         })
         .collect();
     let state = if app.filtering_enabled { "on" } else { "off" };

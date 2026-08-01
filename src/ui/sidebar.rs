@@ -67,8 +67,8 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
     for idx in app.sidebar_scroll..end {
         let filter = &app.filters[idx];
         let selected = focused && idx == app.sidebar_selected;
-        let on = if filter.enabled { "" } else { " off" };
-        let text = format!("{idx}:{}{on} /{}/", filter.label(), filter.pattern);
+        let mark = if filter.enabled { "*" } else { " " };
+        let text = format!("{mark}{idx}:{} /{}/", filter.label(), filter.pattern);
         let display = text::truncate_width(&text, width);
         let style = if selected {
             app.theme.selection_style()
