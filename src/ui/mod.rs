@@ -153,7 +153,7 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
     .split(area);
 
     let body = chunks[0];
-    let show_sidebar = app.config.sidebar && !modal_open;
+    let show_sidebar = app.config.sidebar;
     let sidebar_w = if show_sidebar {
         sidebar::desired_width(body.width, app.config.sidebar_width)
     } else {
@@ -168,7 +168,7 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
         (body, None)
     };
 
-    let detail_content = if app.details.visible && !modal_open {
+    let detail_content = if app.details.visible {
         app.selected_entry()
             .map(|entry| details::build_lines(entry, &app.theme, &app.config, &app.details.folded))
     } else {
@@ -203,11 +203,12 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
     }
     status::draw(frame, app, chunks[2]);
 
+    // Center modals over the main pane so the sidebar stays visible beside them.
     if app.config_modal.is_some() {
-        config_modal::draw(frame, app, body);
+        config_modal::draw(frame, app, main);
     }
     if app.help_modal.is_some() {
-        help_modal::draw(frame, app, body);
+        help_modal::draw(frame, app, main);
     }
 }
 
