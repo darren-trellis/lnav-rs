@@ -443,6 +443,11 @@ impl App {
     }
 
     fn set_focus(&mut self, focus: Focus) {
+        if self.focus != focus {
+            // Drop d/D (and count) when leaving the pane that started them so a
+            // later motion/click cannot apply the op in the wrong index space.
+            self.cancel_pending_op();
+        }
         self.focus = focus;
     }
 

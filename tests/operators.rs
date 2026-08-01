@@ -326,6 +326,37 @@ fn sidebar_d5k_unhides_range() {
 }
 
 #[test]
+fn focus_change_cancels_pending_op() {
+    let (dir, path) = temp_log(
+        "focus-cancel",
+        &[r#"{"level":"info","msg":"a"}"#, r#"{"level":"info","msg":"b"}"#],
+    );
+    let mut app = app_for(&path);
+    command::execute(&mut app, "hide");
+    command::execute(&mut app, "view sidebar on");
+    app.focus_sidebar();
+    command::execute_from_key(&mut app, "delete");
+    assert_eq!(app.pending_op, Some(PendingOp::Delete));
+
+    app.focus_list();
+    assert!(app.pending_op.is_none(), "leaving sidebar should cancel pending D");
+
+    command::execute_from_key(&mut app, "delete");
+    assert_eq!(app.pending_op, Some(PendingOp::Delete));
+    app.focus_list();
+    assert_eq!(
+        app.pending_op,
+        Some(PendingOp::Delete),
+        "same-pane focus should keep pending op"
+    );
+
+    command::execute(&mut app, "view details on");
+    assert!(app.pending_op.is_none(), "list → details should cancel pending D");
+
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn esc_cancels_sidebar_pending_op_without_closing() {
     let (dir, path) = temp_log(
         "esc-sidebar",
