@@ -243,6 +243,7 @@ fn render_line<'a>(app: &'a App, entry: &'a LogEntry, options: LineRenderOptions
     let default_border = columns::ColumnBorderStyle {
         width: theme.column_border_width,
         padding: theme.column_border_padding,
+        color: None,
     };
     let segments = columns::render_segments_sized(
         &app.config.columns,
@@ -252,7 +253,7 @@ fn render_line<'a>(app: &'a App, entry: &'a LogEntry, options: LineRenderOptions
             timestamp_format: &app.config.timestamp_format,
             view_line,
         },
-        default_border,
+        &default_border,
     );
 
     let gutter_style = if selected {
@@ -278,7 +279,7 @@ fn render_line<'a>(app: &'a App, entry: &'a LogEntry, options: LineRenderOptions
             .config
             .columns
             .first()
-            .map(|col| columns::ColumnBorderStyle::resolve(col, default_border))
+            .map(|col| columns::ColumnBorderStyle::resolve(col, &default_border))
             .unwrap_or(default_border);
         let border = columns::column_separator(border_style);
         let border_w = UnicodeWidthStr::width(border.text.as_str());
@@ -344,12 +345,15 @@ fn segment_style(theme: &Theme, entry: &LogEntry, segment: &Segment, selected: b
 
     // Selected row: keep border fg, use selection bg so the highlight is continuous.
     if segment.kind == SegmentKind::ColumnBorder {
+        let tone = segment
+            .border_color
+            .as_ref()
+            .and_then(|spec| spec.parse().ok())
+            .unwrap_or(theme.column_border);
         if selected {
-            return Style::default()
-                .fg(theme.column_border.fg)
-                .bg(theme.selection_bg);
+            return Style::default().fg(tone.fg).bg(theme.selection_bg);
         }
-        return apply_tone(theme, theme.column_border, false, row_bg, false);
+        return apply_tone(theme, tone, false, row_bg, false);
     }
 
     let tone = match segment.kind {

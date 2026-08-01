@@ -72,12 +72,12 @@ fn column_border_defaults_and_overrides() {
     theme
         .apply_overrides(&ThemeOverrides {
             ui: UiOverrides {
-                column_border: Some(ColorSpec::FgBg(ColorSpecFgBg {
+                border: Some(ColorSpec::FgBg(ColorSpecFgBg {
                     fg: "#ff0000".into(),
                     bg: Some("#00ff00".into()),
                 })),
-                column_border_width: Some(2),
-                column_border_padding: Some(lnav_rs::config::Padding { left: 2, right: 1 }),
+                border_width: Some(2),
+                border_padding: Some(lnav_rs::config::Padding { left: 2, right: 1 }),
                 ..Default::default()
             },
             ..Default::default()

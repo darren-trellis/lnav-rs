@@ -29,7 +29,7 @@ string = "#79740e"
 number = "#af3a03"
 bool = "#8f3f71"
 null = "#928374"
-# column_border = { fg = "#bdae93", bg = "#fbf1c7" }
-# column_border_width = 1
-# column_border_padding = 1
-# column_border_padding = { left = 1, right = 2 }
+# border = { fg = "#bdae93", bg = "#fbf1c7" }
+# border_width = 1
+# border_padding = 1
+# border_padding = { left = 1, right = 2 }

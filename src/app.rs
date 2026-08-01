@@ -694,6 +694,24 @@ impl App {
         self.details.scroll = 0;
         self.details.folded.clear();
     }
+
+    pub(crate) fn maybe_autosave(&mut self) {
+        if !self.config.autosave {
+            return;
+        }
+        let msg = self.status_message.clone();
+        if let Err(err) = self.save_config() {
+            self.status_message = Some(format!("error: {err:#}"));
+        } else {
+            self.status_message = msg;
+        }
+    }
+
+    pub(crate) fn save_config(&mut self) -> anyhow::Result<std::path::PathBuf> {
+        self.config.theme.set_name(self.theme.name.clone());
+        self.config.follow = self.view.follow;
+        self.config.write()
+    }
 }
 
 fn copy_to_clipboard(text: &str) -> anyhow::Result<()> {

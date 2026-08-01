@@ -441,7 +441,7 @@ fn view_command(app: &mut App, rest: &str) {
         "sidebar" => match parse_on_off_toggle(arg) {
             Some(action) => {
                 app.set_sidebar(action);
-                maybe_autosave(app);
+                app.maybe_autosave();
             }
             None => {
                 app.status_message = Some(format!(
@@ -453,7 +453,7 @@ fn view_command(app: &mut App, rest: &str) {
             Some(action) => {
                 let closed_sidebar = app.set_current_view(action);
                 if closed_sidebar {
-                    maybe_autosave(app);
+                    app.maybe_autosave();
                 }
             }
             None => {
@@ -573,13 +573,13 @@ fn config_command(app: &mut App, rest: &str) {
         "" | "path" => {
             app.status_message = Some(format!("config: {}", Config::default_path().display()));
         }
-        "init" => match save_config(app) {
+        "init" => match app.save_config() {
             Ok(path) => app.status_message = Some(format!("wrote {}", path.display())),
             Err(err) => app.status_message = Some(format!("error: {err:#}")),
         },
         "set" => set_option(app, arg),
         "get" => get_option(app, arg),
-        "save" => match save_config(app) {
+        "save" => match app.save_config() {
             Ok(path) => app.status_message = Some(format!("saved {}", path.display())),
             Err(err) => app.status_message = Some(format!("error: {err:#}")),
         },
@@ -623,26 +623,11 @@ fn set_option(app: &mut App, rest: &str) {
         return;
     };
     if option.set(app, value) {
-        maybe_autosave(app);
+        // Theme changes autosave inside `commit_theme`; other options save here.
+        if option.name != "theme" {
+            app.maybe_autosave();
+        }
     }
-}
-
-fn maybe_autosave(app: &mut App) {
-    if !app.config.autosave {
-        return;
-    }
-    let msg = app.status_message.clone();
-    if let Err(err) = save_config(app) {
-        app.status_message = Some(format!("error: {err:#}"));
-    } else {
-        app.status_message = msg;
-    }
-}
-
-fn save_config(app: &mut App) -> anyhow::Result<std::path::PathBuf> {
-    app.config.theme.set_name(app.theme.name.clone());
-    app.config.follow = app.view.follow;
-    app.config.write()
 }
 
 fn goto_line(app: &mut App, n: usize) {

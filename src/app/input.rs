@@ -208,6 +208,7 @@ impl App {
                     .unwrap_or(self.theme_index);
                 self.status_message = Some(format!("theme: {}", theme.name));
                 self.theme = theme;
+                self.maybe_autosave();
             }
             Err(err) => self.status_message = Some(format!("error: {err:#}")),
         }

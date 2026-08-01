@@ -114,6 +114,7 @@ pub struct Theme {
     pub bool_color: Tone,
     pub null: Tone,
     /// Vertical rules between list columns (`│` × `column_border_width`).
+    /// From theme `[ui].border` (distinct from pane `[colors].border`).
     pub column_border: Tone,
     /// `0` = plain space between columns (default); `N` = N× `│`.
     pub column_border_width: usize,
@@ -237,13 +238,13 @@ struct ThemeUi {
     null: ColorSpec,
     /// Optional; defaults to `dim` when omitted.
     #[serde(default)]
-    column_border: Option<ColorSpec>,
+    border: Option<ColorSpec>,
     /// Optional; `0` when omitted (space separator, no vertical rule).
     #[serde(default)]
-    column_border_width: usize,
+    border_width: usize,
     /// Optional; `1` or `{ left, right }` (default zero).
     #[serde(default)]
-    column_border_padding: crate::config::Padding,
+    border_padding: crate::config::Padding,
 }
 
 impl Theme {
@@ -365,17 +366,17 @@ impl Theme {
         apply_optional(&mut self.null, u.null.as_ref(), ColorSpec::parse)?;
         apply_optional(
             &mut self.column_border,
-            u.column_border.as_ref(),
+            u.border.as_ref(),
             ColorSpec::parse,
         )?;
         apply_optional(
             &mut self.column_border_width,
-            u.column_border_width.as_ref(),
+            u.border_width.as_ref(),
             |value| Ok(*value),
         )?;
         apply_optional(
             &mut self.column_border_padding,
-            u.column_border_padding.as_ref(),
+            u.border_padding.as_ref(),
             |value| Ok(*value),
         )?;
         Ok(())
@@ -386,7 +387,7 @@ impl Theme {
         let levels = parse_levels(&file.levels)?;
 
         let dim = file.colors.dim.parse()?;
-        let column_border = match file.ui.column_border {
+        let column_border = match file.ui.border {
             Some(spec) => spec.parse()?,
             None => dim,
         };
@@ -411,8 +412,8 @@ impl Theme {
             bool_color: file.ui.bool_color.parse()?,
             null: file.ui.null.parse()?,
             column_border,
-            column_border_width: file.ui.column_border_width,
-            column_border_padding: file.ui.column_border_padding,
+            column_border_width: file.ui.border_width,
+            column_border_padding: file.ui.border_padding,
             levels,
         })
     }
@@ -621,11 +622,11 @@ pub struct UiOverrides {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub null: Option<ColorSpec>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub column_border: Option<ColorSpec>,
+    pub border: Option<ColorSpec>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub column_border_width: Option<usize>,
+    pub border_width: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub column_border_padding: Option<crate::config::Padding>,
+    pub border_padding: Option<crate::config::Padding>,
 }
 
 impl UiOverrides {
@@ -636,9 +637,9 @@ impl UiOverrides {
             && self.number.is_none()
             && self.bool_color.is_none()
             && self.null.is_none()
-            && self.column_border.is_none()
-            && self.column_border_width.is_none()
-            && self.column_border_padding.is_none()
+            && self.border.is_none()
+            && self.border_width.is_none()
+            && self.border_padding.is_none()
     }
 
     pub fn validate(&self) -> Result<()> {
@@ -649,7 +650,7 @@ impl UiOverrides {
             ("ui.number", self.number.as_ref()),
             ("ui.bool", self.bool_color.as_ref()),
             ("ui.null", self.null.as_ref()),
-            ("ui.column_border", self.column_border.as_ref()),
+            ("ui.border", self.border.as_ref()),
         ])?;
         Ok(())
     }

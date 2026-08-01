@@ -3,6 +3,7 @@ use unicode_width::UnicodeWidthStr;
 
 use crate::config::{Align, Column};
 use crate::model::{FieldValue, LogEntry};
+use crate::theme::ColorSpec;
 use crate::timestamp;
 
 #[derive(Debug, Clone)]
@@ -15,7 +16,7 @@ pub struct FormatOptions<'a> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SegmentKind {
     Literal,
-    /// Vertical rule between columns (`│` × theme `column_border_width`).
+    /// Vertical rule between columns (`│` × theme `ui.border_width`).
     ColumnBorder,
     Level,
     Timestamp,
@@ -30,20 +31,24 @@ pub enum SegmentKind {
 pub struct Segment {
     pub kind: SegmentKind,
     pub text: String,
+    /// Per-column border color override (`ColumnBorder` only).
+    pub border_color: Option<ColorSpec>,
 }
 
 /// Vertical rule between list columns (`│` × width, with padding spaces).
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ColumnBorderStyle {
     pub width: usize,
     pub padding: crate::config::Padding,
+    pub color: Option<ColorSpec>,
 }
 
 impl ColumnBorderStyle {
-    pub fn resolve(column: &Column, defaults: Self) -> Self {
+    pub fn resolve(column: &Column, defaults: &Self) -> Self {
         Self {
             width: column.border_width.unwrap_or(defaults.width),
             padding: column.border_padding.unwrap_or(defaults.padding),
+            color: column.border.clone().or_else(|| defaults.color.clone()),
         }
     }
 }
@@ -79,7 +84,7 @@ pub fn render_segments(
     columns: &[Column],
     entry: &LogEntry,
     opts: &FormatOptions<'_>,
-    default_border: ColumnBorderStyle,
+    default_border: &ColumnBorderStyle,
 ) -> Vec<Segment> {
     let widths = measure_widths(columns, &[(entry, opts.view_line)], opts.timestamp_format);
     render_segments_sized(columns, &widths, entry, opts, default_border)
@@ -91,7 +96,7 @@ pub fn render_segments_sized(
     widths: &[usize],
     entry: &LogEntry,
     opts: &FormatOptions<'_>,
-    default_border: ColumnBorderStyle,
+    default_border: &ColumnBorderStyle,
 ) -> Vec<Segment> {
     let mut out = Vec::new();
     for (i, col) in columns.iter().enumerate() {
@@ -108,7 +113,7 @@ pub fn render(
     columns: &[Column],
     entry: &LogEntry,
     opts: &FormatOptions<'_>,
-    default_border: ColumnBorderStyle,
+    default_border: &ColumnBorderStyle,
 ) -> String {
     render_segments(columns, entry, opts, default_border)
         .into_iter()
@@ -121,6 +126,7 @@ pub fn column_separator(border: ColumnBorderStyle) -> Segment {
         Segment {
             kind: SegmentKind::Literal,
             text: " ".into(),
+            border_color: None,
         }
     } else {
         Segment {
@@ -131,6 +137,7 @@ pub fn column_separator(border: ColumnBorderStyle) -> Segment {
                 "│".repeat(border.width),
                 " ".repeat(border.padding.right)
             ),
+            border_color: border.color,
         }
     }
 }
@@ -152,7 +159,11 @@ fn render_column(
             " ".repeat(col.padding.right)
         )
     };
-    Segment { kind, text }
+    Segment {
+        kind,
+        text,
+        border_color: None,
+    }
 }
 
 fn column_value(source: &str, entry: &LogEntry, opts: &FormatOptions<'_>) -> (SegmentKind, String) {

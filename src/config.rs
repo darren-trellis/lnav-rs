@@ -82,10 +82,13 @@ pub struct Column {
     pub align: Align,
     #[serde(default)]
     pub padding: Padding,
-    /// Leading separator width before this column (`None` → theme `ui.column_border_width`).
+    /// Leading separator color (`None` → theme `ui.border`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub border: Option<crate::theme::ColorSpec>,
+    /// Leading separator width before this column (`None` → theme `ui.border_width`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub border_width: Option<usize>,
-    /// Leading separator padding (`None` → theme `ui.column_border_padding`).
+    /// Leading separator padding (`None` → theme `ui.border_padding`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub border_padding: Option<Padding>,
 }
@@ -348,6 +351,8 @@ struct PersistedColumn<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     padding: Option<Padding>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    border: Option<&'a crate::theme::ColorSpec>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     border_width: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
     border_padding: Option<Padding>,
@@ -370,6 +375,7 @@ impl<'a> PersistedConfig<'a> {
                     width: column.width,
                     align: (column.align != Align::Left).then_some(column.align),
                     padding: (!column.padding.is_zero()).then_some(column.padding),
+                    border: column.border.as_ref(),
                     border_width: column.border_width,
                     border_padding: column.border_padding,
                 })
@@ -447,6 +453,7 @@ pub fn default_columns() -> Vec<Column> {
             width: Some(5),
             align: Align::Center,
             padding: Padding::both(1),
+            border: None,
             border_width: None,
             border_padding: None,
         },
@@ -455,6 +462,7 @@ pub fn default_columns() -> Vec<Column> {
             width: None,
             align: Align::Left,
             padding: Padding::default(),
+            border: None,
             border_width: None,
             border_padding: None,
         },
@@ -463,6 +471,7 @@ pub fn default_columns() -> Vec<Column> {
             width: None,
             align: Align::Left,
             padding: Padding::default(),
+            border: None,
             border_width: None,
             border_padding: None,
         },
@@ -584,6 +593,11 @@ impl Config {
         for (i, col) in self.columns.iter().enumerate() {
             if col.source.trim().is_empty() {
                 bail!("columns[{i}].source must not be empty");
+            }
+            if let Some(border) = &col.border {
+                border
+                    .validate()
+                    .with_context(|| format!("invalid columns[{i}].border"))?;
             }
         }
         let known: Vec<&str> = command_catalog::catalog().iter().map(|c| c.name).collect();

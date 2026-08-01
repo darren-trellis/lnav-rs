@@ -30,7 +30,7 @@ number = "#cb4b16"
 bool = "#6c71c4"
 null = "#93a1a1"
 # Vertical rules between list columns (width 0 = space separator).
-# column_border = { fg = "#93a1a1", bg = "#fdf6e3" }
-# column_border_width = 1
-# column_border_padding = 1
-# column_border_padding = { left = 1, right = 2 }
+# border = { fg = "#93a1a1", bg = "#fdf6e3" }
+# border_width = 1
+# border_padding = 1
+# border_padding = { left = 1, right = 2 }

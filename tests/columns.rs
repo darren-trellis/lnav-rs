@@ -39,6 +39,7 @@ fn cols(sources: &[(&str, Option<usize>, Align)]) -> Vec<Column> {
             width: *width,
             align: *align,
             padding: lnav_rs::config::Padding::default(),
+            border: None,
             border_width: None,
             border_padding: None,
         })
@@ -62,15 +63,44 @@ fn per_column_border_width_overrides_default() {
         &columns,
         &entry(),
         &opts,
-        ColumnBorderStyle {
+        &ColumnBorderStyle {
             width: 1,
             padding: lnav_rs::config::Padding::default(),
+            color: None,
         },
     );
     assert_eq!(segs[1].kind, SegmentKind::ColumnBorder);
     assert_eq!(segs[1].text, "││");
     assert_eq!(segs[3].kind, SegmentKind::Literal);
     assert_eq!(segs[3].text, " ");
+}
+
+#[test]
+fn per_column_border_color_overrides_default() {
+    let opts = FormatOptions {
+        timestamp_format: "raw",
+        view_line: 1,
+    };
+    let mut columns = cols(&[
+        ("level", Some(5), Align::Left),
+        ("message", None, Align::Left),
+    ]);
+    columns[1].border = Some(lnav_rs::theme::ColorSpec::Fg("#ff0000".into()));
+    let segs = render_segments(
+        &columns,
+        &entry(),
+        &opts,
+        &ColumnBorderStyle {
+            width: 1,
+            padding: lnav_rs::config::Padding::default(),
+            color: None,
+        },
+    );
+    assert_eq!(segs[1].kind, SegmentKind::ColumnBorder);
+    assert_eq!(
+        segs[1].border_color,
+        Some(lnav_rs::theme::ColorSpec::Fg("#ff0000".into()))
+    );
 }
 
 #[test]
@@ -94,7 +124,7 @@ fn renders_default_style_columns() {
         ("code", None, Align::Left),
     ]);
     assert_eq!(
-        render(&columns, &entry, &opts, ColumnBorderStyle::default()),
+        render(&columns, &entry, &opts, &ColumnBorderStyle::default()),
         format!("ERROR {local_ts} hi 3 500")
     );
 }
@@ -107,7 +137,7 @@ fn width_and_align() {
     };
     let columns = cols(&[("level", Some(8), Align::Right)]);
     assert_eq!(
-        render(&columns, &entry(), &opts, ColumnBorderStyle::default()),
+        render(&columns, &entry(), &opts, &ColumnBorderStyle::default()),
         "   ERROR"
     );
 }
@@ -121,7 +151,7 @@ fn center_aligns_in_fixed_width() {
     let err = entry();
     let columns = cols(&[("level", Some(5), Align::Center)]);
     assert_eq!(
-        render(&columns, &err, &opts, ColumnBorderStyle::default()),
+        render(&columns, &err, &opts, &ColumnBorderStyle::default()),
         "ERROR"
     );
 
@@ -129,19 +159,19 @@ fn center_aligns_in_fixed_width() {
     info.level = LogLevel::Info;
     let columns = cols(&[("level", Some(5), Align::Center)]);
     assert_eq!(
-        render(&columns, &info, &opts, ColumnBorderStyle::default()),
+        render(&columns, &info, &opts, &ColumnBorderStyle::default()),
         " INFO"
     );
 
     let columns = cols(&[("level", Some(6), Align::Center)]);
     assert_eq!(
-        render(&columns, &info, &opts, ColumnBorderStyle::default()),
+        render(&columns, &info, &opts, &ColumnBorderStyle::default()),
         " INFO "
     );
 
     let columns = cols(&[("level", Some(8), Align::Center)]);
     assert_eq!(
-        render(&columns, &err, &opts, ColumnBorderStyle::default()),
+        render(&columns, &err, &opts, &ColumnBorderStyle::default()),
         "  ERROR "
     );
 }
@@ -156,7 +186,7 @@ fn truncates_wide_columns() {
     let mut e = entry();
     e.message = Some("hello".into());
     assert_eq!(
-        render(&columns, &e, &opts, ColumnBorderStyle::default()),
+        render(&columns, &e, &opts, &ColumnBorderStyle::default()),
         "h…"
     );
 }
@@ -169,12 +199,12 @@ fn resolves_dotted_nested_fields() {
     };
     let columns = cols(&[("annotations.url", None, Align::Left)]);
     assert_eq!(
-        render(&columns, &entry(), &opts, ColumnBorderStyle::default()),
+        render(&columns, &entry(), &opts, &ColumnBorderStyle::default()),
         "https://example.com/x"
     );
     let columns = cols(&[("annotations.items.1.id", None, Align::Left)]);
     assert_eq!(
-        render(&columns, &entry(), &opts, ColumnBorderStyle::default()),
+        render(&columns, &entry(), &opts, &ColumnBorderStyle::default()),
         "b"
     );
 }
@@ -190,7 +220,7 @@ fn segments_preserve_kinds() {
         ("timestamp", None, Align::Left),
         ("message", None, Align::Left),
     ]);
-    let segs = render_segments(&columns, &entry(), &opts, ColumnBorderStyle::default());
+    let segs = render_segments(&columns, &entry(), &opts, &ColumnBorderStyle::default());
     assert_eq!(segs[0].kind, SegmentKind::Level);
     assert_eq!(segs[1].kind, SegmentKind::Literal);
     assert_eq!(segs[2].kind, SegmentKind::Timestamp);
@@ -200,9 +230,10 @@ fn segments_preserve_kinds() {
         &columns,
         &entry(),
         &opts,
-        ColumnBorderStyle {
+        &ColumnBorderStyle {
             width: 1,
             padding: lnav_rs::config::Padding::default(),
+            color: None,
         },
     );
     assert_eq!(bordered[1].kind, SegmentKind::ColumnBorder);
@@ -211,9 +242,10 @@ fn segments_preserve_kinds() {
         &columns,
         &entry(),
         &opts,
-        ColumnBorderStyle {
+        &ColumnBorderStyle {
             width: 2,
             padding: lnav_rs::config::Padding::default(),
+            color: None,
         },
     );
     assert_eq!(wide[1].text, "││");
@@ -221,9 +253,10 @@ fn segments_preserve_kinds() {
         &columns,
         &entry(),
         &opts,
-        ColumnBorderStyle {
+        &ColumnBorderStyle {
             width: 1,
             padding: lnav_rs::config::Padding::both(1),
+            color: None,
         },
     );
     assert_eq!(padded[1].text, " │ ");
@@ -231,9 +264,10 @@ fn segments_preserve_kinds() {
         &columns,
         &entry(),
         &opts,
-        ColumnBorderStyle {
+        &ColumnBorderStyle {
             width: 1,
             padding: lnav_rs::config::Padding { left: 2, right: 1 },
+            color: None,
         },
     );
     assert_eq!(asymmetric[1].text, "  │ ");
@@ -252,11 +286,12 @@ fn padding_wraps_fitted_content() {
         width: Some(5),
         align: Align::Left,
         padding: Padding::both(1),
+        border: None,
         border_width: None,
         border_padding: None,
     }];
     assert_eq!(
-        render(&columns, &entry(), &opts, ColumnBorderStyle::default()),
+        render(&columns, &entry(), &opts, &ColumnBorderStyle::default()),
         " ERROR "
     );
 }
@@ -289,7 +324,7 @@ fn auto_widths_align_across_rows() {
             timestamp_format: "raw",
             view_line: 1,
         },
-        ColumnBorderStyle::default(),
+        &ColumnBorderStyle::default(),
     )
     .into_iter()
     .map(|s| s.text)
@@ -302,7 +337,7 @@ fn auto_widths_align_across_rows() {
             timestamp_format: "raw",
             view_line: 2,
         },
-        ColumnBorderStyle::default(),
+        &ColumnBorderStyle::default(),
     )
     .into_iter()
     .map(|s| s.text)
