@@ -25,6 +25,6 @@ Unknown keys, invalid colors, unknown theme names, and unknown keybinding comman
 
 Keybinding-only commands (`nav`, `page`, `scroll`, `match`, `focus`, `search`, `command`) are listed in the README Commands section; they are omitted from `:` completions.
 
-Default resize chords (Shift+Command) call `:config set` with relative values (`+1`/`-1`), so autosave persists them: `S-D-left`/`S-D-h` → `sidebar_width -1`, `S-D-right`/`S-D-l` → `sidebar_width +1`, `S-D-up`/`S-D-k` → `details_max_height +1`, `S-D-down`/`S-D-j` → `details_max_height -1`. Relative `details_max_height` adjusts are capped by content height and main viewport minus pinned rows minus 5; relative `sidebar_width` is capped to leave room for the list. Some terminals swallow Cmd chords — rebind if needed.
+Default resize chords (Shift+Command, encoded `S-D-…`) call `:config set` with relative values: `S-D-left`/`S-D-h` → `sidebar_width +1`, `S-D-right`/`S-D-l` → `sidebar_width -1`, `S-D-up`/`S-D-k` → `details_max_height +1`, `S-D-down`/`S-D-j` → `details_max_height -1`. Relative `details_max_height` adjusts are capped by content height and main viewport minus pinned rows minus 5; relative `sidebar_width` is capped to leave room for the list. macOS often steals Cmd+Shift+↑/↓ — prefer `S-D-k`/`S-D-j` if arrows do nothing.
 
 `?` / `:help` opens a cheatsheet modal (Esc / `q` / `?` closes; `j`/`k` and `h`/`l` scroll).

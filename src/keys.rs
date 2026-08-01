@@ -74,10 +74,11 @@ pub fn defaults() -> BTreeMap<String, String> {
         ("p".into(), "pin".into()),
         ("?".into(), "help".into()),
         ("s".into(), "view sidebar toggle".into()),
-        ("S-D-left".into(), "config set sidebar_width -1".into()),
-        ("S-D-h".into(), "config set sidebar_width -1".into()),
-        ("S-D-right".into(), "config set sidebar_width +1".into()),
-        ("S-D-l".into(), "config set sidebar_width +1".into()),
+        // Left grows the sidebar (divider moves left); right shrinks it.
+        ("S-D-left".into(), "config set sidebar_width +1".into()),
+        ("S-D-h".into(), "config set sidebar_width +1".into()),
+        ("S-D-right".into(), "config set sidebar_width -1".into()),
+        ("S-D-l".into(), "config set sidebar_width -1".into()),
         ("S-D-up".into(), "config set details_max_height +1".into()),
         ("S-D-k".into(), "config set details_max_height +1".into()),
         ("S-D-down".into(), "config set details_max_height -1".into()),
@@ -90,6 +91,15 @@ pub fn details_defaults() -> BTreeMap<String, String> {
     BTreeMap::from([
         ("space".into(), "fold toggle".into()),
         ("esc".into(), "view current off".into()),
+        // Re-declare resize chords so Cmd+Shift+↑/↓/j/k still win over nav while focused.
+        ("S-D-up".into(), "config set details_max_height +1".into()),
+        ("S-D-k".into(), "config set details_max_height +1".into()),
+        ("S-D-down".into(), "config set details_max_height -1".into()),
+        ("S-D-j".into(), "config set details_max_height -1".into()),
+        ("S-D-left".into(), "config set sidebar_width +1".into()),
+        ("S-D-h".into(), "config set sidebar_width +1".into()),
+        ("S-D-right".into(), "config set sidebar_width -1".into()),
+        ("S-D-l".into(), "config set sidebar_width -1".into()),
     ])
 }
 
@@ -105,6 +115,14 @@ pub fn sidebar_defaults() -> BTreeMap<String, String> {
         ("l".into(), "scroll right".into()),
         ("right".into(), "scroll right".into()),
         ("esc".into(), "view current off".into()),
+        ("S-D-left".into(), "config set sidebar_width +1".into()),
+        ("S-D-h".into(), "config set sidebar_width +1".into()),
+        ("S-D-right".into(), "config set sidebar_width -1".into()),
+        ("S-D-l".into(), "config set sidebar_width -1".into()),
+        ("S-D-up".into(), "config set details_max_height +1".into()),
+        ("S-D-k".into(), "config set details_max_height +1".into()),
+        ("S-D-down".into(), "config set details_max_height -1".into()),
+        ("S-D-j".into(), "config set details_max_height -1".into()),
     ])
 }
 

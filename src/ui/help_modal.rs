@@ -64,10 +64,10 @@ const CHEATSHEET: &[Entry] = &[
     Entry::Item {
         context: Context::Base,
         groups: &[
-            "config set sidebar_width -1",
             "config set sidebar_width +1",
+            "config set sidebar_width -1",
         ],
-        description: "resize sidebar width",
+        description: "resize sidebar (← grow · → shrink)",
     },
     Entry::Item {
         context: Context::Base,

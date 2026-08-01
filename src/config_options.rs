@@ -375,7 +375,13 @@ fn set_details_max_height(app: &mut App, value: &str) -> bool {
     if let Some(delta) = parse_relative_delta(value) {
         let delta = delta.saturating_mul(app.take_count() as isize);
         let max = app.details_max_height_cap();
-        let current = app.config.details_max_height.min(max).max(MIN);
+        // Prefer the on-screen overlay height so a config value above the cap
+        // still shrinks/grows from what the user sees.
+        let current = if app.details.visible && app.pointer.hit.overlay.height > 0 {
+            (app.pointer.hit.overlay.height as usize).min(max).max(MIN)
+        } else {
+            app.config.details_max_height.min(max).max(MIN)
+        };
         let next = (current as isize + delta).clamp(MIN as isize, max as isize) as usize;
         app.config.details_max_height = next;
         if !app.details.visible {
