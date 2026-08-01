@@ -12,8 +12,9 @@ name = "catppuccin"
 # [levels]
 # error = { fg = "#1e1e2e", bg = "#f38ba8" }
 
+# border = true
 # [ui]
-# border = { fg = "#585b70", bg = "#1e1e2e" }
+# border_color = { fg = "#585b70", bg = "#1e1e2e" }
 # border_width = 1
 # border_padding = 1
 
@@ -22,7 +23,7 @@ source = "level"
 width = 5
 align = "center"
 padding = 1
-# border = "#585b70"
+# border_color = "#585b70"
 # border_width = 1
 # border_padding = 1
 

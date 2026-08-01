@@ -29,8 +29,6 @@ string = "#a5d6ff"
 number = "#79c0ff"
 bool = "#ff7b72"
 null = "#848d97"
-# Vertical rules between list columns (width 0 = space separator).
-# border = { fg = "#30363d", bg = "#0d1117" }
-# border_width = 1
-# border_padding = 1
-# border_padding = { left = 1, right = 2 }
+border_color = { fg = "#30363d", bg = "#0d1117" }
+border_width = 1
+border_padding = 1

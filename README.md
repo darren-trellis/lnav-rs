@@ -116,6 +116,7 @@ In `/` mode, **Up/Down** recall search history (shared for list and details sear
 | `:config set line_numbers on\|off\|toggle` | Show absolute view line numbers |
 | `:config set relative_line_numbers on\|off\|toggle` | Show relative line numbers (vim-style) |
 | `:config set scrollbar on\|off\|toggle` | Show a right-side scrollbar (default on) |
+| `:config set border on\|off\|toggle` | Draw vertical rules between list columns (default on) |
 | `:config set autosave on\|off\|toggle` | Auto-save after `:config set` (default on) |
 | `:config set sidebar on\|off\|toggle` | Show filters sidebar (default off; same as `:view sidebar`) |
 | `:config set scroll_lines N` | Mouse wheel step (default 1) |
@@ -147,6 +148,7 @@ details_tab_width = 4
 line_numbers = false
 relative_line_numbers = false
 scrollbar = true
+border = true
 autosave = true
 sidebar = false
 scroll_lines = 1
@@ -168,17 +170,16 @@ name = "catppuccin"
 
 # [ui]
 # timestamp = { fg = "#89b4fa", bg = "#11111b" }
-# border = { fg = "#585b70", bg = "#1e1e2e" }
+# border_color = { fg = "#585b70", bg = "#1e1e2e" }
 # border_width = 1
 # border_padding = 1
-# border_padding = { left = 1, right = 2 }
 
 [[columns]]
 source = "level"
 width = 5
 align = "center"
 padding = 1
-# border = "#585b70"
+# border_color = "#585b70"
 # border_width = 1
 # border_padding = 1
 
@@ -207,7 +208,7 @@ backspace = "filter delete line"
 
 `line_numbers` / `relative_line_numbers` show a gutter for the visible list (not file line numbers). With both on, the current line is absolute and others are relative. Counts work like vim (`5j`, `3dd`, `10G`). `:N` jumps to view line `N`.
 
-`[[columns]]` define the list layout. `source` is a builtin (`level`, `timestamp`, `message`, `raw`, `line`, `format`) or a field path (`annotations.url`, `items.0.id`). Columns without `width` auto-size to the widest value in the current viewport so fields share an X position. Set `width` to fix/truncate; `align` is `"left"` (default), `"center"`, or `"right"`. `padding` is spaces around the cell (`1` for both sides, or `{ left = 1, right = 2 }`). Optional `border` / `border_width` / `border_padding` override the theme column separator for the leading rule before that column (omit to inherit `[ui]` defaults); the first column’s border is also used between line numbers and the list.
+`[[columns]]` define the list layout. `source` is a builtin (`level`, `timestamp`, `message`, `raw`, `line`, `format`) or a field path (`annotations.url`, `items.0.id`). Columns without `width` auto-size to the widest value in the current viewport so fields share an X position. Set `width` to fix/truncate; `align` is `"left"` (default), `"center"`, or `"right"`. `padding` is spaces around the cell (`1` for both sides, or `{ left = 1, right = 2 }`). Optional `border_color` / `border_width` / `border_padding` override the theme column separator for the leading rule before that column (omit to inherit `[ui]` defaults); the first column’s border is also used between line numbers and the list. Top-level `border = false` / `:config set border off` hides all column rules.
 
 `timestamp_format` uses [chrono strftime](https://docs.rs/chrono/latest/chrono/format/strftime/index.html) (default `%H:%M:%S`). Set to `raw` to keep the original log string.
 
@@ -221,7 +222,7 @@ Filters sidebar: `s` / `:view sidebar toggle` shows a right-hand list of current
 
 Filters persist under `~/.local/share/lnav-rs/sessions/` (one file per log path hash; stdin uses `stdin.toml`). `session_filters` / `session_stdin` control that (both default on). Turn `session_stdin` off if you don’t want every pipe to share one filter set.
 
-`[theme]` selects the theme name. Optional `[colors]` / `[levels]` / `[ui]` patches at the config root use the same keys as `themes/*.toml` (not nested under `[theme]`). Text colors (`foreground`, `border`, `window_focus_border`, `search_match`, `dim`, levels, and `[ui]` color keys) accept a hex string (fg only) or `{ fg = "...", bg = "..." }`. Surface keys (`background`, `overlay_bg`, `selection_*`, `status_*`) stay plain color strings. Focused chrome: `window_focus_border` is the border of the focused pane (list or details); unfocused panes use `[colors].border`. List column separators: `[ui].border` (color), `[ui].border_width` (`0` = space between columns; `N` draws `N`× `│`), and `[ui].border_padding` (`1` or `{ left, right }`, like column `padding`). The same rule is drawn between line numbers and the first column when line numbers are on (overridable per column with `border` / `border_width` / `border_padding`). Unknown keys, invalid colors, unknown theme names, and unknown keybinding commands are rejected.
+`[theme]` selects the theme name. Optional `[colors]` / `[levels]` / `[ui]` patches at the config root use the same keys as `themes/*.toml` (not nested under `[theme]`). Text colors (`foreground`, `border`, `window_focus_border`, `search_match`, `dim`, levels, and `[ui]` color keys) accept a hex string (fg only) or `{ fg = "...", bg = "..." }`. Surface keys (`background`, `overlay_bg`, `selection_*`, `status_*`) stay plain color strings. Focused chrome: `window_focus_border` is the border of the focused pane (list or details); unfocused panes use `[colors].border`. List column separators (when top-level `border` is on): `[ui].border_color`, `[ui].border_width` (`0` = space between columns; `N` draws `N`× `│`), and `[ui].border_padding` (`1` or `{ left, right }`, like column `padding`). The same rule is drawn between line numbers and the first column when line numbers are on (overridable per column with `border_color` / `border_width` / `border_padding`). Unknown keys, invalid colors, unknown theme names, and unknown keybinding commands are rejected.
 
 `[keys]` overrides defaults (merged). Use `key = ""` to unbind. Special key names: `enter`, `esc`, `up`, `down`, `home`, `end`, `pagedown`, `pageup`, `space`, `backspace`, `C-c`. `[details_keys]` overrides `[keys]` while the details overlay is focused (default: `space = "fold toggle"`). `[sidebar_keys]` overrides `[keys]` while the filters sidebar is focused (defaults: `d = "filter delete"`, `backspace = "filter delete line"`). An empty binding in either contextual section blocks fallback to the same key in `[keys]`. Keybinding-only commands omitted from `:` completions: `nav`, `page`, `match`, `focus`, `search`, `command-mode`.
 

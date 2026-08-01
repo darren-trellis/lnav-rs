@@ -16,7 +16,7 @@ pub struct FormatOptions<'a> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SegmentKind {
     Literal,
-    /// Vertical rule between columns (`│` × theme `ui.border_width`).
+    /// Vertical rule between columns (`│` × theme `ui.border_width` when `border` is on).
     ColumnBorder,
     Level,
     Timestamp,
@@ -36,19 +36,44 @@ pub struct Segment {
 }
 
 /// Vertical rule between list columns (`│` × width, with padding spaces).
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ColumnBorderStyle {
     pub width: usize,
     pub padding: crate::config::Padding,
     pub color: Option<ColorSpec>,
+    /// When false, separators are always a single space (config `border = off`).
+    pub enabled: bool,
+}
+
+impl Default for ColumnBorderStyle {
+    fn default() -> Self {
+        Self {
+            width: 0,
+            padding: crate::config::Padding::default(),
+            color: None,
+            enabled: true,
+        }
+    }
 }
 
 impl ColumnBorderStyle {
     pub fn resolve(column: &Column, defaults: &Self) -> Self {
+        if !defaults.enabled {
+            return Self {
+                width: 0,
+                padding: crate::config::Padding::default(),
+                color: None,
+                enabled: false,
+            };
+        }
         Self {
             width: column.border_width.unwrap_or(defaults.width),
             padding: column.border_padding.unwrap_or(defaults.padding),
-            color: column.border.clone().or_else(|| defaults.color.clone()),
+            color: column
+                .border_color
+                .clone()
+                .or_else(|| defaults.color.clone()),
+            enabled: true,
         }
     }
 }

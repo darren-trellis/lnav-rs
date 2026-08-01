@@ -29,7 +29,6 @@ string = "#9ece6a"
 number = "#ff9e64"
 bool = "#bb9af7"
 null = "#565f89"
-# border = { fg = "#3b4261", bg = "#1a1b26" }
-# border_width = 1
-# border_padding = 1
-# border_padding = { left = 1, right = 2 }
+border_color = { fg = "#3b4261", bg = "#1a1b26" }
+border_width = 1
+border_padding = 1

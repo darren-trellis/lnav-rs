@@ -82,9 +82,9 @@ pub struct Column {
     pub align: Align,
     #[serde(default)]
     pub padding: Padding,
-    /// Leading separator color (`None` → theme `ui.border`).
+    /// Leading separator color (`None` → theme `ui.border_color`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub border: Option<crate::theme::ColorSpec>,
+    pub border_color: Option<crate::theme::ColorSpec>,
     /// Leading separator width before this column (`None` → theme `ui.border_width`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub border_width: Option<usize>,
@@ -240,6 +240,10 @@ pub struct Config {
     #[serde(default = "default_true")]
     pub scrollbar: bool,
 
+    /// Draw vertical rules between list columns (theme/column width still apply when on).
+    #[serde(default = "default_true")]
+    pub border: bool,
+
     /// When true, `:config set` writes the config file after a successful change.
     #[serde(default = "default_true")]
     pub autosave: bool,
@@ -309,6 +313,8 @@ struct PersistedConfig<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     scrollbar: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    border: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     autosave: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     sidebar: Option<bool>,
@@ -351,7 +357,7 @@ struct PersistedColumn<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     padding: Option<Padding>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    border: Option<&'a crate::theme::ColorSpec>,
+    border_color: Option<&'a crate::theme::ColorSpec>,
     #[serde(skip_serializing_if = "Option::is_none")]
     border_width: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -375,7 +381,7 @@ impl<'a> PersistedConfig<'a> {
                     width: column.width,
                     align: (column.align != Align::Left).then_some(column.align),
                     padding: (!column.padding.is_zero()).then_some(column.padding),
-                    border: column.border.as_ref(),
+                    border_color: column.border_color.as_ref(),
                     border_width: column.border_width,
                     border_padding: column.border_padding,
                 })
@@ -397,6 +403,7 @@ impl<'a> PersistedConfig<'a> {
             relative_line_numbers: (config.relative_line_numbers != defaults.relative_line_numbers)
                 .then_some(config.relative_line_numbers),
             scrollbar: (config.scrollbar != defaults.scrollbar).then_some(config.scrollbar),
+            border: (config.border != defaults.border).then_some(config.border),
             autosave: (config.autosave != defaults.autosave).then_some(config.autosave),
             sidebar: (config.sidebar != defaults.sidebar).then_some(config.sidebar),
             scroll_lines: (scroll_lines != defaults.scroll_lines).then_some(scroll_lines),
@@ -453,7 +460,7 @@ pub fn default_columns() -> Vec<Column> {
             width: Some(5),
             align: Align::Center,
             padding: Padding::both(1),
-            border: None,
+            border_color: None,
             border_width: None,
             border_padding: None,
         },
@@ -462,7 +469,7 @@ pub fn default_columns() -> Vec<Column> {
             width: None,
             align: Align::Left,
             padding: Padding::default(),
-            border: None,
+            border_color: None,
             border_width: None,
             border_padding: None,
         },
@@ -471,7 +478,7 @@ pub fn default_columns() -> Vec<Column> {
             width: None,
             align: Align::Left,
             padding: Padding::default(),
-            border: None,
+            border_color: None,
             border_width: None,
             border_padding: None,
         },
@@ -493,6 +500,7 @@ impl Default for Config {
             line_numbers: false,
             relative_line_numbers: false,
             scrollbar: true,
+            border: true,
             autosave: true,
             sidebar: false,
             scroll_lines: default_scroll_lines(),
@@ -594,10 +602,10 @@ impl Config {
             if col.source.trim().is_empty() {
                 bail!("columns[{i}].source must not be empty");
             }
-            if let Some(border) = &col.border {
+            if let Some(border) = &col.border_color {
                 border
                     .validate()
-                    .with_context(|| format!("invalid columns[{i}].border"))?;
+                    .with_context(|| format!("invalid columns[{i}].border_color"))?;
             }
         }
         let known: Vec<&str> = command_catalog::catalog().iter().map(|c| c.name).collect();

@@ -131,6 +131,13 @@ const OPTIONS: &[ConfigOption] = &[
         setter: set_scrollbar,
     },
     ConfigOption {
+        name: "border",
+        help: "on|off|toggle",
+        value_kind: ValueKind::Bool,
+        getter: get_border,
+        setter: set_border,
+    },
+    ConfigOption {
         name: "autosave",
         help: "on|off|toggle",
         value_kind: ValueKind::Bool,
@@ -375,6 +382,21 @@ fn set_scrollbar(app: &mut App, value: &str) -> bool {
         value,
         |app| app.config.scrollbar,
         |app, enabled| app.config.scrollbar = enabled,
+        false,
+    )
+}
+
+fn get_border(app: &App) -> String {
+    on_off(app.config.border)
+}
+
+fn set_border(app: &mut App, value: &str) -> bool {
+    set_bool(
+        app,
+        "border",
+        value,
+        |app| app.config.border,
+        |app, enabled| app.config.border = enabled,
         false,
     )
 }

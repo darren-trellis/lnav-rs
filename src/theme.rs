@@ -114,7 +114,7 @@ pub struct Theme {
     pub bool_color: Tone,
     pub null: Tone,
     /// Vertical rules between list columns (`│` × `column_border_width`).
-    /// From theme `[ui].border` (distinct from pane `[colors].border`).
+    /// From theme `[ui].border_color` (distinct from pane `[colors].border`).
     pub column_border: Tone,
     /// `0` = plain space between columns (default); `N` = N× `│`.
     pub column_border_width: usize,
@@ -238,7 +238,7 @@ struct ThemeUi {
     null: ColorSpec,
     /// Optional; defaults to `dim` when omitted.
     #[serde(default)]
-    border: Option<ColorSpec>,
+    border_color: Option<ColorSpec>,
     /// Optional; `0` when omitted (space separator, no vertical rule).
     #[serde(default)]
     border_width: usize,
@@ -366,7 +366,7 @@ impl Theme {
         apply_optional(&mut self.null, u.null.as_ref(), ColorSpec::parse)?;
         apply_optional(
             &mut self.column_border,
-            u.border.as_ref(),
+            u.border_color.as_ref(),
             ColorSpec::parse,
         )?;
         apply_optional(
@@ -387,7 +387,7 @@ impl Theme {
         let levels = parse_levels(&file.levels)?;
 
         let dim = file.colors.dim.parse()?;
-        let column_border = match file.ui.border {
+        let column_border = match file.ui.border_color {
             Some(spec) => spec.parse()?,
             None => dim,
         };
@@ -622,7 +622,7 @@ pub struct UiOverrides {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub null: Option<ColorSpec>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub border: Option<ColorSpec>,
+    pub border_color: Option<ColorSpec>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub border_width: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -637,7 +637,7 @@ impl UiOverrides {
             && self.number.is_none()
             && self.bool_color.is_none()
             && self.null.is_none()
-            && self.border.is_none()
+            && self.border_color.is_none()
             && self.border_width.is_none()
             && self.border_padding.is_none()
     }
@@ -650,7 +650,7 @@ impl UiOverrides {
             ("ui.number", self.number.as_ref()),
             ("ui.bool", self.bool_color.as_ref()),
             ("ui.null", self.null.as_ref()),
-            ("ui.border", self.border.as_ref()),
+            ("ui.border_color", self.border_color.as_ref()),
         ])?;
         Ok(())
     }

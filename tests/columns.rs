@@ -39,7 +39,7 @@ fn cols(sources: &[(&str, Option<usize>, Align)]) -> Vec<Column> {
             width: *width,
             align: *align,
             padding: lnav_rs::config::Padding::default(),
-            border: None,
+            border_color: None,
             border_width: None,
             border_padding: None,
         })
@@ -67,6 +67,7 @@ fn per_column_border_width_overrides_default() {
             width: 1,
             padding: lnav_rs::config::Padding::default(),
             color: None,
+            enabled: true,
         },
     );
     assert_eq!(segs[1].kind, SegmentKind::ColumnBorder);
@@ -85,7 +86,7 @@ fn per_column_border_color_overrides_default() {
         ("level", Some(5), Align::Left),
         ("message", None, Align::Left),
     ]);
-    columns[1].border = Some(lnav_rs::theme::ColorSpec::Fg("#ff0000".into()));
+    columns[1].border_color = Some(lnav_rs::theme::ColorSpec::Fg("#ff0000".into()));
     let segs = render_segments(
         &columns,
         &entry(),
@@ -94,6 +95,7 @@ fn per_column_border_color_overrides_default() {
             width: 1,
             padding: lnav_rs::config::Padding::default(),
             color: None,
+            enabled: true,
         },
     );
     assert_eq!(segs[1].kind, SegmentKind::ColumnBorder);
@@ -234,6 +236,7 @@ fn segments_preserve_kinds() {
             width: 1,
             padding: lnav_rs::config::Padding::default(),
             color: None,
+            enabled: true,
         },
     );
     assert_eq!(bordered[1].kind, SegmentKind::ColumnBorder);
@@ -246,6 +249,7 @@ fn segments_preserve_kinds() {
             width: 2,
             padding: lnav_rs::config::Padding::default(),
             color: None,
+            enabled: true,
         },
     );
     assert_eq!(wide[1].text, "││");
@@ -257,6 +261,7 @@ fn segments_preserve_kinds() {
             width: 1,
             padding: lnav_rs::config::Padding::both(1),
             color: None,
+            enabled: true,
         },
     );
     assert_eq!(padded[1].text, " │ ");
@@ -268,6 +273,7 @@ fn segments_preserve_kinds() {
             width: 1,
             padding: lnav_rs::config::Padding { left: 2, right: 1 },
             color: None,
+            enabled: true,
         },
     );
     assert_eq!(asymmetric[1].text, "  │ ");
@@ -286,7 +292,7 @@ fn padding_wraps_fitted_content() {
         width: Some(5),
         align: Align::Left,
         padding: Padding::both(1),
-        border: None,
+        border_color: None,
         border_width: None,
         border_padding: None,
     }];

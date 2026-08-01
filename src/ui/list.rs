@@ -244,6 +244,7 @@ fn render_line<'a>(app: &'a App, entry: &'a LogEntry, options: LineRenderOptions
         width: theme.column_border_width,
         padding: theme.column_border_padding,
         color: None,
+        enabled: app.config.border,
     };
     let segments = columns::render_segments_sized(
         &app.config.columns,

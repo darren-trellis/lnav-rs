@@ -72,7 +72,7 @@ fn column_border_defaults_and_overrides() {
     theme
         .apply_overrides(&ThemeOverrides {
             ui: UiOverrides {
-                border: Some(ColorSpec::FgBg(ColorSpecFgBg {
+                border_color: Some(ColorSpec::FgBg(ColorSpecFgBg {
                     fg: "#ff0000".into(),
                     bg: Some("#00ff00".into()),
                 })),

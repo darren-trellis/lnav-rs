@@ -115,6 +115,7 @@ fn write_omits_default_keys() {
     assert!(!raw.contains("details_tab_width = "));
     assert!(!raw.contains("line_numbers = "));
     assert!(!raw.contains("scrollbar = "));
+    assert!(!raw.contains("border = "));
     assert!(!raw.contains("autosave = "));
     assert!(!raw.contains("session_filters = "));
     assert!(!raw.contains("session_stdin = "));
@@ -152,7 +153,7 @@ fn write_root_scalars_before_theme_tables_roundtrip() {
             width: Some(5),
             align: Align::Center,
             padding: Padding::both(1),
-            border: None,
+            border_color: None,
             border_width: None,
             border_padding: None,
         },
@@ -161,7 +162,7 @@ fn write_root_scalars_before_theme_tables_roundtrip() {
             width: None,
             align: Align::Left,
             padding: Padding::default(),
-            border: None,
+            border_color: None,
             border_width: None,
             border_padding: None,
         },
