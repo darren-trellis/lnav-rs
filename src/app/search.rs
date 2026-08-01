@@ -94,33 +94,35 @@ impl App {
     }
 
     pub fn move_sidebar_cursor(&mut self, delta: isize) {
-        if self.filters.is_empty() {
+        let len = self.sidebar_len();
+        if len == 0 {
             self.sidebar_selected = 0;
             return;
         }
         self.cancel_pending_op();
-        let next = (self.sidebar_selected as isize + delta)
-            .clamp(0, self.filters.len() as isize - 1) as usize;
+        let next = (self.sidebar_selected as isize + delta).clamp(0, len as isize - 1) as usize;
         self.sidebar_selected = next;
         self.ensure_sidebar_selection_visible();
     }
 
     pub fn jump_sidebar_cursor(&mut self, idx: usize) {
-        if self.filters.is_empty() {
+        let len = self.sidebar_len();
+        if len == 0 {
             self.sidebar_selected = 0;
             return;
         }
         self.cancel_pending_op();
-        self.sidebar_selected = idx.min(self.filters.len() - 1);
+        self.sidebar_selected = idx.min(len - 1);
         self.ensure_sidebar_selection_visible();
     }
 
     pub(crate) fn scroll_sidebar(&mut self, delta: isize) {
-        if self.filters.is_empty() {
+        let len = self.sidebar_len();
+        if len == 0 {
             return;
         }
         let viewport = self.pointer.hit.sidebar_inner.height.max(1) as usize;
-        let max_scroll = self.filters.len().saturating_sub(viewport);
+        let max_scroll = len.saturating_sub(viewport);
         let next = (self.sidebar_scroll as isize + delta).clamp(0, max_scroll as isize) as usize;
         self.sidebar_scroll = next;
     }
@@ -133,12 +135,13 @@ impl App {
     }
 
     pub fn ensure_sidebar_visible(&mut self, viewport_height: usize, follow_selection: bool) {
-        if viewport_height == 0 || self.filters.is_empty() {
+        let len = self.sidebar_len();
+        if viewport_height == 0 || len == 0 {
             self.sidebar_scroll = 0;
             return;
         }
-        if self.sidebar_selected >= self.filters.len() {
-            self.sidebar_selected = self.filters.len() - 1;
+        if self.sidebar_selected >= len {
+            self.sidebar_selected = len - 1;
         }
         if follow_selection {
             if self.sidebar_selected < self.sidebar_scroll {
@@ -147,7 +150,7 @@ impl App {
                 self.sidebar_scroll = self.sidebar_selected + 1 - viewport_height;
             }
         }
-        let max_scroll = self.filters.len().saturating_sub(viewport_height);
+        let max_scroll = len.saturating_sub(viewport_height);
         if self.sidebar_scroll > max_scroll {
             self.sidebar_scroll = max_scroll;
         }

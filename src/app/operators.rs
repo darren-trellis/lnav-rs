@@ -1,38 +1,45 @@
 use std::collections::HashSet;
 
-use super::{App, PendingOp, ToggleAction};
+use super::{App, PendingOp, SidebarItem, ToggleAction};
 use crate::object_span;
 
 impl App {
     pub fn start_or_repeat_filter_delete(&mut self) {
-        if self.filters.is_empty() {
+        if self.sidebar_len() == 0 {
             self.pending_op = None;
             self.count = None;
-            self.status_message = Some("no filters".into());
+            self.status_message = Some("sidebar empty".into());
             return;
         }
         if self.pending_op == Some(PendingOp::DeleteFilter) {
             self.pending_op = None;
             self.count = None;
-            self.delete_selected_filter();
+            self.delete_sidebar_selection();
             return;
         }
         self.pending_op = Some(PendingOp::DeleteFilter);
         self.status_message = None;
     }
 
+    pub fn delete_sidebar_selection(&mut self) {
+        match self.sidebar_selection() {
+            Some(SidebarItem::Filter(index)) => self.delete_filter_at(index),
+            Some(SidebarItem::Hidden(source)) => self.unhide_source(source, false),
+            None => self.status_message = Some("sidebar empty".into()),
+        }
+    }
+
     pub fn delete_selected_filter(&mut self) {
-        if self.filters.is_empty() {
-            self.status_message = Some("no filters".into());
+        self.delete_sidebar_selection();
+    }
+
+    fn delete_filter_at(&mut self, index: usize) {
+        if index >= self.filters.len() {
+            self.status_message = Some("no such filter".into());
             return;
         }
-        let index = self.sidebar_selected.min(self.filters.len() - 1);
         let removed = self.filters.remove(index);
-        if self.filters.is_empty() {
-            self.sidebar_selected = 0;
-        } else if self.sidebar_selected >= self.filters.len() {
-            self.sidebar_selected = self.filters.len() - 1;
-        }
+        self.clamp_sidebar_selection();
         self.rebuild_visible(None);
         self.persist_session();
         self.status_message = Some(format!(
@@ -42,12 +49,40 @@ impl App {
         ));
     }
 
+    pub fn unhide_source(&mut self, source: usize, reveal: bool) {
+        if !self.view.hidden.remove(&source) {
+            self.status_message = Some("line not hidden".into());
+            return;
+        }
+        self.rebuild_visible(Some(source));
+        self.clamp_sidebar_selection();
+        if reveal {
+            if let Some(display) = self.display_of_source(source) {
+                self.jump_to(display);
+            }
+            self.focus_list();
+            self.status_message = Some(format!("revealed line {}", source + 1));
+        } else {
+            self.status_message = Some(format!("unhid line {}", source + 1));
+        }
+    }
+
+    pub fn reveal_sidebar_selection(&mut self) {
+        match self.sidebar_selection() {
+            Some(SidebarItem::Hidden(source)) => self.unhide_source(source, true),
+            Some(SidebarItem::Filter(_)) => {
+                self.status_message = Some("select a hidden line".into());
+            }
+            None => self.status_message = Some("no hidden lines".into()),
+        }
+    }
+
     pub fn set_filter_enabled(&mut self, index: usize, action: ToggleAction) {
         if index >= self.filters.len() {
             self.status_message = Some("no such filter".into());
             return;
         }
-        self.sidebar_selected = index;
+        self.select_sidebar_item(SidebarItem::Filter(index));
         let enabled = match action {
             ToggleAction::On => true,
             ToggleAction::Off => false,
@@ -65,12 +100,13 @@ impl App {
     }
 
     pub fn set_selected_filter_enabled(&mut self, action: ToggleAction) {
-        if self.filters.is_empty() {
-            self.status_message = Some("no filters".into());
-            return;
+        match self.sidebar_selection() {
+            Some(SidebarItem::Filter(index)) => self.set_filter_enabled(index, action),
+            Some(SidebarItem::Hidden(_)) => {
+                self.status_message = Some("select a filter".into());
+            }
+            None => self.status_message = Some("no filters".into()),
         }
-        let index = self.sidebar_selected.min(self.filters.len() - 1);
-        self.set_filter_enabled(index, action);
     }
 
     pub(crate) fn take_count(&mut self) -> usize {

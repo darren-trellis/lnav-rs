@@ -5,7 +5,7 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph};
 use unicode_width::UnicodeWidthStr;
 
-use crate::app::App;
+use crate::app::{App, SidebarItem};
 use crate::text;
 
 const WIDTH: u16 = 28;
@@ -26,11 +26,13 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
         border = border.add_modifier(Modifier::BOLD);
     }
 
-    let n = app.filters.len();
-    let title = if n == 0 {
-        " filters ".to_string()
-    } else {
-        format!(" filters ({n}) ")
+    let n_filters = app.filters.len();
+    let n_hidden = app.view.hidden.len();
+    let title = match (n_filters, n_hidden) {
+        (0, 0) => " sidebar ".to_string(),
+        (f, 0) => format!(" filters ({f}) "),
+        (0, h) => format!(" hidden ({h}) "),
+        (f, h) => format!(" F{f} · H{h} "),
     };
 
     let block = Block::default()
@@ -50,9 +52,10 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
     let viewport = inner.height as usize;
     app.ensure_sidebar_visible(viewport, app.config.scroll_moves_selection);
 
-    if app.filters.is_empty() {
+    let items = app.sidebar_items();
+    if items.is_empty() {
         let empty = Paragraph::new(Line::from(Span::styled(
-            " no filters ",
+            " no filters · no hidden ",
             app.theme.tone_style(app.theme.dim, app.theme.overlay_bg),
         )))
         .style(Style::default().bg(app.theme.overlay_bg));
@@ -60,24 +63,40 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
         return;
     }
 
-    let end = (app.sidebar_scroll + viewport).min(app.filters.len());
+    let end = (app.sidebar_scroll + viewport).min(items.len());
     let mut lines = Vec::with_capacity(end.saturating_sub(app.sidebar_scroll));
     let width = inner.width as usize;
 
     for idx in app.sidebar_scroll..end {
-        let filter = &app.filters[idx];
         let selected = focused && idx == app.sidebar_selected;
-        let mark = if filter.enabled { "*" } else { " " };
-        let text = format!("{mark}{idx}:{} /{}/", filter.label(), filter.pattern);
+        let (text, dim) = match items[idx] {
+            SidebarItem::Filter(fi) => {
+                let filter = &app.filters[fi];
+                let mark = if filter.enabled { "*" } else { " " };
+                (
+                    format!("{mark}{fi}:{} /{}/", filter.label(), filter.pattern),
+                    !filter.enabled,
+                )
+            }
+            SidebarItem::Hidden(src) => {
+                let preview = app
+                    .source
+                    .entries()
+                    .get(src)
+                    .map(|e| e.raw.replace('\n', " "))
+                    .unwrap_or_default();
+                (format!("·{} {preview}", src + 1), true)
+            }
+        };
         let display = text::truncate_width(&text, width);
         let style = if selected {
             app.theme.selection_style()
-        } else if filter.enabled {
+        } else if dim {
+            app.theme.tone_style(app.theme.dim, app.theme.overlay_bg)
+        } else {
             Style::default()
                 .fg(app.theme.foreground.fg)
                 .bg(app.theme.overlay_bg)
-        } else {
-            app.theme.tone_style(app.theme.dim, app.theme.overlay_bg)
         };
         let mut spans = vec![Span::styled(display.clone(), style)];
         let used = UnicodeWidthStr::width(display.as_str());

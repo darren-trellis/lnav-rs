@@ -212,7 +212,7 @@ impl App {
             if area.height > 0 {
                 let row_off = (row - area.y) as usize;
                 let idx = self.sidebar_scroll + row_off;
-                if idx < self.filters.len() {
+                if idx < self.sidebar_len() {
                     self.sidebar_selected = idx;
                 }
             }

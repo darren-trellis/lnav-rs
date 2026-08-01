@@ -39,7 +39,7 @@ pub enum InputMode {
 pub enum PendingOp {
     Hide,
     Delete,
-    /// Sidebar filter delete (`dd` while filters sidebar focused).
+    /// Sidebar delete (`dd`: filter delete or unhide).
     DeleteFilter,
 }
 
@@ -55,6 +55,13 @@ pub enum Focus {
     List,
     Details,
     Sidebar,
+}
+
+/// Selectable row in the filters/hidden sidebar.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SidebarItem {
+    Filter(usize),
+    Hidden(usize),
 }
 
 /// Modal opened by bare `:config set KEY` (list picker or freeform editor).
@@ -606,10 +613,43 @@ impl App {
         }
         self.details.help = false;
         self.set_focus(Focus::Sidebar);
-        if self.filters.is_empty() {
+        let len = self.sidebar_len();
+        if len == 0 {
             self.sidebar_selected = 0;
         } else {
-            self.sidebar_selected = self.sidebar_selected.min(self.filters.len() - 1);
+            self.sidebar_selected = self.sidebar_selected.min(len - 1);
+        }
+    }
+
+    pub fn sidebar_items(&self) -> Vec<SidebarItem> {
+        let mut items: Vec<SidebarItem> = (0..self.filters.len()).map(SidebarItem::Filter).collect();
+        let mut hidden: Vec<usize> = self.view.hidden.iter().copied().collect();
+        hidden.sort_unstable();
+        items.extend(hidden.into_iter().map(SidebarItem::Hidden));
+        items
+    }
+
+    pub fn sidebar_len(&self) -> usize {
+        self.filters.len() + self.view.hidden.len()
+    }
+
+    pub fn sidebar_selection(&self) -> Option<SidebarItem> {
+        self.sidebar_items().get(self.sidebar_selected).copied()
+    }
+
+    pub fn select_sidebar_item(&mut self, item: SidebarItem) {
+        if let Some(idx) = self.sidebar_items().iter().position(|row| *row == item) {
+            self.sidebar_selected = idx;
+        }
+    }
+
+    pub fn clamp_sidebar_selection(&mut self) {
+        let len = self.sidebar_len();
+        if len == 0 {
+            self.sidebar_selected = 0;
+            self.sidebar_scroll = 0;
+        } else if self.sidebar_selected >= len {
+            self.sidebar_selected = len - 1;
         }
     }
 

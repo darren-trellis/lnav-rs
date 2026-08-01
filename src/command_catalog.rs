@@ -27,7 +27,7 @@ const COMMANDS: &[CommandInfo] = &[
     },
     CommandInfo {
         name: "hide",
-        help: "hide line(s): dd or d{{motion}} | line | clear",
+        help: "hide line(s): dd or d{{motion}} | line | clear | unhide|reveal [N]",
     },
     CommandInfo {
         name: "pin",

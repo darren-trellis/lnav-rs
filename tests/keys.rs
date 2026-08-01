@@ -42,6 +42,10 @@ fn default_d_maps_to_hide() {
         Some("filter set toggle")
     );
     assert_eq!(
+        sidebar_defaults().get("enter").map(String::as_str),
+        Some("hide reveal")
+    );
+    assert_eq!(
         defaults().get("esc").map(String::as_str),
         Some("command-mode clear")
     );

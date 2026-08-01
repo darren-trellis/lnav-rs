@@ -225,7 +225,9 @@ const SEARCH_SUBS: &[(&str, &str)] = &[("clear", "clear search highlights")];
 
 const HIDE_SUBS: &[(&str, &str)] = &[
     ("line", "hide current line(s) immediately"),
-    ("clear", "restore lines hidden with hide"),
+    ("clear", "restore all manually hidden lines"),
+    ("unhide", "unhide selected/sidebar or LINE"),
+    ("reveal", "unhide and jump to selected/LINE"),
 ];
 
 const PIN_SUBS: &[(&str, &str)] = &[("clear", "unpin all sticky lines")];

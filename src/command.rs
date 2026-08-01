@@ -1,4 +1,4 @@
-use crate::app::{App, Focus, InputMode, PendingOp, ToggleAction};
+use crate::app::{App, Focus, InputMode, PendingOp, SidebarItem, ToggleAction};
 use crate::config_options;
 use crate::filter::{Filter, FilterKind};
 
@@ -120,7 +120,7 @@ fn navigate(app: &mut App, navigation: Navigation) {
                 app.jump_sidebar_cursor(line.saturating_sub(1));
             }
             Navigation::Bottom(None) => {
-                app.jump_sidebar_cursor(app.filters.len().saturating_sub(1));
+                app.jump_sidebar_cursor(app.sidebar_len().saturating_sub(1));
             }
         },
         Focus::Details if app.details.visible => match navigation {
@@ -248,7 +248,7 @@ fn list_filters(app: &mut App) {
 
 fn delete_filter(app: &mut App, rest: &str) {
     if rest.is_empty() {
-        app.delete_selected_filter();
+        app.delete_sidebar_selection();
         return;
     }
     let Ok(idx) = rest.parse::<usize>() else {
@@ -259,8 +259,8 @@ fn delete_filter(app: &mut App, rest: &str) {
         app.status_message = Some("no such filter".into());
         return;
     }
-    app.sidebar_selected = idx;
-    app.delete_selected_filter();
+    app.select_sidebar_item(SidebarItem::Filter(idx));
+    app.delete_sidebar_selection();
 }
 
 fn set_filter_item(app: &mut App, rest: &str) {
@@ -430,7 +430,7 @@ fn search_command(app: &mut App, rest: &str) {
 }
 
 fn hide_command(app: &mut App, rest: &str, invoke: Invoke) {
-    let (sub, _) = split_cmd(rest);
+    let (sub, arg) = split_cmd(rest);
     match sub.to_ascii_lowercase().as_str() {
         "" => match invoke {
             Invoke::Key => app.start_or_repeat_op(PendingOp::Hide),
@@ -442,11 +442,48 @@ fn hide_command(app: &mut App, rest: &str, invoke: Invoke) {
             let n = app.view.hidden.len();
             app.view.hidden.clear();
             app.rebuild_visible(None);
+            app.clamp_sidebar_selection();
             app.status_message = Some(format!("unhid {n} line(s)"));
         }
+        "unhide" => {
+            app.cancel_pending_op();
+            if arg.is_empty() {
+                match app.sidebar_selection() {
+                    Some(SidebarItem::Hidden(source)) => app.unhide_source(source, false),
+                    _ => app.status_message = Some("usage: :hide unhide [LINE]".into()),
+                }
+                return;
+            }
+            let Ok(line) = arg.parse::<usize>() else {
+                app.status_message = Some("usage: :hide unhide [LINE]".into());
+                return;
+            };
+            if line == 0 {
+                app.status_message = Some("usage: :hide unhide [LINE]".into());
+                return;
+            }
+            app.unhide_source(line - 1, false);
+        }
+        "reveal" => {
+            app.cancel_pending_op();
+            if arg.is_empty() {
+                app.reveal_sidebar_selection();
+                return;
+            }
+            let Ok(line) = arg.parse::<usize>() else {
+                app.status_message = Some("usage: :hide reveal [LINE]".into());
+                return;
+            };
+            if line == 0 {
+                app.status_message = Some("usage: :hide reveal [LINE]".into());
+                return;
+            }
+            app.unhide_source(line - 1, true);
+        }
         other => {
-            app.status_message =
-                Some(format!("usage: :hide | :hide line | :hide clear  (unknown: {other})"));
+            app.status_message = Some(format!(
+                "usage: :hide | :hide line | :hide clear|unhide|reveal  (unknown: {other})"
+            ));
         }
     }
 }
