@@ -108,7 +108,7 @@ In `/` mode, **Up/Down** recall search history (shared for list and details sear
 | `:pin` / `:pin line` | Pin/unpin current line(s) sticky at the top of the list |
 | `:pin clear` | Unpin all sticky lines |
 | `:config set KEY` | Open picker/editor for a setting (theme, bools, formats, numbers) |
-| `:config set theme [NAME]` | Set theme, or open theme picker with live preview |
+| `:config set theme [NAME]` | Set theme, or open theme picker |
 | `:config set follow on\|off\|toggle` | Enable/disable/toggle live follow |
 | `:config set wrap_details on\|off\|toggle` | Wrap overlay text |
 | `:config set details_json_tree on\|off\|toggle` | Tree-view nested JSON in details (default on) |
@@ -221,7 +221,7 @@ space = "filter set toggle"
 
 `case_mode` controls `/` search and `:filter` matching: `smart` / `smartcase` (default; insensitive unless the pattern has an uppercase letter), `insensitive`, or `sensitive`.
 
-Boolean `:config set` values use `on` / `off` / `toggle` only. Bare `:config set KEY` opens a modal: a list for theme/bool/case/timestamp options, or a value editor for numbers. With `autosave` on (default), successful `:config set` (including modal confirms) and sidebar visibility writes `config.toml`; use `:config save` to write manually. With `autoreload` on (default), edits to the config file on disk are applied automatically; use `:config load` to reload manually.
+Boolean `:config set` values use `on` / `off` / `toggle` only. Bare `:config set KEY` opens a modal: a list for theme/bool/case/timestamp options, or a value editor for numbers. List pickers apply the highlighted value live (Esc restores the previous value; Enter/`view details` commits). With `autosave` on (default), successful `:config set` (including modal confirms) and sidebar visibility writes `config.toml`; use `:config save` to write manually. With `autoreload` on (default), edits to the config file on disk are applied automatically; use `:config load` to reload manually.
 
 Details: `Enter` (`view details on`) opens and focuses the overlay — the selection highlight moves into details (`j`/`k` move the cursor; Esc runs `view current off` and closes it). `Tab` / `:focus toggle` cycles focus across the list, details (if open), and the filters sidebar (if open). `Space` folds/unfolds the tree item under the cursor when details is focused (`:fold on|off|toggle`). `:help toggle` (when details focused) toggles keybinding hints on the overlay border. `c` / `:copy` copies the focused item’s value (strings without quotes; objects/arrays as pretty JSON). With details focused, `/` searches inside the overlay (`n`/`N` cycle matches). Nested JSON fields render as a tree when `details_json_tree` is on (`details_tab_width` sets indent per level). Overlay height grows with content up to `details_max_height` (and screen space).
 

@@ -287,22 +287,7 @@ impl App {
                     list_area: Rect::default(),
                     list_start: 0,
                 }));
-                if option.name == "theme" {
-                    self.preview_theme_at_selection();
-                }
-                let confirm = keys::binding_for_command(
-                    &self.config.keys.bindings,
-                    None,
-                    "view details on",
-                )
-                .or_else(|| {
-                    keys::binding_for_command(&self.config.keys.bindings, None, "view details")
-                })
-                .unwrap_or("enter");
-                self.status_message = Some(format!(
-                    "{} · click/{confirm} to set · Esc to cancel",
-                    option.name
-                ));
+                self.preview_config_at_selection();
             }
         }
     }
@@ -320,7 +305,7 @@ impl App {
     }
 
     fn config_picker_select(&mut self, idx: usize) {
-        let option_name = {
+        {
             let Some(ConfigModal::Picker(picker)) = &mut self.config_modal else {
                 return;
             };
@@ -328,25 +313,36 @@ impl App {
                 return;
             }
             picker.selected = idx;
-            picker.option_name
-        };
-        if option_name == "theme" {
-            self.preview_theme_at_selection();
         }
+        self.preview_config_at_selection();
     }
 
-    fn preview_theme_at_selection(&mut self) {
-        let Some(name) = self.config_modal.as_ref().and_then(|m| match m {
-            ConfigModal::Picker(p) if p.option_name == "theme" => p.values.get(p.selected).cloned(),
-            _ => None,
-        }) else {
+    fn preview_config_at_selection(&mut self) {
+        let Some(ConfigModal::Picker(picker)) = &self.config_modal else {
             return;
         };
-        let overrides = self.config.theme_overrides();
-        if let Ok(theme) = Theme::resolve_with_overrides(&name, &overrides) {
-            self.theme = theme;
-            self.status_message = Some(format!("preview: {name}"));
-        }
+        let name = picker.option_name;
+        let previous = picker.previous_value.clone();
+        let Some(raw) = picker.values.get(picker.selected).cloned() else {
+            return;
+        };
+        let value = resolve_picker_value(&raw, &previous);
+        let Some(option) = config_options::find(name) else {
+            return;
+        };
+        self.config_preview = true;
+        let _ = option.set(self, &value);
+        self.config_preview = false;
+        let confirm = keys::binding_for_command(
+            &self.config.keys.bindings,
+            None,
+            "view details on",
+        )
+        .or_else(|| keys::binding_for_command(&self.config.keys.bindings, None, "view details"))
+        .unwrap_or("enter");
+        self.status_message = Some(format!(
+            "preview: {name}={value} · click/{confirm} to set · Esc to cancel"
+        ));
     }
 
     pub(crate) fn close_config_modal(&mut self, confirm: bool) {
@@ -355,28 +351,20 @@ impl App {
         };
         match modal {
             ConfigModal::Picker(picker) => {
-                if confirm && let Some(value) = picker.values.get(picker.selected) {
-                    self.commit_config_value(picker.option_name, value);
+                if confirm && let Some(raw) = picker.values.get(picker.selected) {
+                    let value = resolve_picker_value(raw, &picker.previous_value);
+                    self.commit_config_value(picker.option_name, &value);
                     return;
                 }
-                if picker.option_name == "theme" {
-                    let overrides = self.config.theme_overrides();
-                    if let Ok(theme) =
-                        Theme::resolve_with_overrides(&picker.previous_value, &overrides)
-                    {
-                        self.theme = theme;
-                        self.theme_index = Theme::list_names()
-                            .iter()
-                            .position(|t| t == &picker.previous_value)
-                            .unwrap_or(self.theme_index);
-                    }
-                    self.status_message = Some(format!("theme: {}", self.config.theme.name()));
-                } else {
-                    self.status_message = Some(format!(
-                        "{}={}",
-                        picker.option_name, picker.previous_value
-                    ));
+                self.config_preview = true;
+                if let Some(option) = config_options::find(picker.option_name) {
+                    let _ = option.set(self, &picker.previous_value);
                 }
+                self.config_preview = false;
+                self.status_message = Some(format!(
+                    "{}={}",
+                    picker.option_name, picker.previous_value
+                ));
             }
             ConfigModal::Editor(editor) => {
                 if confirm {
@@ -587,6 +575,18 @@ impl App {
         }
     }
 
+}
+
+fn resolve_picker_value(value: &str, previous: &str) -> String {
+    if value.eq_ignore_ascii_case("toggle") {
+        if previous.eq_ignore_ascii_case("on") {
+            "off".into()
+        } else {
+            "on".into()
+        }
+    } else {
+        value.to_string()
+    }
 }
 
 fn contains(area: Rect, col: u16, row: u16) -> bool {

@@ -188,6 +188,8 @@ pub struct App {
     pub count: Option<usize>,
     pub config_modal: Option<ConfigModal>,
     pub help_modal: Option<HelpModal>,
+    /// When true, config setters apply for picker preview without autosave.
+    pub(crate) config_preview: bool,
     pub(crate) pointer: PointerState,
     pub(crate) search: SearchState,
     pub(crate) command_line: CommandLineState,
@@ -270,6 +272,7 @@ impl App {
             count: None,
             config_modal: None,
             help_modal: None,
+            config_preview: false,
             pointer: PointerState {
                 hit: HitAreas::default(),
                 last_click: None,
@@ -751,7 +754,7 @@ impl App {
     }
 
     pub(crate) fn maybe_autosave(&mut self) {
-        if !self.config.autosave {
+        if self.config_preview || !self.config.autosave {
             return;
         }
         let msg = self.status_message.clone();

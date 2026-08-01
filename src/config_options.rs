@@ -450,6 +450,9 @@ fn set_sidebar(app: &mut App, value: &str) -> bool {
         |app| app.config.sidebar,
         |app, enabled| {
             app.config.sidebar = enabled;
+            if app.config_preview {
+                return;
+            }
             if enabled {
                 app.focus_sidebar();
             } else if app.is_sidebar_focused() {
