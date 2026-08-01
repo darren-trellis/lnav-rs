@@ -17,7 +17,7 @@ Unknown keys, invalid colors, unknown theme names, and unknown keybinding comman
 
 ## Keybindings
 
-`[keys]` overrides defaults (merged). Use `key = ""` to unbind. Chain commands with `;` (e.g. `r = "view details on; focus toggle"`). Special key names: `enter`, `esc`, `up`, `down`, `left`, `right`, `home`, `end`, `pagedown`, `pageup`, `space`, `backspace`, `S-backspace`, `C-c`, `D-` (Super/Command), combinable as `C-S-left`.
+`[keys]` overrides defaults (merged). Use `key = ""` to unbind. Chain commands with `;` (e.g. `r = "view details on; focus toggle"`). Special key names: `enter`, `esc`, `up`, `down`, `left`, `right`, `home`, `end`, `pagedown`, `pageup`, `space`, `backspace`, `S-backspace`, `C-c`, `D-` (Super/Command), combinable as `A-S-left`.
 
 - `[keys.details]` overrides `[keys]` while the details overlay is focused.
 - `[keys.sidebar]` overrides `[keys]` while the filters sidebar is focused.
@@ -25,6 +25,6 @@ Unknown keys, invalid colors, unknown theme names, and unknown keybinding comman
 
 Keybinding-only commands (`nav`, `page`, `scroll`, `match`, `focus`, `search`, `command`) are listed in the README Commands section; they are omitted from `:` completions.
 
-Default resize chords (Ctrl+Shift, encoded `C-S-…`) call `:config set` with relative values: `C-S-left`/`C-S-h` → `sidebar_width +1`, `C-S-right`/`C-S-l` → `sidebar_width -1`, `C-S-up`/`C-S-k` → `details_max_height +1`, `C-S-down`/`C-S-j` → `details_max_height -1`. Relative `details_max_height` adjusts are capped by content height and main viewport minus pinned rows minus 5; relative `sidebar_width` is capped to leave room for the list.
+Default resize chords (Alt/Option+Shift, encoded `A-S-…`) call `:config set` with relative values: `A-S-left`/`A-S-h` → `sidebar_width +1`, `A-S-right`/`A-S-l` → `sidebar_width -1`, `A-S-up`/`A-S-k` → `details_max_height +1`, `A-S-down`/`A-S-j` → `details_max_height -1`. Relative `details_max_height` adjusts are capped by content height and main viewport minus pinned rows minus 5; relative `sidebar_width` is capped to leave room for the list.
 
 `?` / `:help` opens a cheatsheet modal (Esc / `q` / `?` closes; `j`/`k` and `h`/`l` scroll).

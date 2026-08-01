@@ -58,8 +58,8 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 | `d` | `hide` operator — `dd` current, `dj`/`dG`/… range; in sidebar `dd` deletes filter / unhides line |
 | `Backspace` | `hide line` (same as `dd`; accepts a count); in sidebar `filter delete line` (unhides if on a hidden row) |
 | `Shift+Backspace` | `delete line` (same as `DD`; accepts a count) |
-| `Ctrl+Shift+←/→` / `h`/`l` | `config set sidebar_width +1` / `-1` (← grows, → shrinks; accepts a count) |
-| `Ctrl+Shift+↑/↓` / `k`/`j` | `config set details_max_height +1` / `-1` (capped by content/layout; accepts a count) |
+| `Alt+Shift+←/→` / `h`/`l` | `config set sidebar_width +1` / `-1` (← grows, → shrinks; accepts a count) |
+| `Alt+Shift+↑/↓` / `k`/`j` | `config set details_max_height +1` / `-1` (capped by content/layout; accepts a count) |
 | `p` | `pin` — toggle sticky pin at top of list (accepts a count) |
 | `D` | `delete` operator — `DD` current, `Dj`/`DG`/… range (in-place; safe with `tee -a`) |
 | `?` | `help` (cheatsheet modal; Esc closes; `:help toggle` details border hints when focused) |

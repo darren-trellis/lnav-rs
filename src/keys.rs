@@ -40,7 +40,7 @@ impl KeysConfig {
 ///   `home`, `end`, `pagedown`, `pageup`, `tab`, `backtab`, `space`,
 ///   `backspace`
 /// - modifiers: `C-c` (control), `A-` (alt), `S-` (shift on specials),
-///   `D-` (super / Command), combinable as `C-S-left`
+///   `D-` (super / Command), combinable as `A-S-left`
 pub fn defaults() -> BTreeMap<String, String> {
     BTreeMap::from([
         ("q".into(), "quit".into()),
@@ -75,14 +75,14 @@ pub fn defaults() -> BTreeMap<String, String> {
         ("?".into(), "help".into()),
         ("s".into(), "view sidebar toggle".into()),
         // Left grows the sidebar (divider moves left); right shrinks it.
-        ("C-S-left".into(), "config set sidebar_width +1".into()),
-        ("C-S-h".into(), "config set sidebar_width +1".into()),
-        ("C-S-right".into(), "config set sidebar_width -1".into()),
-        ("C-S-l".into(), "config set sidebar_width -1".into()),
-        ("C-S-up".into(), "config set details_max_height +1".into()),
-        ("C-S-k".into(), "config set details_max_height +1".into()),
-        ("C-S-down".into(), "config set details_max_height -1".into()),
-        ("C-S-j".into(), "config set details_max_height -1".into()),
+        ("A-S-left".into(), "config set sidebar_width +1".into()),
+        ("A-S-h".into(), "config set sidebar_width +1".into()),
+        ("A-S-right".into(), "config set sidebar_width -1".into()),
+        ("A-S-l".into(), "config set sidebar_width -1".into()),
+        ("A-S-up".into(), "config set details_max_height +1".into()),
+        ("A-S-k".into(), "config set details_max_height +1".into()),
+        ("A-S-down".into(), "config set details_max_height -1".into()),
+        ("A-S-j".into(), "config set details_max_height -1".into()),
     ])
 }
 
@@ -91,15 +91,15 @@ pub fn details_defaults() -> BTreeMap<String, String> {
     BTreeMap::from([
         ("space".into(), "fold toggle".into()),
         ("esc".into(), "view current off".into()),
-        // Re-declare resize chords so Ctrl+Shift+↑/↓/j/k still win over nav while focused.
-        ("C-S-up".into(), "config set details_max_height +1".into()),
-        ("C-S-k".into(), "config set details_max_height +1".into()),
-        ("C-S-down".into(), "config set details_max_height -1".into()),
-        ("C-S-j".into(), "config set details_max_height -1".into()),
-        ("C-S-left".into(), "config set sidebar_width +1".into()),
-        ("C-S-h".into(), "config set sidebar_width +1".into()),
-        ("C-S-right".into(), "config set sidebar_width -1".into()),
-        ("C-S-l".into(), "config set sidebar_width -1".into()),
+        // Re-declare resize chords so Alt+Shift+↑/↓/j/k still win over nav while focused.
+        ("A-S-up".into(), "config set details_max_height +1".into()),
+        ("A-S-k".into(), "config set details_max_height +1".into()),
+        ("A-S-down".into(), "config set details_max_height -1".into()),
+        ("A-S-j".into(), "config set details_max_height -1".into()),
+        ("A-S-left".into(), "config set sidebar_width +1".into()),
+        ("A-S-h".into(), "config set sidebar_width +1".into()),
+        ("A-S-right".into(), "config set sidebar_width -1".into()),
+        ("A-S-l".into(), "config set sidebar_width -1".into()),
     ])
 }
 
@@ -115,14 +115,14 @@ pub fn sidebar_defaults() -> BTreeMap<String, String> {
         ("l".into(), "scroll right".into()),
         ("right".into(), "scroll right".into()),
         ("esc".into(), "view current off".into()),
-        ("C-S-left".into(), "config set sidebar_width +1".into()),
-        ("C-S-h".into(), "config set sidebar_width +1".into()),
-        ("C-S-right".into(), "config set sidebar_width -1".into()),
-        ("C-S-l".into(), "config set sidebar_width -1".into()),
-        ("C-S-up".into(), "config set details_max_height +1".into()),
-        ("C-S-k".into(), "config set details_max_height +1".into()),
-        ("C-S-down".into(), "config set details_max_height -1".into()),
-        ("C-S-j".into(), "config set details_max_height -1".into()),
+        ("A-S-left".into(), "config set sidebar_width +1".into()),
+        ("A-S-h".into(), "config set sidebar_width +1".into()),
+        ("A-S-right".into(), "config set sidebar_width -1".into()),
+        ("A-S-l".into(), "config set sidebar_width -1".into()),
+        ("A-S-up".into(), "config set details_max_height +1".into()),
+        ("A-S-k".into(), "config set details_max_height +1".into()),
+        ("A-S-down".into(), "config set details_max_height -1".into()),
+        ("A-S-j".into(), "config set details_max_height -1".into()),
     ])
 }
 
@@ -291,7 +291,7 @@ pub fn encode(key: KeyEvent) -> Option<String> {
 
     let is_char = matches!(key.code, KeyCode::Char(_));
     // With modifiers, normalize letters and keep Shift as an explicit `S-` prefix
-    // so Ctrl+Shift+h encodes as `C-S-h` (not `C-H`).
+    // so Alt+Shift+h encodes as `A-S-h` (not `A-H`).
     if (ctrl || alt || super_key) && base.len() == 1 {
         base = base.to_ascii_lowercase();
     }

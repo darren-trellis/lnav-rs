@@ -20,31 +20,31 @@ fn encodes_shift_backspace() {
 }
 
 #[test]
-fn encodes_ctrl_shift_chords() {
-    let left = KeyEvent::new(KeyCode::Left, KeyModifiers::CONTROL | KeyModifiers::SHIFT);
-    assert_eq!(encode(left).as_deref(), Some("C-S-left"));
-    let h = KeyEvent::new(KeyCode::Char('h'), KeyModifiers::CONTROL | KeyModifiers::SHIFT);
-    assert_eq!(encode(h).as_deref(), Some("C-S-h"));
-    let h_upper = KeyEvent::new(KeyCode::Char('H'), KeyModifiers::CONTROL | KeyModifiers::SHIFT);
-    assert_eq!(encode(h_upper).as_deref(), Some("C-S-h"));
+fn encodes_alt_shift_chords() {
+    let left = KeyEvent::new(KeyCode::Left, KeyModifiers::ALT | KeyModifiers::SHIFT);
+    assert_eq!(encode(left).as_deref(), Some("A-S-left"));
+    let h = KeyEvent::new(KeyCode::Char('h'), KeyModifiers::ALT | KeyModifiers::SHIFT);
+    assert_eq!(encode(h).as_deref(), Some("A-S-h"));
+    let h_upper = KeyEvent::new(KeyCode::Char('H'), KeyModifiers::ALT | KeyModifiers::SHIFT);
+    assert_eq!(encode(h_upper).as_deref(), Some("A-S-h"));
 }
 
 #[test]
 fn default_resize_bindings() {
     assert_eq!(
-        defaults().get("C-S-left").map(String::as_str),
+        defaults().get("A-S-left").map(String::as_str),
         Some("config set sidebar_width +1")
     );
     assert_eq!(
-        defaults().get("C-S-right").map(String::as_str),
+        defaults().get("A-S-right").map(String::as_str),
         Some("config set sidebar_width -1")
     );
     assert_eq!(
-        defaults().get("C-S-j").map(String::as_str),
+        defaults().get("A-S-j").map(String::as_str),
         Some("config set details_max_height -1")
     );
     assert_eq!(
-        details_defaults().get("C-S-up").map(String::as_str),
+        details_defaults().get("A-S-up").map(String::as_str),
         Some("config set details_max_height +1")
     );
 }
