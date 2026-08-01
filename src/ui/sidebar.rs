@@ -33,13 +33,31 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
     let n_filters = app.filters.len();
     let n_hidden = app.view.hidden.len();
     let filters_off = !app.filtering_enabled && n_filters > 0;
+    // Title sits on the top border between the corner glyphs.
+    let title_max = area.width.saturating_sub(2) as usize;
     let title = match (n_filters, n_hidden, filters_off) {
         (0, 0, _) => " sidebar ".to_string(),
         (_, 0, true) => " filters (disabled) ".to_string(),
         (f, 0, false) => format!(" filters ({f}) "),
         (0, h, _) => format!(" hidden ({h}) "),
-        (_, h, true) => format!(" filters (disabled) · H{h} "),
-        (f, h, false) => format!(" F{f} · H{h} "),
+        (_, h, true) => {
+            let full = format!(" filters (disabled) · hidden ({h}) ");
+            let short = format!(" filters (disabled) · H{h} ");
+            if UnicodeWidthStr::width(full.as_str()) <= title_max {
+                full
+            } else {
+                short
+            }
+        }
+        (f, h, false) => {
+            let full = format!(" filters ({f}) · hidden ({h}) ");
+            let short = format!(" F{f} · H{h} ");
+            if UnicodeWidthStr::width(full.as_str()) <= title_max {
+                full
+            } else {
+                short
+            }
+        }
     };
 
     let block = Block::default()
