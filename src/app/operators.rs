@@ -3,6 +3,31 @@ use std::collections::HashSet;
 use super::{App, PendingOp, SidebarItem, ToggleAction};
 use crate::object_span;
 
+/// Map a source index through a delete that renumbers survivors.
+///
+/// Returns `None` if `old` itself was deleted; otherwise the new index after
+/// removing every deleted index that was below `old`.
+fn remap_index_after_delete(old: usize, deleted: &HashSet<usize>) -> Option<usize> {
+    if deleted.contains(&old) {
+        return None;
+    }
+    Some(old - deleted.iter().filter(|&&d| d < old).count())
+}
+
+fn remap_pinned_after_delete(pinned: &[usize], deleted: &HashSet<usize>) -> Vec<usize> {
+    pinned
+        .iter()
+        .filter_map(|&index| remap_index_after_delete(index, deleted))
+        .collect()
+}
+
+fn remap_hidden_after_delete(hidden: &HashSet<usize>, deleted: &HashSet<usize>) -> HashSet<usize> {
+    hidden
+        .iter()
+        .filter_map(|&index| remap_index_after_delete(index, deleted))
+        .collect()
+}
+
 impl App {
     pub fn start_or_repeat_filter_delete(&mut self) {
         if self.sidebar_len() == 0 {
@@ -221,8 +246,11 @@ impl App {
                 match self.source.delete_entries(&indices) {
                     Ok(removed) => {
                         let deleted: HashSet<usize> = indices.iter().copied().collect();
-                        self.view.hidden.clear();
-                        self.view.pinned.retain(|index| !deleted.contains(index));
+                        self.view.pinned =
+                            remap_pinned_after_delete(&self.view.pinned, &deleted);
+                        self.view.hidden =
+                            remap_hidden_after_delete(&self.view.hidden, &deleted);
+                        self.clamp_sidebar_selection();
                         self.rebuild_visible(None);
                         if self.display_len() == 0 {
                             self.view.selected = 0;
@@ -355,5 +383,40 @@ impl App {
             "pinned {count} line{}  (:pin clear to restore)",
             if count == 1 { "" } else { "s" }
         ));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn remap_skips_deleted_and_shifts_survivors() {
+        let deleted: HashSet<usize> = [0, 2].into_iter().collect();
+        assert_eq!(remap_index_after_delete(0, &deleted), None);
+        assert_eq!(remap_index_after_delete(1, &deleted), Some(0));
+        assert_eq!(remap_index_after_delete(2, &deleted), None);
+        assert_eq!(remap_index_after_delete(3, &deleted), Some(1));
+        assert_eq!(remap_index_after_delete(4, &deleted), Some(2));
+    }
+
+    #[test]
+    fn remap_preserves_pin_order() {
+        let deleted: HashSet<usize> = [1].into_iter().collect();
+        assert_eq!(
+            remap_pinned_after_delete(&[3, 0, 1], &deleted),
+            vec![2, 0]
+        );
+    }
+
+    #[test]
+    fn remap_keeps_unrelated_hides() {
+        let deleted: HashSet<usize> = [0].into_iter().collect();
+        let hidden: HashSet<usize> = [0, 2, 4].into_iter().collect();
+        let remapped = remap_hidden_after_delete(&hidden, &deleted);
+        assert!(!remapped.contains(&0));
+        assert!(remapped.contains(&1)); // was 2
+        assert!(remapped.contains(&3)); // was 4
+        assert_eq!(remapped.len(), 2);
     }
 }

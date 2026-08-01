@@ -1,5 +1,4 @@
 use std::fs;
-use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
@@ -73,11 +72,20 @@ impl Session {
     }
 }
 
-fn path_key(path: &Path) -> String {
+/// Stable filename key for a log path (FNV-1a 64-bit of the canonical path).
+///
+/// Must not use `DefaultHasher` — that algorithm is not stable across Rust
+/// versions, which would orphan session files on toolchain upgrades.
+pub fn path_key(path: &Path) -> String {
+    const FNV_OFFSET: u64 = 0xcbf29ce484222325;
+    const FNV_PRIME: u64 = 0x100000001b3;
     let canon = fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
-    let mut hasher = std::collections::hash_map::DefaultHasher::new();
-    canon.hash(&mut hasher);
-    format!("{:016x}", hasher.finish())
+    let mut hash = FNV_OFFSET;
+    for byte in canon.to_string_lossy().as_bytes() {
+        hash ^= u64::from(*byte);
+        hash = hash.wrapping_mul(FNV_PRIME);
+    }
+    format!("{hash:016x}")
 }
 
 /// Session file for this source, if persistence is enabled in config.

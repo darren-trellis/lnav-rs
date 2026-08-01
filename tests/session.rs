@@ -1,9 +1,18 @@
 use std::fs;
 use std::io::Write;
+use std::path::Path;
 
 use lnav_rs::config::Config;
 use lnav_rs::session::*;
 use lnav_rs::tail::LogSource;
+
+#[test]
+fn path_key_is_stable_fnv1a() {
+    // Golden FNV-1a 64-bit of the literal path bytes. The path must not exist
+    // so path_key skips canonicalize and hashes the string as given.
+    let path = Path::new("/tmp/lnav-rs-nonexistent/session-key-fixture.jsonl");
+    assert_eq!(path_key(path), "597ce46ce860de3c");
+}
 
 #[test]
 fn roundtrip_filters() {
