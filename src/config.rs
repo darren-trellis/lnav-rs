@@ -82,6 +82,9 @@ pub struct Column {
     pub align: Align,
     #[serde(default)]
     pub padding: Padding,
+    /// Leading separator on/off (`None` → top-level `border`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub border: Option<bool>,
     /// Leading separator color (`None` → theme `ui.border_color`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub border_color: Option<crate::theme::ColorSpec>,
@@ -357,6 +360,8 @@ struct PersistedColumn<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     padding: Option<Padding>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    border: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     border_color: Option<&'a crate::theme::ColorSpec>,
     #[serde(skip_serializing_if = "Option::is_none")]
     border_width: Option<usize>,
@@ -381,6 +386,7 @@ impl<'a> PersistedConfig<'a> {
                     width: column.width,
                     align: (column.align != Align::Left).then_some(column.align),
                     padding: (!column.padding.is_zero()).then_some(column.padding),
+                    border: column.border,
                     border_color: column.border_color.as_ref(),
                     border_width: column.border_width,
                     border_padding: column.border_padding,
@@ -460,6 +466,7 @@ pub fn default_columns() -> Vec<Column> {
             width: Some(5),
             align: Align::Center,
             padding: Padding::both(1),
+            border: None,
             border_color: None,
             border_width: None,
             border_padding: None,
@@ -469,6 +476,7 @@ pub fn default_columns() -> Vec<Column> {
             width: None,
             align: Align::Left,
             padding: Padding::default(),
+            border: None,
             border_color: None,
             border_width: None,
             border_padding: None,
@@ -478,6 +486,7 @@ pub fn default_columns() -> Vec<Column> {
             width: None,
             align: Align::Left,
             padding: Padding::default(),
+            border: None,
             border_color: None,
             border_width: None,
             border_padding: None,

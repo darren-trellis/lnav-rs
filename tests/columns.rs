@@ -39,6 +39,7 @@ fn cols(sources: &[(&str, Option<usize>, Align)]) -> Vec<Column> {
             width: *width,
             align: *align,
             padding: lnav_rs::config::Padding::default(),
+            border: None,
             border_color: None,
             border_width: None,
             border_padding: None,
@@ -74,6 +75,36 @@ fn per_column_border_width_overrides_default() {
     assert_eq!(segs[1].text, "││");
     assert_eq!(segs[3].kind, SegmentKind::Literal);
     assert_eq!(segs[3].text, " ");
+}
+
+#[test]
+fn per_column_border_overrides_global() {
+    let opts = FormatOptions {
+        timestamp_format: "raw",
+        view_line: 1,
+    };
+    let mut columns = cols(&[
+        ("level", Some(5), Align::Left),
+        ("message", None, Align::Left),
+        ("code", None, Align::Left),
+    ]);
+    columns[1].border = Some(false);
+    columns[2].border = Some(true);
+    let segs = render_segments(
+        &columns,
+        &entry(),
+        &opts,
+        &ColumnBorderStyle {
+            width: 1,
+            padding: lnav_rs::config::Padding::default(),
+            color: None,
+            enabled: false,
+        },
+    );
+    assert_eq!(segs[1].kind, SegmentKind::Literal);
+    assert_eq!(segs[1].text, " ");
+    assert_eq!(segs[3].kind, SegmentKind::ColumnBorder);
+    assert_eq!(segs[3].text, "│");
 }
 
 #[test]
@@ -292,6 +323,7 @@ fn padding_wraps_fitted_content() {
         width: Some(5),
         align: Align::Left,
         padding: Padding::both(1),
+        border: None,
         border_color: None,
         border_width: None,
         border_padding: None,

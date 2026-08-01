@@ -41,7 +41,7 @@ pub struct ColumnBorderStyle {
     pub width: usize,
     pub padding: crate::config::Padding,
     pub color: Option<ColorSpec>,
-    /// When false, separators are always a single space (config `border = off`).
+    /// When false, separators are a single space (global/column `border = false`).
     pub enabled: bool,
 }
 
@@ -58,7 +58,8 @@ impl Default for ColumnBorderStyle {
 
 impl ColumnBorderStyle {
     pub fn resolve(column: &Column, defaults: &Self) -> Self {
-        if !defaults.enabled {
+        let enabled = column.border.unwrap_or(defaults.enabled);
+        if !enabled {
             return Self {
                 width: 0,
                 padding: crate::config::Padding::default(),

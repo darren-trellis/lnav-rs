@@ -23,6 +23,7 @@ source = "level"
 width = 5
 align = "center"
 padding = 1
+# border = true
 # border_color = "#585b70"
 # border_width = 1
 # border_padding = 1
