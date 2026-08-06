@@ -2,16 +2,16 @@ use std::fs;
 use std::io::Write;
 use std::path::Path;
 
-use lnav_rs::config::Config;
-use lnav_rs::session::*;
-use lnav_rs::tail::LogSource;
+use teleminator::config::Config;
+use teleminator::session::*;
+use teleminator::tail::LogSource;
 
 #[test]
 fn path_key_is_stable_fnv1a() {
     // Golden FNV-1a 64-bit of the literal path bytes. The path must not exist
     // so path_key skips canonicalize and hashes the string as given.
-    let path = Path::new("/tmp/lnav-rs-nonexistent/session-key-fixture.jsonl");
-    assert_eq!(path_key(path), "597ce46ce860de3c");
+    let path = Path::new("/tmp/teleminator-nonexistent/session-key-fixture.jsonl");
+    assert_eq!(path_key(path), "61ff4ad7b1c66197");
 }
 
 #[test]
@@ -34,7 +34,7 @@ fn roundtrip_filters() {
     let raw = toml::to_string(&session).unwrap();
     let parsed: Session = toml::from_str(&raw).unwrap();
     let (filters, enabled) = parsed
-        .into_filters(lnav_rs::config::CaseMode::Insensitive)
+        .into_filters(teleminator::config::CaseMode::Insensitive)
         .unwrap();
     assert!(!enabled);
     assert_eq!(filters.len(), 2);
@@ -47,7 +47,7 @@ fn roundtrip_filters() {
 
 #[test]
 fn session_path_respects_flags() {
-    let dir = std::env::temp_dir().join(format!("lnav-rs-sess-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("teleminator-sess-{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();
     let log = dir.join("app.jsonl");

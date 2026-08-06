@@ -1,7 +1,7 @@
 use ratatui::style::Style;
 use ratatui::text::Span;
 
-use lnav_rs::text::*;
+use teleminator::text::*;
 
 #[test]
 fn slice_width_skips_and_takes_display_columns() {

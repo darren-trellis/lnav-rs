@@ -1,7 +1,7 @@
-use lnav_rs::model::{LineFormat, LogLevel};
-use lnav_rs::parse::json::parse_json_line;
-use lnav_rs::parse::logfmt::parse_logfmt;
-use lnav_rs::parse::parse_line;
+use teleminator::model::{LineFormat, LogLevel};
+use teleminator::parse::json::parse_json_line;
+use teleminator::parse::logfmt::parse_logfmt;
+use teleminator::parse::parse_line;
 
 #[test]
 fn parses_json_line() {

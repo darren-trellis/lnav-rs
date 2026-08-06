@@ -1,10 +1,10 @@
 use std::fs;
 
-use lnav_rs::config::*;
+use teleminator::config::*;
 
 #[test]
 fn roundtrip_defaults() {
-    let dir = std::env::temp_dir().join(format!("lnav-rs-roundtrip-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("teleminator-roundtrip-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
     let cfg = Config::default();
@@ -18,7 +18,7 @@ fn roundtrip_defaults() {
 
 #[test]
 fn load_merges_partial_keys() {
-    let dir = std::env::temp_dir().join(format!("lnav-rs-cfg-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("teleminator-cfg-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
     fs::write(
@@ -37,7 +37,7 @@ fn load_merges_partial_keys() {
 
 #[test]
 fn rejects_theme_string() {
-    let dir = std::env::temp_dir().join(format!("lnav-rs-theme-str-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("teleminator-theme-str-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
     fs::write(&path, "theme = \"nord\"\n").unwrap();
@@ -47,7 +47,7 @@ fn rejects_theme_string() {
 
 #[test]
 fn rejects_unknown_field() {
-    let dir = std::env::temp_dir().join(format!("lnav-rs-unk-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("teleminator-unk-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
     fs::write(&path, "nope = 1\n").unwrap();
@@ -57,7 +57,7 @@ fn rejects_unknown_field() {
 
 #[test]
 fn rejects_invalid_color() {
-    let dir = std::env::temp_dir().join(format!("lnav-rs-badcol-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("teleminator-badcol-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
     fs::write(
@@ -71,7 +71,7 @@ fn rejects_invalid_color() {
 
 #[test]
 fn rejects_unknown_key_command() {
-    let dir = std::env::temp_dir().join(format!("lnav-rs-badcmd-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("teleminator-badcmd-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
     fs::write(&path, "[keys]\nq = \"not-a-command\"\n").unwrap();
@@ -81,7 +81,7 @@ fn rejects_unknown_key_command() {
 
 #[test]
 fn accepts_chained_key_commands() {
-    let dir = std::env::temp_dir().join(format!("lnav-rs-chain-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("teleminator-chain-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
     fs::write(
@@ -101,7 +101,7 @@ fn accepts_chained_key_commands() {
 
 #[test]
 fn load_nested_keys_details_and_sidebar() {
-    let dir = std::env::temp_dir().join(format!("lnav-rs-nested-keys-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("teleminator-nested-keys-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
     fs::write(
@@ -130,7 +130,7 @@ fn load_nested_keys_details_and_sidebar() {
 
 #[test]
 fn write_nested_key_overlays() {
-    let dir = std::env::temp_dir().join(format!("lnav-rs-write-nested-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("teleminator-write-nested-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
     let mut cfg = Config::default();
@@ -145,7 +145,7 @@ fn write_nested_key_overlays() {
 
 #[test]
 fn rejects_zero_scroll_lines() {
-    let dir = std::env::temp_dir().join(format!("lnav-rs-scroll-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("teleminator-scroll-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
     fs::write(&path, "[main]\nscroll_lines = 0\n").unwrap();
@@ -155,7 +155,7 @@ fn rejects_zero_scroll_lines() {
 
 #[test]
 fn rejects_narrow_sidebar_width() {
-    let dir = std::env::temp_dir().join(format!("lnav-rs-sidebar-w-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("teleminator-sidebar-w-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
     fs::write(&path, "[main]\nsidebar_width = 8\n").unwrap();
@@ -165,7 +165,7 @@ fn rejects_narrow_sidebar_width() {
 
 #[test]
 fn rejects_root_level_main_settings() {
-    let dir = std::env::temp_dir().join(format!("lnav-rs-root-main-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("teleminator-root-main-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
     fs::write(&path, "follow = true\nline_numbers = true\n").unwrap();
@@ -175,7 +175,7 @@ fn rejects_root_level_main_settings() {
 
 #[test]
 fn rejects_legacy_scrollbar_key() {
-    let dir = std::env::temp_dir().join(format!("lnav-rs-legacy-bar-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("teleminator-legacy-bar-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
     fs::write(&path, "[main]\nscrollbar = false\n").unwrap();
@@ -185,7 +185,7 @@ fn rejects_legacy_scrollbar_key() {
 
 #[test]
 fn write_emits_theme_table() {
-    let dir = std::env::temp_dir().join(format!("lnav-rs-write-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("teleminator-write-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
     let mut cfg = Config::default();
@@ -200,7 +200,7 @@ fn write_emits_theme_table() {
 
 #[test]
 fn write_omits_default_keys() {
-    let dir = std::env::temp_dir().join(format!("lnav-rs-write-keys-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("teleminator-write-keys-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
     Config::default().write_to(&path).unwrap();
@@ -239,7 +239,7 @@ fn case_mode_smartcase_and_aliases() {
     assert!(CaseMode::Smart.ignore_case("error"));
     assert!(!CaseMode::Smart.ignore_case("Error"));
     assert_eq!(CaseMode::parse("smartcase"), Some(CaseMode::Smart));
-    let dir = std::env::temp_dir().join(format!("lnav-rs-case-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("teleminator-case-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
     fs::write(&path, "[main]\ncase_mode = \"smartcase\"\n").unwrap();
@@ -250,7 +250,7 @@ fn case_mode_smartcase_and_aliases() {
 
 #[test]
 fn write_main_section_before_theme_tables_roundtrip() {
-    let dir = std::env::temp_dir().join(format!("lnav-rs-write-order-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("teleminator-write-order-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
 
@@ -258,7 +258,7 @@ fn write_main_section_before_theme_tables_roundtrip() {
         line_numbers: true,
         ..Config::default()
     };
-    cfg.levels.info = Some(lnav_rs::theme::ColorSpec::Fg("#a6e3a1".into()));
+    cfg.levels.info = Some(teleminator::theme::ColorSpec::Fg("#a6e3a1".into()));
     cfg.columns = vec![
         Column {
             source: "level".into(),
@@ -298,7 +298,7 @@ fn write_main_section_before_theme_tables_roundtrip() {
     assert!(loaded.line_numbers);
     assert_eq!(
         loaded.levels.info,
-        Some(lnav_rs::theme::ColorSpec::Fg("#a6e3a1".into()))
+        Some(teleminator::theme::ColorSpec::Fg("#a6e3a1".into()))
     );
     assert_eq!(loaded.columns.len(), 2);
     assert_eq!(loaded.columns[1].source, "annotations.url");
@@ -308,7 +308,7 @@ fn write_main_section_before_theme_tables_roundtrip() {
 
 #[test]
 fn load_columns_from_toml() {
-    let dir = std::env::temp_dir().join(format!("lnav-rs-cols-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("teleminator-cols-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
     fs::write(
@@ -331,7 +331,7 @@ source = "annotations.url"
 
 #[test]
 fn load_column_padding_from_toml() {
-    let dir = std::env::temp_dir().join(format!("lnav-rs-pad-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("teleminator-pad-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
     fs::write(
@@ -357,7 +357,7 @@ padding = { left = 1, right = 2 }
 
 #[test]
 fn rejects_legacy_line_format() {
-    let dir = std::env::temp_dir().join(format!("lnav-rs-legacy-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("teleminator-legacy-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
     fs::write(&path, "line_format = \"{raw}\"\n[theme]\nname = \"nord\"\n").unwrap();
@@ -367,7 +367,7 @@ fn rejects_legacy_line_format() {
 
 #[test]
 fn load_theme_table_overrides() {
-    let dir = std::env::temp_dir().join(format!("lnav-rs-ovr-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("teleminator-ovr-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
     fs::write(
@@ -390,18 +390,18 @@ bool = "#00ff00"
     assert_eq!(o.colors.background.as_deref(), Some("#000000"));
     assert_eq!(
         o.levels.error,
-        Some(lnav_rs::theme::ColorSpec::Fg("#ff0000".into()))
+        Some(teleminator::theme::ColorSpec::Fg("#ff0000".into()))
     );
     assert_eq!(
         o.ui.bool_color,
-        Some(lnav_rs::theme::ColorSpec::Fg("#00ff00".into()))
+        Some(teleminator::theme::ColorSpec::Fg("#00ff00".into()))
     );
     let _ = fs::remove_dir_all(&dir);
 }
 
 #[test]
 fn load_tone_fg_bg() {
-    let dir = std::env::temp_dir().join(format!("lnav-rs-lvl-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("teleminator-lvl-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
     fs::write(
@@ -423,31 +423,31 @@ timestamp = { fg = "#89b4fa", bg = "#11111b" }
     let o = cfg.theme_overrides();
     assert_eq!(
         o.colors.dim,
-        Some(lnav_rs::theme::ColorSpec::FgBg(lnav_rs::theme::ColorSpecFgBg {
+        Some(teleminator::theme::ColorSpec::FgBg(teleminator::theme::ColorSpecFgBg {
             fg: "#6c7086".into(),
             bg: Some("#313244".into()),
         }))
     );
     assert_eq!(
         o.levels.error,
-        Some(lnav_rs::theme::ColorSpec::FgBg(lnav_rs::theme::ColorSpecFgBg {
+        Some(teleminator::theme::ColorSpec::FgBg(teleminator::theme::ColorSpecFgBg {
             fg: "#1e1e2e".into(),
             bg: Some("#f38ba8".into()),
         }))
     );
     assert_eq!(
         o.levels.warn,
-        Some(lnav_rs::theme::ColorSpec::Fg("#f9e2af".into()))
+        Some(teleminator::theme::ColorSpec::Fg("#f9e2af".into()))
     );
     assert_eq!(
         o.ui.timestamp,
-        Some(lnav_rs::theme::ColorSpec::FgBg(lnav_rs::theme::ColorSpecFgBg {
+        Some(teleminator::theme::ColorSpec::FgBg(teleminator::theme::ColorSpecFgBg {
             fg: "#89b4fa".into(),
             bg: Some("#11111b".into()),
         }))
     );
-    let theme = lnav_rs::theme::Theme::resolve_with_overrides(cfg.theme.name(), &o).unwrap();
-    let err = theme.level_color(lnav_rs::model::LogLevel::Error);
+    let theme = teleminator::theme::Theme::resolve_with_overrides(cfg.theme.name(), &o).unwrap();
+    let err = theme.level_color(teleminator::model::LogLevel::Error);
     assert_eq!(err.fg, ratatui::style::Color::Rgb(0x1e, 0x1e, 0x2e));
     assert_eq!(err.bg, Some(ratatui::style::Color::Rgb(0xf3, 0x8b, 0xa8)));
     assert_eq!(
@@ -463,7 +463,7 @@ timestamp = { fg = "#89b4fa", bg = "#11111b" }
 
 #[test]
 fn rejects_legacy_theme_overrides() {
-    let dir = std::env::temp_dir().join(format!("lnav-rs-legacy-ovr-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("teleminator-legacy-ovr-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
     fs::write(

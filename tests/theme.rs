@@ -1,5 +1,5 @@
-use lnav_rs::model::LogLevel;
-use lnav_rs::theme::*;
+use teleminator::model::LogLevel;
+use teleminator::theme::*;
 use ratatui::style::Color;
 
 
@@ -59,7 +59,7 @@ fn overrides_patch_selected_colors() {
 fn column_border_defaults_and_overrides() {
     let theme = Theme::builtin("catppuccin").unwrap();
     assert_eq!(theme.column_border_width, 1);
-    assert_eq!(theme.column_border_padding, lnav_rs::config::Padding::both(1));
+    assert_eq!(theme.column_border_padding, teleminator::config::Padding::both(1));
     assert_eq!(
         theme.column_border,
         Tone {
@@ -77,7 +77,7 @@ fn column_border_defaults_and_overrides() {
                     bg: Some("#00ff00".into()),
                 })),
                 border_width: Some(2),
-                border_padding: Some(lnav_rs::config::Padding { left: 2, right: 1 }),
+                border_padding: Some(teleminator::config::Padding { left: 2, right: 1 }),
                 ..Default::default()
             },
             ..Default::default()
@@ -86,7 +86,7 @@ fn column_border_defaults_and_overrides() {
     assert_eq!(theme.column_border_width, 2);
     assert_eq!(
         theme.column_border_padding,
-        lnav_rs::config::Padding { left: 2, right: 1 }
+        teleminator::config::Padding { left: 2, right: 1 }
     );
     assert_eq!(
         theme.column_border,

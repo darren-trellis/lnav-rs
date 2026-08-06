@@ -1,7 +1,7 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
-use lnav_rs::keys::*;
-use lnav_rs::ui::help_modal;
+use teleminator::keys::*;
+use teleminator::ui::help_modal;
 
 #[test]
 fn encodes_case_sensitive_chars() {

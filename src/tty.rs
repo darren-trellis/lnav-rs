@@ -55,8 +55,8 @@ pub fn require_piped_stdin() -> Result<File> {
         Some(pipe) => Ok(pipe),
         None => bail!(
             "stdin is a terminal; pipe JSON/log lines in, e.g.\n  \
-             myapp | lnav-rs\n  \
-             or: lnav-rs - < app.jsonl"
+             myapp | teleminator\n  \
+             or: teleminator - < app.jsonl"
         ),
     }
 }

@@ -8,4 +8,4 @@ Enabled filters are marked with `*`; disabled ones are ignored. With `:filter of
 
 ## Sessions
 
-Filters persist under `~/.local/share/lnav-rs/sessions/` (one file per log path hash; stdin uses `stdin.toml`). `session_filters` / `session_stdin` control that (both default on). Turn `session_stdin` off if you don’t want every pipe to share one filter set.
+Filters persist under `~/.local/share/teleminator/sessions/` (one file per log path hash; stdin uses `stdin.toml`). `session_filters` / `session_stdin` control that (both default on). Turn `session_stdin` off if you don’t want every pipe to share one filter set.

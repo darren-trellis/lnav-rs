@@ -1,8 +1,8 @@
 [package]
-name = "lnav-rs"
+name = "teleminator"
 version = "0.1.0"
 edition = "2024"
-description = "A modern log file navigator — Rust + ratatui rewrite of lnav essentials"
+description = "Teleminator — a modern log and trace navigator (Rust + ratatui)"
 license = "MIT"
 readme = "README.md"
 

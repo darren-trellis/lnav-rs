@@ -1,4 +1,4 @@
-use lnav_rs::completion::*;
+use teleminator::completion::*;
 
 #[test]
 fn completes_filter_prefix() {

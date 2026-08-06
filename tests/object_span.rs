@@ -1,6 +1,6 @@
-use lnav_rs::model::{LineFormat, LogEntry, LogLevel};
-use lnav_rs::object_span::*;
-use lnav_rs::parse::parse_line;
+use teleminator::model::{LineFormat, LogEntry, LogLevel};
+use teleminator::object_span::*;
+use teleminator::parse::parse_line;
 
 fn entries(lines: &[&str]) -> Vec<LogEntry> {
     lines

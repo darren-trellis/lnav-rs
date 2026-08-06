@@ -1,14 +1,14 @@
 use std::fs;
 
-use lnav_rs::assemble::RecordAssembler;
-use lnav_rs::model::LineFormat;
-use lnav_rs::parse::parse_line;
-use lnav_rs::tail::LogSource;
-use lnav_rs::trace;
+use teleminator::assemble::RecordAssembler;
+use teleminator::model::LineFormat;
+use teleminator::parse::parse_line;
+use teleminator::tail::LogSource;
+use teleminator::trace;
 
 #[test]
 fn assembles_json_and_otel_into_entries() {
-    let dir = std::env::temp_dir().join(format!("lnav-rs-otel-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("teleminator-otel-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
     let path = dir.join("mixed.txt");
     fs::write(&path, include_str!("../examples/sample-otel.txt")).unwrap();

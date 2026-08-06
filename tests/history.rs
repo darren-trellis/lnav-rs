@@ -1,4 +1,4 @@
-use lnav_rs::history::*;
+use teleminator::history::*;
 use std::fs;
 
 #[test]
@@ -26,7 +26,7 @@ fn up_down_restores_staging() {
 
 #[test]
 fn roundtrip_file() {
-    let dir = std::env::temp_dir().join(format!("lnav-rs-hist-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("teleminator-hist-{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();
     let path = dir.join("search_history");

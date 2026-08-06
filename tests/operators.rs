@@ -1,14 +1,14 @@
 use std::fs;
 use std::io::Write;
 
-use lnav_rs::app::{App, Focus, PendingOp, SidebarItem, ToggleAction};
-use lnav_rs::command;
-use lnav_rs::config::Config;
-use lnav_rs::tail::LogSource;
+use teleminator::app::{App, Focus, PendingOp, SidebarItem, ToggleAction};
+use teleminator::command;
+use teleminator::config::Config;
+use teleminator::tail::LogSource;
 
 fn temp_log(name: &str, lines: &[&str]) -> (std::path::PathBuf, std::path::PathBuf) {
     let dir = std::env::temp_dir().join(format!(
-        "lnav-rs-op-{}-{}",
+        "teleminator-op-{}-{}",
         name,
         std::process::id()
     ));
@@ -456,7 +456,7 @@ fn delete_all_clears_stdin_buffer() {
     use std::thread;
     use std::time::Duration;
 
-    use lnav_rs::tail::RefreshOutcome;
+    use teleminator::tail::RefreshOutcome;
 
     let mut fds = [0; 2];
     assert_eq!(unsafe { libc::pipe(fds.as_mut_ptr()) }, 0);
@@ -469,7 +469,7 @@ fn delete_all_clears_stdin_buffer() {
     let mut config = Config::default();
     config.follow = false;
     config.session_stdin = false;
-    let mut app = App::new(source, config, std::env::temp_dir().join("lnav-rs-stdin-cfg.toml"))
+    let mut app = App::new(source, config, std::env::temp_dir().join("teleminator-stdin-cfg.toml"))
         .unwrap();
 
     let mut added = 0;

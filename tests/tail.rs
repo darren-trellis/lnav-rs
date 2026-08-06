@@ -3,7 +3,7 @@ use std::io::Write;
 use std::thread;
 use std::time::Duration;
 
-use lnav_rs::tail::*;
+use teleminator::tail::*;
 
 #[cfg(unix)]
 #[test]
@@ -33,12 +33,12 @@ fn stdin_source_reads_json_lines() {
     assert_eq!(source.len(), 2);
     assert_eq!(source.display_name(), "<stdin>");
     assert_eq!(source.entries()[0].message.as_deref(), Some("from pipe"));
-    assert_eq!(source.entries()[1].level, lnav_rs::model::LogLevel::Error);
+    assert_eq!(source.entries()[1].level, teleminator::model::LogLevel::Error);
 }
 
 #[test]
 fn delete_entries_rewrites_file() {
-    let dir = std::env::temp_dir().join(format!("lnav-rs-del-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("teleminator-del-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
     let path = dir.join("test.jsonl");
     fs::write(

@@ -270,7 +270,7 @@ pub struct Config {
     /// Keybindings: `[keys]`, `[keys.details]`, `[keys.sidebar]`, `[keys.spans]`.
     pub keys: KeysConfig,
 
-    /// Persist filters per log file under `~/.local/share/lnav-rs/sessions/`.
+    /// Persist filters per log file under `~/.local/share/teleminator/sessions/`.
     pub session_filters: bool,
 
     /// Persist filters for stdin under a shared `sessions/stdin.toml`.
@@ -738,11 +738,11 @@ impl Config {
         if let Ok(xdg) = std::env::var("XDG_CONFIG_HOME")
             && !xdg.is_empty()
         {
-            return PathBuf::from(xdg).join("lnav-rs");
+            return PathBuf::from(xdg).join("teleminator");
         }
         dirs_home()
-            .map(|h| h.join(".config").join("lnav-rs"))
-            .unwrap_or_else(|| PathBuf::from(".lnav-rs"))
+            .map(|h| h.join(".config").join("teleminator"))
+            .unwrap_or_else(|| PathBuf::from(".teleminator"))
     }
 
     pub fn themes_dir() -> PathBuf {
@@ -757,11 +757,11 @@ impl Config {
         if let Ok(xdg) = std::env::var("XDG_DATA_HOME")
             && !xdg.is_empty()
         {
-            return PathBuf::from(xdg).join("lnav-rs");
+            return PathBuf::from(xdg).join("teleminator");
         }
         dirs_home()
-            .map(|h| h.join(".local").join("share").join("lnav-rs"))
-            .unwrap_or_else(|| PathBuf::from(".lnav-rs-data"))
+            .map(|h| h.join(".local").join("share").join("teleminator"))
+            .unwrap_or_else(|| PathBuf::from(".teleminator-data"))
     }
 
     pub fn sessions_dir() -> PathBuf {

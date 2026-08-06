@@ -1,4 +1,4 @@
-use lnav_rs::app::mouse::*;
+use teleminator::app::mouse::*;
 
 #[test]
 fn scroll_index_maps_track_ends() {

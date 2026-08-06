@@ -7,7 +7,7 @@ pub struct CommandInfo {
 const COMMANDS: &[CommandInfo] = &[
     CommandInfo {
         name: "quit",
-        help: "quit lnav-rs",
+        help: "quit Teleminator",
     },
     CommandInfo {
         name: "help",

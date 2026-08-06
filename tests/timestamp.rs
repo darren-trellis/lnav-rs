@@ -1,6 +1,6 @@
 use chrono::Local;
 
-use lnav_rs::timestamp::*;
+use teleminator::timestamp::*;
 
 #[test]
 fn parses_rfc3339() {

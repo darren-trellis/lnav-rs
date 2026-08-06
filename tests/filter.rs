@@ -1,6 +1,6 @@
-use lnav_rs::config::CaseMode;
-use lnav_rs::filter::*;
-use lnav_rs::model::{LineFormat, LogEntry, LogLevel};
+use teleminator::config::CaseMode;
+use teleminator::filter::*;
+use teleminator::model::{LineFormat, LogEntry, LogLevel};
 
 
 fn entry(raw: &str) -> LogEntry {

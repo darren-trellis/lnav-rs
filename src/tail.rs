@@ -105,7 +105,7 @@ impl LogSource {
     pub fn open_stdin(pipe: File) -> Result<Self> {
         let (tx, line_rx) = mpsc::sync_channel::<String>(8192);
         let reader = thread::Builder::new()
-            .name("lnav-rs-stdin".into())
+            .name("teleminator-stdin".into())
             .spawn(move || {
                 let mut reader = BufReader::new(pipe);
                 let mut buf = String::new();

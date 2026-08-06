@@ -1,7 +1,7 @@
-use lnav_rs::columns::*;
-use lnav_rs::config::{Align, Column};
-use lnav_rs::model::{Field, FieldValue, LineFormat, LogEntry, LogLevel};
-use lnav_rs::timestamp;
+use teleminator::columns::*;
+use teleminator::config::{Align, Column};
+use teleminator::model::{Field, FieldValue, LineFormat, LogEntry, LogLevel};
+use teleminator::timestamp;
 use unicode_width::UnicodeWidthStr;
 
 fn entry() -> LogEntry {
@@ -38,7 +38,7 @@ fn cols(sources: &[(&str, Option<usize>, Align)]) -> Vec<Column> {
             source: (*source).into(),
             width: *width,
             align: *align,
-            padding: lnav_rs::config::Padding::default(),
+            padding: teleminator::config::Padding::default(),
             border: None,
             border_color: None,
             border_width: None,
@@ -66,7 +66,7 @@ fn per_column_border_width_overrides_default() {
         &opts,
         &ColumnBorderStyle {
             width: 1,
-            padding: lnav_rs::config::Padding::default(),
+            padding: teleminator::config::Padding::default(),
             color: None,
             enabled: true,
         },
@@ -96,7 +96,7 @@ fn per_column_border_overrides_global() {
         &opts,
         &ColumnBorderStyle {
             width: 1,
-            padding: lnav_rs::config::Padding::default(),
+            padding: teleminator::config::Padding::default(),
             color: None,
             enabled: false,
         },
@@ -117,14 +117,14 @@ fn per_column_border_color_overrides_default() {
         ("level", Some(5), Align::Left),
         ("message", None, Align::Left),
     ]);
-    columns[1].border_color = Some(lnav_rs::theme::ColorSpec::Fg("#ff0000".into()));
+    columns[1].border_color = Some(teleminator::theme::ColorSpec::Fg("#ff0000".into()));
     let segs = render_segments(
         &columns,
         &entry(),
         &opts,
         &ColumnBorderStyle {
             width: 1,
-            padding: lnav_rs::config::Padding::default(),
+            padding: teleminator::config::Padding::default(),
             color: None,
             enabled: true,
         },
@@ -132,7 +132,7 @@ fn per_column_border_color_overrides_default() {
     assert_eq!(segs[1].kind, SegmentKind::ColumnBorder);
     assert_eq!(
         segs[1].border_color,
-        Some(lnav_rs::theme::ColorSpec::Fg("#ff0000".into()))
+        Some(teleminator::theme::ColorSpec::Fg("#ff0000".into()))
     );
 }
 
@@ -265,7 +265,7 @@ fn segments_preserve_kinds() {
         &opts,
         &ColumnBorderStyle {
             width: 1,
-            padding: lnav_rs::config::Padding::default(),
+            padding: teleminator::config::Padding::default(),
             color: None,
             enabled: true,
         },
@@ -278,7 +278,7 @@ fn segments_preserve_kinds() {
         &opts,
         &ColumnBorderStyle {
             width: 2,
-            padding: lnav_rs::config::Padding::default(),
+            padding: teleminator::config::Padding::default(),
             color: None,
             enabled: true,
         },
@@ -290,7 +290,7 @@ fn segments_preserve_kinds() {
         &opts,
         &ColumnBorderStyle {
             width: 1,
-            padding: lnav_rs::config::Padding::both(1),
+            padding: teleminator::config::Padding::both(1),
             color: None,
             enabled: true,
         },
@@ -302,7 +302,7 @@ fn segments_preserve_kinds() {
         &opts,
         &ColumnBorderStyle {
             width: 1,
-            padding: lnav_rs::config::Padding { left: 2, right: 1 },
+            padding: teleminator::config::Padding { left: 2, right: 1 },
             color: None,
             enabled: true,
         },
@@ -312,7 +312,7 @@ fn segments_preserve_kinds() {
 
 #[test]
 fn padding_wraps_fitted_content() {
-    use lnav_rs::config::Padding;
+    use teleminator::config::Padding;
 
     let opts = FormatOptions {
         timestamp_format: "raw",

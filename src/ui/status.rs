@@ -32,12 +32,12 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
             let follow = if app.view.follow { "FOLLOW" } else { "PAUSED" };
             if visible == total {
                 format!(
-                    "{pos}/{total}  {follow}{filter_tag}  {}  lnav-rs",
+                    "{pos}/{total}  {follow}{filter_tag}  {}  Teleminator",
                     app.theme.name
                 )
             } else {
                 format!(
-                    "{pos}/{visible} ({total})  {follow}{filter_tag}  {}  lnav-rs",
+                    "{pos}/{visible} ({total})  {follow}{filter_tag}  {}  Teleminator",
                     app.theme.name
                 )
             }
@@ -47,7 +47,7 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
             let pos = if len == 0 { 0 } else { app.spans.selected + 1 };
             let traces = app.spans.forest.traces.len();
             format!(
-                "{pos}/{len}  {traces} traces{filter_tag}  {}  lnav-rs",
+                "{pos}/{len}  {traces} traces{filter_tag}  {}  Teleminator",
                 app.theme.name
             )
         }

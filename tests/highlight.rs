@@ -1,4 +1,4 @@
-use lnav_rs::highlight::*;
+use teleminator::highlight::*;
 use ratatui::style::{Color, Style};
 use regex::RegexBuilder;
 

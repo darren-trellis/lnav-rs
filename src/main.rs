@@ -5,19 +5,19 @@ use std::process::ExitCode;
 use anyhow::{Result, bail};
 use clap::Parser;
 
-use lnav_rs::app::App;
-use lnav_rs::config::Config;
-use lnav_rs::tail::LogSource;
-use lnav_rs::tty;
+use teleminator::app::App;
+use teleminator::config::Config;
+use teleminator::tail::LogSource;
+use teleminator::tty;
 
 #[derive(Debug, Parser)]
 #[command(
-    name = "lnav-rs",
-    about = "A modern log file navigator — Rust + ratatui rewrite of lnav essentials",
+    name = "teleminator",
+    about = "Teleminator — a modern log and trace navigator",
     version
 )]
 struct Cli {
-    /// Log file to open, or `-` for stdin (also: `prog | lnav-rs`)
+    /// Log file to open, or `-` for stdin (also: `prog | teleminator`)
     file: Option<PathBuf>,
 
     /// Path to config file
@@ -91,8 +91,8 @@ fn open_source(file: Option<&PathBuf>) -> Result<LogSource> {
             if stdin_is_tty {
                 bail!(
                     "a log file is required, or pipe data to stdin\n  \
-                     lnav-rs app.jsonl\n  \
-                     myapp | lnav-rs"
+                     teleminator app.jsonl\n  \
+                     myapp | teleminator"
                 );
             }
             let pipe = tty::require_piped_stdin()?;

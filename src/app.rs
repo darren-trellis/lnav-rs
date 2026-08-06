@@ -1288,7 +1288,7 @@ mod refresh_tests {
 
     fn temp_log(name: &str, lines: &[&str]) -> (PathBuf, PathBuf) {
         let dir = std::env::temp_dir().join(format!(
-            "lnav-rs-refresh-{}-{}",
+            "teleminator-refresh-{}-{}",
             name,
             std::process::id()
         ));

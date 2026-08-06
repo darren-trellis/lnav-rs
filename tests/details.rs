@@ -1,9 +1,9 @@
 use std::collections::HashSet;
 
-use lnav_rs::config::Config;
-use lnav_rs::details::*;
-use lnav_rs::model::{Field, FieldValue, LineFormat, LogEntry, LogLevel};
-use lnav_rs::theme::Theme;
+use teleminator::config::Config;
+use teleminator::details::*;
+use teleminator::model::{Field, FieldValue, LineFormat, LogEntry, LogLevel};
+use teleminator::theme::Theme;
 
 
 fn theme() -> Theme {

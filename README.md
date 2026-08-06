@@ -1,6 +1,6 @@
-# lnav-rs
+# Teleminator
 
-A modern log file navigator written in Rust. Inspired by [lnav](https://lnav.org).
+A modern log and trace navigator written in Rust. Inspired by [lnav](https://lnav.org).
 
 ## Install
 
@@ -8,26 +8,33 @@ A modern log file navigator written in Rust. Inspired by [lnav](https://lnav.org
 cargo install --path .
 ```
 
+If you previously used `lnav-rs`, move config and sessions:
+
+```bash
+mv ~/.config/lnav-rs ~/.config/teleminator
+mv ~/.local/share/lnav-rs ~/.local/share/teleminator
+```
+
 ## Usage
 
 ```bash
-lnav-rs examples/sample.jsonl
-lnav-rs examples/sample-spans.jsonl
-lnav-rs examples/sample-otel.txt
-lnav-rs examples/sample.logfmt
-lnav-rs --init-config
+teleminator examples/sample.jsonl
+teleminator examples/sample-spans.jsonl
+teleminator examples/sample-otel.txt
+teleminator examples/sample.logfmt
+teleminator --init-config
 
 # Pipe JSON / log lines from a program (keyboard still works via /dev/tty)
-myapp | lnav-rs
-myapp | lnav-rs -
-lnav-rs - < app.jsonl
+myapp | teleminator
+myapp | teleminator -
+teleminator - < app.jsonl
 ```
 
 ### CLI flags
 
 | Flag | Description |
 |------|-------------|
-| `[FILE]` | Log file to open, or `-` for stdin (also: `prog \| lnav-rs`) |
+| `[FILE]` | Log file to open, or `-` for stdin (also: `prog \| teleminator`) |
 | `--config <PATH>` | Path to config file |
 | `--init-config` | Write a default config file and exit |
 | `-h`, `--help` | Print help |
@@ -99,7 +106,7 @@ Hidden commands (these are mainly used internally for keybindings):
 
 ## Config
 
-Default path: `~/.config/lnav-rs/config.toml`
+Default path: `~/.config/teleminator/config.toml`
 
 ```toml
 [main]

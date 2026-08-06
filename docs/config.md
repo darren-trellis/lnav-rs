@@ -11,7 +11,7 @@ Text colors (`foreground`, `border`, `window_focus_border`, `search_match`, `dim
 
 Focused chrome: `window_focus_border` is the border of the focused pane (list or details); unfocused panes use `[colors].border`. List column separators: `[ui].border_color`, `[ui].border_width` (`0` = space between columns; `N` draws `N`× `│`), and `[ui].border_padding` (`1` or `{ left, right }`, like column `padding`), gated by `[main].border` unless a column sets `border = true|false`. The same rule is drawn between line numbers and the first column when line numbers are on.
 
-Drop custom TOML themes in `~/.config/lnav-rs/themes/<name>.toml` (same shape as files in `themes/`), then `:config set theme <name>` or `:config set theme` for the picker.
+Drop custom TOML themes in `~/.config/teleminator/themes/<name>.toml` (same shape as files in `themes/`), then `:config set theme <name>` or `:config set theme` for the picker.
 
 Unknown keys, invalid colors, unknown theme names, and unknown keybinding commands are rejected.
 
