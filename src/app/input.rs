@@ -657,6 +657,16 @@ impl App {
                 Some(cmd.clone())
             };
         }
+        if self.is_spans_tab()
+            && self.is_list_focused()
+            && let Some(cmd) = self.config.keys.spans.get(spec)
+        {
+            return if cmd.is_empty() {
+                None
+            } else {
+                Some(cmd.clone())
+            };
+        }
         self.config
             .keys
             .bindings

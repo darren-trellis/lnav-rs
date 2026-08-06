@@ -5,19 +5,11 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::Paragraph;
 use unicode_width::UnicodeWidthStr;
 
-use crate::app::{App, InputMode, PendingOp};
+use crate::app::{App, InputMode, PendingOp, PrimaryTab};
 
 pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
     app.pointer.hit.status = area;
     let theme = &app.theme;
-    let visible = app.visible_len();
-    let total = app.source.len();
-    let pos = if visible == 0 {
-        0
-    } else {
-        app.view.selected + 1
-    };
-    let follow = if app.view.follow { "FOLLOW" } else { "PAUSED" };
     let filter_tag = if !app.filters.is_empty() {
         if app.filtering_enabled {
             format!("  F{}", app.filters.len())
@@ -28,16 +20,37 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
         String::new()
     };
 
-    let right = if visible == total {
-        format!(
-            "{pos}/{total}  {follow}{filter_tag}  {}  lnav-rs",
-            app.theme.name
-        )
-    } else {
-        format!(
-            "{pos}/{visible} ({total})  {follow}{filter_tag}  {}  lnav-rs",
-            app.theme.name
-        )
+    let right = match app.primary_tab {
+        PrimaryTab::Logs => {
+            let visible = app.visible_len();
+            let total = app.source.len();
+            let pos = if visible == 0 {
+                0
+            } else {
+                app.view.selected + 1
+            };
+            let follow = if app.view.follow { "FOLLOW" } else { "PAUSED" };
+            if visible == total {
+                format!(
+                    "{pos}/{total}  {follow}{filter_tag}  {}  lnav-rs",
+                    app.theme.name
+                )
+            } else {
+                format!(
+                    "{pos}/{visible} ({total})  {follow}{filter_tag}  {}  lnav-rs",
+                    app.theme.name
+                )
+            }
+        }
+        PrimaryTab::Spans => {
+            let len = app.spans_len();
+            let pos = if len == 0 { 0 } else { app.spans.selected + 1 };
+            let traces = app.spans.forest.traces.len();
+            format!(
+                "{pos}/{len}  {traces} traces{filter_tag}  {}  lnav-rs",
+                app.theme.name
+            )
+        }
     };
 
     let style = Style::default()

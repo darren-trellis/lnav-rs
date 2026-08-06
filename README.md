@@ -12,6 +12,7 @@ cargo install --path .
 
 ```bash
 lnav-rs examples/sample.jsonl
+lnav-rs examples/sample-spans.jsonl
 lnav-rs examples/sample.logfmt
 lnav-rs --init-config
 
@@ -46,9 +47,10 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 | `G` / `End` | `nav bottom` |
 | `h` / `←` | `scroll left` (list; sidebar when focused) |
 | `l` / `→` | `scroll right` (list; sidebar when focused) |
-| `Enter` | `view details on` (list); in sidebar `hide reveal` (unhide + jump) |
+| `Enter` | `view details on` (list); in Spans opens the span's log; in sidebar `hide reveal` (unhide + jump) |
 | `Tab` | `focus toggle` (cycle list → details → sidebar) |
-| `Space` | `fold toggle` in details; `filter set toggle` in sidebar |
+| `[` / `]` | `view tab prev` / `view tab next` (Logs ↔ Spans) |
+| `Space` | `fold toggle` in details or Spans tree; `filter set toggle` in sidebar |
 | `c` | `copy` (copy focused details value to clipboard) |
 | `Esc` | `command clear` (list); in details/sidebar `view current off` (cancels pending `d`/`D` first, else closes the pane) |
 | `/` | `search` (regex; highlights matched text; Up/Down recall history) |
@@ -72,7 +74,7 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 |---------|--------|-------------|
 | `:quit` | | Quit |
 | `:help` | `on` \| `off` \| `toggle` | Cheatsheet modal; with details focused, show/hide key hints on the overlay border |
-| `:view` | `details` \| `sidebar` \| `current` [`on` \| `off` \| `toggle`] | Open/close/toggle the details overlay, filters sidebar, or focused pane |
+| `:view` | `details` \| `sidebar` \| `current` [`on` \| `off` \| `toggle`] \| `tab` [`logs` \| `spans` \| `toggle`] \| `logs` \| `spans` | Open/close panes, or switch the Logs / Spans tab |
 | `:fold` | `on` \| `off` \| `toggle` | Fold/unfold the details tree item under the cursor |
 | `:copy` | | Copy the focused details value to the clipboard |
 | `:hide` | `[line]` \| `clear` \| `unhide [N]` \| `reveal [N]` | Hide current line(s) (`dd`); clear restores; unhide/reveal by sidebar selection or source line N |
@@ -181,7 +183,15 @@ space = "filter set toggle"
 enter = "hide reveal"
 h = "scroll left"
 l = "scroll right"
+
+[keys.spans]
+space = "fold toggle"
+enter = "view details on"
 ```
+
+### Spans
+
+Log lines that carry both a `trace_id` and `span_id` (OpenTelemetry / Datadog-style fields, including nested `dd.*`) appear under the **Spans** tab as a tree per trace. Use `[` / `]` (or `:view tab spans`) to switch tabs, `Space` to fold, and `Enter` on a span to jump to its log line. See [docs/spans.md](docs/spans.md).
 
 ## Options
 

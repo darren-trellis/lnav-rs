@@ -3,7 +3,8 @@ use std::collections::BTreeMap;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use serde::{Deserialize, Serialize};
 
-/// Keybindings: base map plus contextual overlays under `[keys.details]` / `[keys.sidebar]`.
+/// Keybindings: base map plus contextual overlays under `[keys.details]` /
+/// `[keys.sidebar]` / `[keys.spans]`.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct KeysConfig {
     #[serde(default, flatten)]
@@ -12,6 +13,8 @@ pub struct KeysConfig {
     pub details: BTreeMap<String, String>,
     #[serde(default)]
     pub sidebar: BTreeMap<String, String>,
+    #[serde(default)]
+    pub spans: BTreeMap<String, String>,
 }
 
 impl KeysConfig {
@@ -20,6 +23,7 @@ impl KeysConfig {
             bindings: defaults(),
             details: details_defaults(),
             sidebar: sidebar_defaults(),
+            spans: spans_defaults(),
         }
     }
 
@@ -28,6 +32,7 @@ impl KeysConfig {
             bindings: merge(defaults(), user.bindings),
             details: merge_overlay(details_defaults(), user.details),
             sidebar: merge_overlay(sidebar_defaults(), user.sidebar),
+            spans: merge_overlay(spans_defaults(), user.spans),
         }
     }
 }
@@ -77,6 +82,24 @@ pub fn defaults() -> BTreeMap<String, String> {
         ("?".into(), "help".into()),
         ("s".into(), "view sidebar toggle".into()),
         // Left grows the sidebar (divider moves left); right shrinks it.
+        ("A-S-left".into(), "config set sidebar_width +1".into()),
+        ("A-S-h".into(), "config set sidebar_width +1".into()),
+        ("A-S-right".into(), "config set sidebar_width -1".into()),
+        ("A-S-l".into(), "config set sidebar_width -1".into()),
+        ("A-S-up".into(), "config set details_max_height +1".into()),
+        ("A-S-k".into(), "config set details_max_height +1".into()),
+        ("A-S-down".into(), "config set details_max_height -1".into()),
+        ("A-S-j".into(), "config set details_max_height -1".into()),
+        ("[".into(), "view tab prev".into()),
+        ("]".into(), "view tab next".into()),
+    ])
+}
+
+/// Defaults applied when the Spans tab tree is focused (override `[keys]`).
+pub fn spans_defaults() -> BTreeMap<String, String> {
+    BTreeMap::from([
+        ("space".into(), "fold toggle".into()),
+        ("enter".into(), "view details on".into()),
         ("A-S-left".into(), "config set sidebar_width +1".into()),
         ("A-S-h".into(), "config set sidebar_width +1".into()),
         ("A-S-right".into(), "config set sidebar_width -1".into()),

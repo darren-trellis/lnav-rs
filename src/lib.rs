@@ -18,5 +18,6 @@ pub mod tail;
 pub mod text;
 pub mod theme;
 pub mod timestamp;
+pub mod trace;
 pub mod tty;
 pub mod ui;

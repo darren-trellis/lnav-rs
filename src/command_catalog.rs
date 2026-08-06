@@ -15,7 +15,7 @@ const COMMANDS: &[CommandInfo] = &[
     },
     CommandInfo {
         name: "view",
-        help: "details|sidebar|current [on|off|toggle]",
+        help: "details|sidebar|current [on|off|toggle] | tab|logs|spans",
     },
     CommandInfo {
         name: "fold",

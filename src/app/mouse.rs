@@ -185,6 +185,10 @@ impl App {
     }
 
     fn apply_list_scrollbar_vertical(&mut self, row: u16) {
+        if self.is_spans_tab() {
+            self.apply_spans_scrollbar_vertical(row);
+            return;
+        }
         let bar = self.pointer.hit.list_scrollbar_vertical;
         let viewport = self.pointer.hit.list_inner.height as usize;
         if viewport == 0 || bar.height == 0 || self.view.visible.is_empty() {
@@ -214,10 +218,42 @@ impl App {
         }
     }
 
+    fn apply_spans_scrollbar_vertical(&mut self, row: u16) {
+        self.ensure_spans_built();
+        let bar = self.pointer.hit.list_scrollbar_vertical;
+        let viewport = self.pointer.hit.list_inner.height.max(1) as usize;
+        let len = self.spans.lines.len();
+        if viewport == 0 || bar.height == 0 || len == 0 {
+            return;
+        }
+        let new_scroll = scroll_index_at(bar.height, row.saturating_sub(bar.y), len, viewport);
+        let max_scroll = len.saturating_sub(viewport);
+        self.spans.scroll = new_scroll.min(max_scroll);
+        self.focus_list();
+        if self.config.scroll_moves_selection {
+            if self.spans.selected < self.spans.scroll {
+                self.reset_overlay_for_selection_change();
+                self.spans.selected = self.spans.scroll;
+            } else if self.spans.selected >= self.spans.scroll + viewport {
+                self.reset_overlay_for_selection_change();
+                self.spans.selected = self.spans.scroll + viewport - 1;
+            }
+        }
+    }
+
     fn apply_list_scrollbar_horizontal(&mut self, col: u16) {
         let bar = self.pointer.hit.list_scrollbar_horizontal;
         let viewport = self.pointer.hit.list_inner.width.max(1) as usize;
         if bar.width == 0 {
+            return;
+        }
+        if self.is_spans_tab() {
+            let content_w = self.spans.content_width.max(1);
+            let new_scroll =
+                scroll_index_at(bar.width, col.saturating_sub(bar.x), content_w, viewport);
+            let max_scroll = content_w.saturating_sub(viewport);
+            self.spans.scroll_x = new_scroll.min(max_scroll);
+            self.focus_list();
             return;
         }
         let content_w = self.list_content_width.max(1);
@@ -296,6 +332,17 @@ impl App {
             return;
         }
 
+        if contains(self.pointer.hit.tab_logs, col, row) {
+            self.leave_editing_modes();
+            self.set_primary_tab(super::PrimaryTab::Logs);
+            return;
+        }
+        if contains(self.pointer.hit.tab_spans, col, row) {
+            self.leave_editing_modes();
+            self.set_primary_tab(super::PrimaryTab::Spans);
+            return;
+        }
+
         if contains(self.pointer.hit.sidebar_inner, col, row) {
             self.leave_editing_modes();
             self.focus_sidebar();
@@ -340,6 +387,10 @@ impl App {
     }
 
     fn click_list_row(&mut self, row: u16) {
+        if self.is_spans_tab() {
+            self.click_spans_row(row);
+            return;
+        }
         let area = self.pointer.hit.list_inner;
         if area.height == 0 || self.display_len() == 0 {
             return;
@@ -379,6 +430,29 @@ impl App {
         self.view.selected = display;
         if self.register_click(ClickTarget::List(display)) {
             self.toggle_details();
+        }
+    }
+
+    fn click_spans_row(&mut self, row: u16) {
+        self.ensure_spans_built();
+        let area = self.pointer.hit.list_inner;
+        if area.height == 0 || self.spans.lines.is_empty() {
+            return;
+        }
+        let row_off = (row - area.y) as usize;
+        let idx = self.spans.scroll + row_off;
+        if idx >= self.spans.lines.len() {
+            return;
+        }
+        self.leave_editing_modes();
+        self.focus_list();
+        self.cancel_pending_op();
+        if idx != self.spans.selected {
+            self.reset_overlay_for_selection_change();
+        }
+        self.spans.selected = idx;
+        if self.register_click(ClickTarget::List(idx)) {
+            self.open_details();
         }
     }
 

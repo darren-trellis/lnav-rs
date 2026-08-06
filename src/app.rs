@@ -20,6 +20,7 @@ use crate::model::LogEntry;
 use crate::session::{self, Session};
 use crate::tail::{LogSource, RefreshOutcome};
 use crate::theme::Theme;
+use crate::trace::{self, SpanLine, TraceForest};
 use crate::ui;
 
 mod input;
@@ -55,6 +56,13 @@ pub enum Focus {
     List,
     Details,
     Sidebar,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum PrimaryTab {
+    #[default]
+    Logs,
+    Spans,
 }
 
 /// Selectable row in the filters/hidden sidebar.
@@ -107,6 +115,9 @@ pub struct HelpModal {
 pub(crate) struct HitAreas {
     /// Main list+details column (excludes sidebar / status / completions).
     pub(crate) main: Rect,
+    pub(crate) tabs: Rect,
+    pub(crate) tab_logs: Rect,
+    pub(crate) tab_spans: Rect,
     pub(crate) list_inner: Rect,
     pub(crate) list_scrollbar_vertical: Rect,
     pub(crate) list_scrollbar_horizontal: Rect,
@@ -167,6 +178,18 @@ pub(crate) struct DetailsState {
     pub(crate) help: bool,
 }
 
+pub(crate) struct SpansState {
+    pub(crate) forest: TraceForest,
+    pub(crate) lines: Vec<SpanLine>,
+    pub(crate) selected: usize,
+    pub(crate) scroll: usize,
+    pub(crate) scroll_x: usize,
+    pub(crate) content_width: usize,
+    pub(crate) folded: HashSet<String>,
+    /// Generation of source/filter state the forest was built from.
+    forest_dirty: bool,
+}
+
 pub(crate) struct SearchState {
     pub(crate) query: String,
     pub(crate) regex: Option<Regex>,
@@ -199,6 +222,8 @@ pub struct App {
     pub filtering_enabled: bool,
     pub(crate) view: ViewState,
     pub(crate) details: DetailsState,
+    pub(crate) primary_tab: PrimaryTab,
+    pub(crate) spans: SpansState,
     focus: Focus,
     /// Selected row index in the sidebar (filters + hidden lines).
     pub sidebar_selected: usize,
@@ -286,6 +311,17 @@ impl App {
                 folded: HashSet::new(),
                 help: false,
             },
+            primary_tab: PrimaryTab::Logs,
+            spans: SpansState {
+                forest: TraceForest::default(),
+                lines: Vec::new(),
+                selected: 0,
+                scroll: 0,
+                scroll_x: 0,
+                content_width: 0,
+                folded: HashSet::new(),
+                forest_dirty: true,
+            },
             config,
             config_path,
             theme,
@@ -344,8 +380,83 @@ impl App {
     }
 
     pub fn selected_entry(&self) -> Option<&LogEntry> {
-        let src = self.source_at_display(self.view.selected)?;
+        let src = if self.primary_tab == PrimaryTab::Spans {
+            self.spans
+                .lines
+                .get(self.spans.selected)
+                .and_then(|line| line.source_index)?
+        } else {
+            self.source_at_display(self.view.selected)?
+        };
         self.source.entries().get(src)
+    }
+
+    pub fn is_spans_tab(&self) -> bool {
+        self.primary_tab == PrimaryTab::Spans
+    }
+
+    pub fn spans_len(&self) -> usize {
+        self.spans.lines.len()
+    }
+
+    pub fn set_primary_tab(&mut self, tab: PrimaryTab) {
+        if self.primary_tab == tab {
+            return;
+        }
+        self.cancel_pending_op();
+        self.primary_tab = tab;
+        self.focus_list();
+        if tab == PrimaryTab::Spans {
+            self.ensure_spans_built();
+            self.status_message = Some("tab: Spans".into());
+        } else {
+            self.status_message = Some("tab: Logs".into());
+        }
+    }
+
+    pub fn cycle_primary_tab(&mut self) {
+        match self.primary_tab {
+            PrimaryTab::Logs => self.set_primary_tab(PrimaryTab::Spans),
+            PrimaryTab::Spans => self.set_primary_tab(PrimaryTab::Logs),
+        }
+    }
+
+    pub(crate) fn mark_spans_dirty(&mut self) {
+        self.spans.forest_dirty = true;
+    }
+
+    pub(crate) fn ensure_spans_built(&mut self) {
+        if self.spans.forest_dirty {
+            self.rebuild_spans_forest();
+        }
+    }
+
+    pub(crate) fn rebuild_spans_forest(&mut self) {
+        let indices: Vec<usize> = self
+            .view
+            .pinned
+            .iter()
+            .chain(self.view.visible.iter())
+            .copied()
+            .collect();
+        self.spans.forest = trace::build_forest(self.source.entries(), &indices);
+        self.spans.forest_dirty = false;
+        self.rebuild_span_lines();
+    }
+
+    pub(crate) fn rebuild_span_lines(&mut self) {
+        self.spans.lines = trace::build_lines(
+            &self.spans.forest,
+            &self.spans.folded,
+            &self.theme,
+            self.config.details_tab_width,
+        );
+        if self.spans.lines.is_empty() {
+            self.spans.selected = 0;
+            self.spans.scroll = 0;
+        } else {
+            self.spans.selected = self.spans.selected.min(self.spans.lines.len() - 1);
+        }
     }
 
     pub fn pin_count(&self) -> usize {
@@ -465,6 +576,7 @@ impl App {
         .into_iter()
         .filter(|index| !pinned.contains(index))
         .collect();
+        self.mark_spans_dirty();
 
         if self.display_len() == 0 {
             self.view.selected = 0;
@@ -514,6 +626,7 @@ impl App {
             let from = self.source.len().saturating_sub(n);
             let prev_visible = self.view.visible.len();
             self.extend_visible(from);
+            self.mark_spans_dirty();
             if !self.search.query.is_empty() && !self.search.in_details {
                 self.extend_search_matches(prev_visible);
             }
@@ -767,6 +880,10 @@ impl App {
     }
 
     pub fn scroll_list_x(&mut self, delta: isize) {
+        if self.is_spans_tab() {
+            self.scroll_spans_x(delta);
+            return;
+        }
         let viewport = self.pointer.hit.list_inner.width.max(1) as usize;
         let max = self.list_content_width.saturating_sub(viewport);
         self.list_scroll_x =
@@ -786,6 +903,10 @@ impl App {
 
     pub fn open_details(&mut self) {
         self.cancel_pending_op();
+        if self.primary_tab == PrimaryTab::Spans && self.is_list_focused() {
+            self.reveal_selected_span();
+            return;
+        }
         if self.selected_entry().is_none() {
             return;
         }
@@ -795,6 +916,36 @@ impl App {
             self.details.scroll = 0;
         }
         self.focus_details();
+    }
+
+    /// From the Spans tab: jump to the underlying log line, or fold a trace header.
+    pub fn reveal_selected_span(&mut self) {
+        self.ensure_spans_built();
+        let Some(line) = self.spans.lines.get(self.spans.selected).cloned() else {
+            return;
+        };
+        let Some(src) = line.source_index else {
+            if line.foldable {
+                self.set_span_fold(ToggleAction::Toggle);
+            } else {
+                self.status_message = Some("select a span to open its log".into());
+            }
+            return;
+        };
+        let Some(display) = self.display_of_source(src) else {
+            self.status_message = Some("span log is hidden by filters".into());
+            return;
+        };
+        self.primary_tab = PrimaryTab::Logs;
+        self.focus_list();
+        self.jump_to(display);
+        if !self.details.visible {
+            self.details.visible = true;
+            self.details.cursor = 0;
+            self.details.scroll = 0;
+        }
+        self.focus_details();
+        self.status_message = Some("opened span log".into());
     }
 
     pub fn close_details(&mut self) {
@@ -854,6 +1005,10 @@ impl App {
     }
 
     pub fn set_overlay_fold(&mut self, action: ToggleAction) {
+        if self.primary_tab == PrimaryTab::Spans && self.is_list_focused() {
+            self.set_span_fold(action);
+            return;
+        }
         if !self.details.visible || !self.is_details_focused() {
             self.status_message = Some("focus details first (Enter)".into());
             return;
@@ -905,6 +1060,33 @@ impl App {
         if self.search.in_details && !self.search.query.is_empty() {
             self.run_search();
         }
+    }
+
+    pub fn set_span_fold(&mut self, action: ToggleAction) {
+        self.ensure_spans_built();
+        let Some(line) = self.spans.lines.get(self.spans.selected) else {
+            return;
+        };
+        if !line.foldable || line.path.is_empty() {
+            self.status_message = Some("not a foldable tree item".into());
+            return;
+        }
+        let key = line.path.clone();
+        let currently_folded = self.spans.folded.contains(&key);
+        let fold = match action {
+            ToggleAction::On => true,
+            ToggleAction::Off => false,
+            ToggleAction::Toggle => !currently_folded,
+        };
+        if fold {
+            self.spans.folded.insert(key.clone());
+            self.status_message = Some(format!("folded {key}"));
+        } else {
+            self.spans.folded.remove(&key);
+            self.status_message = Some(format!("unfolded {key}"));
+        }
+        self.rebuild_span_lines();
+        self.ensure_span_selection_visible();
     }
 
     fn reset_overlay_for_selection_change(&mut self) {
@@ -1008,6 +1190,7 @@ impl App {
         self.theme = theme;
         self.theme_index = theme_index;
         self.view.follow = self.config.follow;
+        self.mark_spans_dirty();
         if !self.config.sidebar && self.is_sidebar_focused() {
             self.focus_list();
         }

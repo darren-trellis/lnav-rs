@@ -249,6 +249,17 @@ const VIEW_SUBS: &[(&str, &str)] = &[
     ("details", "open/close/toggle details overlay"),
     ("sidebar", "show/hide/toggle filters sidebar"),
     ("current", "control the focused details/sidebar pane"),
+    ("tab", "switch Logs/Spans tab"),
+    ("logs", "show Logs tab"),
+    ("spans", "show Spans tab"),
+];
+
+const TAB_SUBS: &[(&str, &str)] = &[
+    ("logs", "show Logs tab"),
+    ("spans", "show Spans tab"),
+    ("toggle", "cycle Logs ↔ Spans"),
+    ("next", "cycle Logs ↔ Spans"),
+    ("prev", "cycle Logs ↔ Spans"),
 ];
 
 const DETAILS_SUBS: &[(&str, &str)] = &[
@@ -322,6 +333,7 @@ fn view_suggestions(rest: &str, rest_from: usize) -> Vec<Suggestion> {
         "details" => on_off_toggle_suggestions(arg, arg_from, DETAILS_SUBS),
         "sidebar" => on_off_toggle_suggestions(arg, arg_from, SIDEBAR_SUBS),
         "current" => on_off_toggle_suggestions(arg, arg_from, CURRENT_SUBS),
+        "tab" => on_off_toggle_suggestions(arg, arg_from, TAB_SUBS),
         _ => Vec::new(),
     }
 }

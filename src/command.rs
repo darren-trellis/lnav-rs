@@ -145,6 +145,10 @@ fn navigate(app: &mut App, navigation: Navigation) {
 }
 
 fn navigate_list(app: &mut App, navigation: Navigation) {
+    if app.is_spans_tab() {
+        navigate_spans(app, navigation);
+        return;
+    }
     let page_height = page_step(app, app.pointer.hit.list_inner.height as usize);
     app.with_motion(|app| match navigation {
         Navigation::Lines(delta) => app.move_selection(delta),
@@ -172,6 +176,34 @@ fn navigate_list(app: &mut App, navigation: Navigation) {
             }
         }
     });
+}
+
+fn navigate_spans(app: &mut App, navigation: Navigation) {
+    app.ensure_spans_built();
+    let page_height = page_step(app, app.pointer.hit.list_inner.height as usize);
+    let len = app.spans_len();
+    match navigation {
+        Navigation::Lines(delta) => app.move_span_selection(delta),
+        Navigation::Pages(pages) => app.move_span_selection(page_height * pages),
+        Navigation::Top(line) => {
+            if len == 0 {
+                return;
+            }
+            let target = line.map(|n| n.saturating_sub(1)).unwrap_or(0);
+            app.jump_span_to(target.min(len - 1));
+        }
+        Navigation::Bottom(Some(line)) => {
+            if len == 0 {
+                return;
+            }
+            app.jump_span_to(line.saturating_sub(1).min(len - 1));
+        }
+        Navigation::Bottom(None) => {
+            if len > 0 {
+                app.jump_span_to(len - 1);
+            }
+        }
+    }
 }
 
 fn add_filter(app: &mut App, kind: FilterKind, pattern: &str) {
@@ -583,9 +615,27 @@ fn view_command(app: &mut App, rest: &str) {
                 ));
             }
         },
+        "tab" => view_tab_command(app, arg),
+        "logs" => app.set_primary_tab(crate::app::PrimaryTab::Logs),
+        "spans" => app.set_primary_tab(crate::app::PrimaryTab::Spans),
         other => {
             app.status_message = Some(format!(
-                "usage: :view [details|sidebar|current] [on|off|toggle]  (unknown: {other})"
+                "usage: :view [details|sidebar|current|tab|logs|spans] …  (unknown: {other})"
+            ));
+        }
+    }
+}
+
+fn view_tab_command(app: &mut App, arg: &str) {
+    let (sub, _) = split_cmd(arg);
+    match sub.to_ascii_lowercase().as_str() {
+        "" | "toggle" | "next" => app.cycle_primary_tab(),
+        "prev" => app.cycle_primary_tab(),
+        "logs" => app.set_primary_tab(crate::app::PrimaryTab::Logs),
+        "spans" => app.set_primary_tab(crate::app::PrimaryTab::Spans),
+        other => {
+            app.status_message = Some(format!(
+                "usage: :view tab [logs|spans|toggle|next|prev]  (unknown: {other})"
             ));
         }
     }

@@ -1,8 +1,10 @@
 mod list;
 mod overlay;
 mod sidebar;
+mod spans;
 mod status;
 mod suggest;
+mod tabs;
 pub(crate) mod config_modal;
 pub mod help_modal;
 
@@ -11,7 +13,7 @@ use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::Style;
 use ratatui::widgets::{Block, Clear, Scrollbar, ScrollbarOrientation, ScrollbarState};
 
-use crate::app::{App, InputMode};
+use crate::app::{App, InputMode, PrimaryTab};
 use crate::details;
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -146,13 +148,16 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
     };
 
     let chunks = Layout::vertical([
+        Constraint::Length(1),
         Constraint::Min(1),
         Constraint::Length(suggest_h),
         Constraint::Length(1),
     ])
     .split(area);
 
-    let body = chunks[0];
+    tabs::draw(frame, app, chunks[0]);
+
+    let body = chunks[1];
     let show_sidebar = app.config.sidebar;
     let sidebar_w = if show_sidebar {
         sidebar::desired_width(body.width, app.config.sidebar_width)
@@ -182,7 +187,10 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
     if overlay_height > 0 {
         let split =
             Layout::vertical([Constraint::Min(3), Constraint::Length(overlay_height)]).split(main);
-        list::draw(frame, app, split[0]);
+        match app.primary_tab {
+            PrimaryTab::Logs => list::draw(frame, app, split[0]),
+            PrimaryTab::Spans => spans::draw(frame, app, split[0]),
+        }
         overlay::draw(
             frame,
             app,
@@ -190,7 +198,10 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
             detail_content.as_deref().unwrap_or_default(),
         );
     } else {
-        list::draw(frame, app, main);
+        match app.primary_tab {
+            PrimaryTab::Logs => list::draw(frame, app, main),
+            PrimaryTab::Spans => spans::draw(frame, app, main),
+        }
     }
 
     if let Some(area) = sidebar_area {
@@ -200,9 +211,9 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
     }
 
     if suggest_h > 0 {
-        suggest::draw(frame, app, chunks[1]);
+        suggest::draw(frame, app, chunks[2]);
     }
-    status::draw(frame, app, chunks[2]);
+    status::draw(frame, app, chunks[3]);
 
     // Center modals over the main pane so the sidebar stays visible beside them.
     if app.config_modal.is_some() {

@@ -267,7 +267,7 @@ pub struct Config {
     /// List-view columns. Empty / missing → default level / timestamp / message.
     pub columns: Vec<Column>,
 
-    /// Keybindings: `[keys]`, `[keys.details]`, `[keys.sidebar]`.
+    /// Keybindings: `[keys]`, `[keys.details]`, `[keys.sidebar]`, `[keys.spans]`.
     pub keys: KeysConfig,
 
     /// Persist filters per log file under `~/.local/share/lnav-rs/sessions/`.
@@ -525,11 +525,16 @@ struct PersistedKeys {
     details: BTreeMap<String, String>,
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
     sidebar: BTreeMap<String, String>,
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    spans: BTreeMap<String, String>,
 }
 
 impl PersistedKeys {
     fn is_empty(&self) -> bool {
-        self.bindings.is_empty() && self.details.is_empty() && self.sidebar.is_empty()
+        self.bindings.is_empty()
+            && self.details.is_empty()
+            && self.sidebar.is_empty()
+            && self.spans.is_empty()
     }
 
     fn from_config(config: &Config, defaults: &Config) -> Self {
@@ -537,6 +542,7 @@ impl PersistedKeys {
             bindings: key_differences(&config.keys.bindings, &defaults.keys.bindings),
             details: key_differences(&config.keys.details, &defaults.keys.details),
             sidebar: key_differences(&config.keys.sidebar, &defaults.keys.sidebar),
+            spans: key_differences(&config.keys.spans, &defaults.keys.spans),
         }
     }
 }
@@ -821,6 +827,7 @@ impl Config {
         validate_key_map("keys", &self.keys.bindings, &known)?;
         validate_key_map("keys.details", &self.keys.details, &known)?;
         validate_key_map("keys.sidebar", &self.keys.sidebar, &known)?;
+        validate_key_map("keys.spans", &self.keys.spans, &known)?;
         Ok(())
     }
 

@@ -21,6 +21,7 @@ Unknown keys, invalid colors, unknown theme names, and unknown keybinding comman
 
 - `[keys.details]` overrides `[keys]` while the details overlay is focused.
 - `[keys.sidebar]` overrides `[keys]` while the filters sidebar is focused.
+- `[keys.spans]` overrides `[keys]` while the Spans tab tree is focused.
 - An empty binding in either contextual section blocks fallback to the same key in `[keys]`.
 
 Keybinding-only commands (`nav`, `page`, `scroll`, `match`, `focus`, `search`, `command`) are listed in the README Commands section; they are omitted from `:` completions.

@@ -16,6 +16,7 @@ enum Context {
     Base,
     Details,
     Sidebar,
+    Spans,
 }
 
 enum Entry {
@@ -76,6 +77,13 @@ const CHEATSHEET: &[Entry] = &[
             "config set details_max_height -1",
         ],
         description: "resize details max height",
+    },
+    Entry::Blank,
+    Entry::Heading("Tabs"),
+    Entry::Item {
+        context: Context::Base,
+        groups: &["view tab next", "view tab prev"],
+        description: "switch Logs / Spans tab",
     },
     Entry::Blank,
     Entry::Heading("List"),
@@ -148,6 +156,18 @@ const CHEATSHEET: &[Entry] = &[
         context: Context::Base,
         groups: &["quit"],
         description: "quit",
+    },
+    Entry::Blank,
+    Entry::Heading("Spans"),
+    Entry::Item {
+        context: Context::Spans,
+        groups: &["fold toggle"],
+        description: "fold/unfold trace or span",
+    },
+    Entry::Item {
+        context: Context::Spans,
+        groups: &["view details on"],
+        description: "open span's log in Logs tab",
     },
     Entry::Blank,
     Entry::Heading("Details"),
@@ -265,6 +285,7 @@ fn maps_for(
         Context::Base => (&keys.bindings, None),
         Context::Details => (&keys.bindings, Some(&keys.details)),
         Context::Sidebar => (&keys.bindings, Some(&keys.sidebar)),
+        Context::Spans => (&keys.bindings, Some(&keys.spans)),
     }
 }
 

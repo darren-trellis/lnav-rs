@@ -44,3 +44,11 @@ source = "message"
 
 [[columns]]
 source = "annotations.url"
+
+# [keys]
+# "[" = "view tab prev"
+# "]" = "view tab next"
+#
+# [keys.spans]
+# space = "fold toggle"
+# enter = "view details on"

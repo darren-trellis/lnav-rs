@@ -143,6 +143,22 @@ fn default_d_maps_to_hide() {
         sidebar_defaults().get("esc").map(String::as_str),
         Some("view current off")
     );
+    assert_eq!(
+        defaults().get("[").map(String::as_str),
+        Some("view tab prev")
+    );
+    assert_eq!(
+        defaults().get("]").map(String::as_str),
+        Some("view tab next")
+    );
+    assert_eq!(
+        spans_defaults().get("space").map(String::as_str),
+        Some("fold toggle")
+    );
+    assert_eq!(
+        spans_defaults().get("enter").map(String::as_str),
+        Some("view details on")
+    );
     assert!(!defaults().contains_key("t"));
 }
 

@@ -285,6 +285,10 @@ impl App {
     }
 
     pub(crate) fn move_selection(&mut self, delta: isize) {
+        if self.is_spans_tab() {
+            self.move_span_selection(delta);
+            return;
+        }
         if self.display_len() == 0 {
             return;
         }
@@ -298,7 +302,62 @@ impl App {
         self.ensure_selection_visible();
     }
 
+    pub(crate) fn move_span_selection(&mut self, delta: isize) {
+        self.ensure_spans_built();
+        if self.spans.lines.is_empty() {
+            return;
+        }
+        let next = (self.spans.selected as isize + delta)
+            .clamp(0, self.spans.lines.len() as isize - 1) as usize;
+        if next != self.spans.selected {
+            self.reset_overlay_for_selection_change();
+        }
+        self.spans.selected = next;
+        self.ensure_span_selection_visible();
+    }
+
+    pub(crate) fn jump_span_to(&mut self, idx: usize) {
+        self.ensure_spans_built();
+        if self.spans.lines.is_empty() {
+            return;
+        }
+        let next = idx.min(self.spans.lines.len() - 1);
+        if next != self.spans.selected {
+            self.reset_overlay_for_selection_change();
+        }
+        self.spans.selected = next;
+        self.ensure_span_selection_visible();
+    }
+
+    pub(crate) fn ensure_span_selection_visible(&mut self) {
+        let viewport = self.pointer.hit.list_inner.height as usize;
+        if viewport == 0 || self.spans.lines.is_empty() {
+            return;
+        }
+        let idx = self.spans.selected;
+        if idx < self.spans.scroll {
+            self.spans.scroll = idx;
+        } else if idx >= self.spans.scroll + viewport {
+            self.spans.scroll = idx + 1 - viewport;
+        }
+        let max_scroll = self.spans.lines.len().saturating_sub(viewport);
+        if self.spans.scroll > max_scroll {
+            self.spans.scroll = max_scroll;
+        }
+    }
+
+    pub fn scroll_spans_x(&mut self, delta: isize) {
+        let viewport = self.pointer.hit.list_inner.width.max(1) as usize;
+        let max = self.spans.content_width.saturating_sub(viewport);
+        self.spans.scroll_x =
+            (self.spans.scroll_x as isize + delta).clamp(0, max as isize) as usize;
+    }
+
     pub(crate) fn jump_to(&mut self, idx: usize) {
+        if self.is_spans_tab() {
+            self.jump_span_to(idx);
+            return;
+        }
         if self.display_len() == 0 {
             return;
         }
@@ -311,6 +370,10 @@ impl App {
     }
 
     pub(crate) fn scroll_list(&mut self, delta: isize) {
+        if self.is_spans_tab() {
+            self.scroll_spans(delta);
+            return;
+        }
         if self.view.visible.is_empty() {
             return;
         }
@@ -321,6 +384,17 @@ impl App {
         let max_scroll = self.view.visible.len().saturating_sub(body_h);
         let next = (self.view.scroll as isize + delta).clamp(0, max_scroll as isize) as usize;
         self.view.scroll = next;
+    }
+
+    pub(crate) fn scroll_spans(&mut self, delta: isize) {
+        self.ensure_spans_built();
+        if self.spans.lines.is_empty() {
+            return;
+        }
+        let viewport = self.pointer.hit.list_inner.height.max(1) as usize;
+        let max_scroll = self.spans.lines.len().saturating_sub(viewport);
+        self.spans.scroll =
+            (self.spans.scroll as isize + delta).clamp(0, max_scroll as isize) as usize;
     }
 
     fn ensure_selection_visible(&mut self) {
