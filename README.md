@@ -119,15 +119,10 @@ line_numbers = false
 relative_line_numbers = false
 list_scrollbar_vertical = true
 list_scrollbar_horizontal = true
-sidebar_scrollbar_vertical = true
-sidebar_scrollbar_horizontal = true
 details_scrollbar_vertical = true
 border = true
 autosave = true
 autoreload = true
-sidebar = false
-sidebar_width = 28
-sidebar_position = "right"   # or "left"
 scroll_lines = 1
 page_lines = 0
 scroll_moves_selection = true
@@ -135,6 +130,13 @@ timestamp_format = "%H:%M:%S"
 case_mode = "smart"   # or "sensitive" | "insensitive"
 session_filters = true
 session_stdin = true
+
+[sidebar]
+enabled = false
+width = 28
+position = "right"   # or "left"
+scrollbar_vertical = true
+scrollbar_horizontal = true
 
 [theme]
 name = "catppuccin"

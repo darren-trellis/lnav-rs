@@ -1,6 +1,6 @@
 # Filters and sidebar
 
-`s` / `:view sidebar toggle` shows a list of filters, then manually hidden lines (`·N` with a preview). Position is `sidebar_position` (`left` or `right`, default `right`). Width is `sidebar_width` (default 28; clamped to leave room for the list). Vertical/horizontal scrollbars are controlled by `sidebar_scrollbar_*` (same idea as `list_scrollbar_*`).
+`s` / `:view sidebar toggle` shows a list of filters, then manually hidden lines (`·N` with a preview). File settings live under `[sidebar]`: `position` (`left` or `right`, default `right`), `width` (default 28; clamped to leave room for the list), and `scrollbar_vertical` / `scrollbar_horizontal` (same idea as `[main]` list scrollbars). `:config set` still uses the flat names (`sidebar_position`, `sidebar_width`, `sidebar_scrollbar_*`).
 
 When focused, `j`/`k` move the selection, `h`/`l` (or ←/→ / Shift+wheel) scroll horizontally, `Space` toggles the selected filter on/off, `dd` / Backspace deletes a filter or unhides a hidden line, `DD` / Shift+Backspace permanently deletes from the file (selected hidden line, or every line matching the selected filter), and Enter reveals a hidden line and jumps to it. Operator ranges work the same as in the list (`dG`, `D5k`, `dj`, …). (`[keys.sidebar]` defaults: `space = "filter set toggle"`, `d = "filter delete"`, `backspace = "filter delete line"`, `D = "delete"`, `S-backspace = "delete line"`, `enter = "hide reveal"`, `h`/`left = "scroll left"`, `l`/`right = "scroll right"`, `esc = "view current off"`).
 

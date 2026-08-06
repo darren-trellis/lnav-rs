@@ -3,18 +3,20 @@ line_numbers = true
 # details_json_tree = true
 # details_max_height = 24
 # details_tab_width = 4
-# sidebar = true
-# sidebar_width = 36
-# sidebar_position = "left"   # or "right"
 # list_scrollbar_vertical = true
 # list_scrollbar_horizontal = true
-# sidebar_scrollbar_vertical = true
-# sidebar_scrollbar_horizontal = true
 # details_scrollbar_vertical = true
 # case_mode = "insensitive"
 # session_filters = true
 # session_stdin = true
 # border = true
+
+# [sidebar]
+# enabled = true
+# width = 36
+# position = "left"   # or "right"
+# scrollbar_vertical = true
+# scrollbar_horizontal = true
 
 [theme]
 name = "catppuccin"

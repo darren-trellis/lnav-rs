@@ -158,8 +158,84 @@ fn rejects_narrow_sidebar_width() {
     let dir = std::env::temp_dir().join(format!("teleminator-sidebar-w-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
-    fs::write(&path, "[main]\nsidebar_width = 8\n").unwrap();
+    fs::write(&path, "[sidebar]\nwidth = 8\n").unwrap();
     assert!(Config::load_from(&path).is_err());
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn loads_sidebar_section() {
+    let dir = std::env::temp_dir().join(format!("teleminator-sidebar-sec-{}", std::process::id()));
+    let _ = fs::create_dir_all(&dir);
+    let path = dir.join("config.toml");
+    fs::write(
+        &path,
+        r#"[sidebar]
+enabled = true
+width = 36
+position = "left"
+scrollbar_vertical = false
+scrollbar_horizontal = false
+"#,
+    )
+    .unwrap();
+    let (cfg, _) = Config::load_from(&path).unwrap();
+    assert!(cfg.sidebar);
+    assert_eq!(cfg.sidebar_width, 36);
+    assert_eq!(cfg.sidebar_position, SidebarPosition::Left);
+    assert!(!cfg.sidebar_scrollbar_vertical);
+    assert!(!cfg.sidebar_scrollbar_horizontal);
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn loads_legacy_main_sidebar_keys() {
+    let dir = std::env::temp_dir().join(format!("teleminator-sidebar-leg-{}", std::process::id()));
+    let _ = fs::create_dir_all(&dir);
+    let path = dir.join("config.toml");
+    fs::write(
+        &path,
+        r#"[main]
+sidebar = true
+sidebar_width = 40
+sidebar_position = "left"
+sidebar_scrollbar_vertical = false
+sidebar_scrollbar_horizontal = false
+"#,
+    )
+    .unwrap();
+    let (cfg, _) = Config::load_from(&path).unwrap();
+    assert!(cfg.sidebar);
+    assert_eq!(cfg.sidebar_width, 40);
+    assert_eq!(cfg.sidebar_position, SidebarPosition::Left);
+    assert!(!cfg.sidebar_scrollbar_vertical);
+    assert!(!cfg.sidebar_scrollbar_horizontal);
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn sidebar_section_wins_over_legacy_main() {
+    let dir = std::env::temp_dir().join(format!("teleminator-sidebar-win-{}", std::process::id()));
+    let _ = fs::create_dir_all(&dir);
+    let path = dir.join("config.toml");
+    fs::write(
+        &path,
+        r#"[main]
+sidebar = false
+sidebar_width = 40
+sidebar_position = "right"
+
+[sidebar]
+enabled = true
+width = 32
+position = "left"
+"#,
+    )
+    .unwrap();
+    let (cfg, _) = Config::load_from(&path).unwrap();
+    assert!(cfg.sidebar);
+    assert_eq!(cfg.sidebar_width, 32);
+    assert_eq!(cfg.sidebar_position, SidebarPosition::Left);
     let _ = fs::remove_dir_all(&dir);
 }
 
@@ -215,14 +291,13 @@ fn write_omits_default_keys() {
     assert!(!raw.contains("line_numbers = "));
     assert!(!raw.contains("list_scrollbar_vertical = "));
     assert!(!raw.contains("list_scrollbar_horizontal = "));
-    assert!(!raw.contains("sidebar_scrollbar_vertical = "));
-    assert!(!raw.contains("sidebar_scrollbar_horizontal = "));
     assert!(!raw.contains("details_scrollbar_vertical = "));
     assert!(!raw.contains("scrollbar = "));
     assert!(!raw.contains("border = "));
     assert!(!raw.contains("autosave = "));
     assert!(!raw.contains("autoreload = "));
     assert!(!raw.contains("page_lines = "));
+    assert!(!raw.contains("[sidebar]"));
     assert!(!raw.contains("sidebar_width = "));
     assert!(!raw.contains("session_filters = "));
     assert!(!raw.contains("session_stdin = "));
@@ -257,14 +332,43 @@ fn sidebar_position_left_and_aliases() {
     let dir = std::env::temp_dir().join(format!("teleminator-side-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
-    fs::write(&path, "[main]\nsidebar_position = \"left\"\n").unwrap();
+    fs::write(&path, "[sidebar]\nposition = \"left\"\n").unwrap();
     let (cfg, _) = Config::load_from(&path).unwrap();
     assert_eq!(cfg.sidebar_position, SidebarPosition::Left);
     let mut out = cfg;
     out.sidebar_position = SidebarPosition::Left;
     out.write_to(&path).unwrap();
     let raw = fs::read_to_string(&path).unwrap();
-    assert!(raw.contains("sidebar_position = \"left\""));
+    assert!(raw.contains("[sidebar]"));
+    assert!(raw.contains("position = \"left\""));
+    assert!(!raw.contains("sidebar_position = "));
+    assert!(!raw.contains("[main]"));
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn write_emits_sidebar_section_not_main_keys() {
+    let dir = std::env::temp_dir().join(format!("teleminator-write-side-{}", std::process::id()));
+    let _ = fs::create_dir_all(&dir);
+    let path = dir.join("config.toml");
+    let mut cfg = Config::default();
+    cfg.sidebar = true;
+    cfg.sidebar_width = 36;
+    cfg.sidebar_position = SidebarPosition::Left;
+    cfg.sidebar_scrollbar_vertical = false;
+    cfg.sidebar_scrollbar_horizontal = false;
+    cfg.write_to(&path).unwrap();
+    let raw = fs::read_to_string(&path).unwrap();
+    assert!(raw.contains("[sidebar]"));
+    assert!(raw.contains("enabled = true"));
+    assert!(raw.contains("width = 36"));
+    assert!(raw.contains("position = \"left\""));
+    assert!(raw.contains("scrollbar_vertical = false"));
+    assert!(raw.contains("scrollbar_horizontal = false"));
+    assert!(!raw.contains("sidebar_width = "));
+    assert!(!raw.contains("sidebar_position = "));
+    assert!(!raw.contains("sidebar_scrollbar_"));
+    assert!(!raw.contains("[main]\nsidebar"));
     let _ = fs::remove_dir_all(&dir);
 }
 

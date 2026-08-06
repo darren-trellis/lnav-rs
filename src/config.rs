@@ -307,6 +307,9 @@ pub struct Config {
 }
 
 /// Scalar settings stored under `[main]` in `config.toml`.
+///
+/// Legacy sidebar keys (`sidebar`, `sidebar_width`, …) are still accepted here
+/// for older configs; new writes use `[sidebar]` instead.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 struct MainConfig {
@@ -328,10 +331,10 @@ struct MainConfig {
     list_scrollbar_vertical: bool,
     #[serde(default = "default_true")]
     list_scrollbar_horizontal: bool,
-    #[serde(default = "default_true")]
-    sidebar_scrollbar_vertical: bool,
-    #[serde(default = "default_true")]
-    sidebar_scrollbar_horizontal: bool,
+    #[serde(default)]
+    sidebar_scrollbar_vertical: Option<bool>,
+    #[serde(default)]
+    sidebar_scrollbar_horizontal: Option<bool>,
     #[serde(default = "default_true")]
     details_scrollbar_vertical: bool,
     #[serde(default = "default_true")]
@@ -341,11 +344,11 @@ struct MainConfig {
     #[serde(default = "default_true")]
     autoreload: bool,
     #[serde(default)]
-    sidebar: bool,
-    #[serde(default = "default_sidebar_width")]
-    sidebar_width: usize,
+    sidebar: Option<bool>,
     #[serde(default)]
-    sidebar_position: SidebarPosition,
+    sidebar_width: Option<usize>,
+    #[serde(default)]
+    sidebar_position: Option<SidebarPosition>,
     #[serde(default = "default_scroll_lines")]
     scroll_lines: usize,
     #[serde(default)]
@@ -374,15 +377,15 @@ impl Default for MainConfig {
             relative_line_numbers: false,
             list_scrollbar_vertical: true,
             list_scrollbar_horizontal: true,
-            sidebar_scrollbar_vertical: true,
-            sidebar_scrollbar_horizontal: true,
+            sidebar_scrollbar_vertical: None,
+            sidebar_scrollbar_horizontal: None,
             details_scrollbar_vertical: true,
             border: true,
             autosave: true,
             autoreload: true,
-            sidebar: false,
-            sidebar_width: default_sidebar_width(),
-            sidebar_position: SidebarPosition::default(),
+            sidebar: None,
+            sidebar_width: None,
+            sidebar_position: None,
             scroll_lines: default_scroll_lines(),
             page_lines: 0,
             scroll_moves_selection: true,
@@ -394,12 +397,30 @@ impl Default for MainConfig {
     }
 }
 
-/// On-disk TOML shape: scalars live under `[main]`.
+/// Sidebar settings under `[sidebar]` in `config.toml`.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+struct SidebarFileConfig {
+    #[serde(default)]
+    enabled: Option<bool>,
+    #[serde(default)]
+    width: Option<usize>,
+    #[serde(default)]
+    position: Option<SidebarPosition>,
+    #[serde(default)]
+    scrollbar_vertical: Option<bool>,
+    #[serde(default)]
+    scrollbar_horizontal: Option<bool>,
+}
+
+/// On-disk TOML shape: scalars live under `[main]` / `[sidebar]`.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct ConfigDocument {
     #[serde(default)]
     main: MainConfig,
+    #[serde(default)]
+    sidebar: SidebarFileConfig,
     #[serde(default)]
     theme: ThemeConfig,
     #[serde(default)]
@@ -416,6 +437,33 @@ struct ConfigDocument {
 
 impl ConfigDocument {
     fn into_config(self) -> Config {
+        // `[sidebar]` wins over legacy `[main] sidebar_*` keys.
+        let sidebar = self
+            .sidebar
+            .enabled
+            .or(self.main.sidebar)
+            .unwrap_or(false);
+        let sidebar_width = self
+            .sidebar
+            .width
+            .or(self.main.sidebar_width)
+            .unwrap_or_else(default_sidebar_width);
+        let sidebar_position = self
+            .sidebar
+            .position
+            .or(self.main.sidebar_position)
+            .unwrap_or_default();
+        let sidebar_scrollbar_vertical = self
+            .sidebar
+            .scrollbar_vertical
+            .or(self.main.sidebar_scrollbar_vertical)
+            .unwrap_or(true);
+        let sidebar_scrollbar_horizontal = self
+            .sidebar
+            .scrollbar_horizontal
+            .or(self.main.sidebar_scrollbar_horizontal)
+            .unwrap_or(true);
+
         Config {
             theme: self.theme,
             colors: self.colors,
@@ -430,15 +478,15 @@ impl ConfigDocument {
             relative_line_numbers: self.main.relative_line_numbers,
             list_scrollbar_vertical: self.main.list_scrollbar_vertical,
             list_scrollbar_horizontal: self.main.list_scrollbar_horizontal,
-            sidebar_scrollbar_vertical: self.main.sidebar_scrollbar_vertical,
-            sidebar_scrollbar_horizontal: self.main.sidebar_scrollbar_horizontal,
+            sidebar_scrollbar_vertical,
+            sidebar_scrollbar_horizontal,
             details_scrollbar_vertical: self.main.details_scrollbar_vertical,
             border: self.main.border,
             autosave: self.main.autosave,
             autoreload: self.main.autoreload,
-            sidebar: self.main.sidebar,
-            sidebar_width: self.main.sidebar_width,
-            sidebar_position: self.main.sidebar_position,
+            sidebar,
+            sidebar_width,
+            sidebar_position,
             scroll_lines: self.main.scroll_lines,
             page_lines: self.main.page_lines,
             scroll_moves_selection: self.main.scroll_moves_selection,
@@ -456,6 +504,8 @@ impl ConfigDocument {
 struct PersistedConfig<'a> {
     #[serde(skip_serializing_if = "PersistedMain::is_empty")]
     main: PersistedMain<'a>,
+    #[serde(skip_serializing_if = "PersistedSidebar::is_empty")]
+    sidebar: PersistedSidebar,
     theme: &'a ThemeConfig,
     #[serde(skip_serializing_if = "crate::theme::ColorOverrides::is_empty")]
     colors: &'a crate::theme::ColorOverrides,
@@ -490,10 +540,6 @@ struct PersistedMain<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     list_scrollbar_horizontal: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    sidebar_scrollbar_vertical: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    sidebar_scrollbar_horizontal: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     details_scrollbar_vertical: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     border: Option<bool>,
@@ -501,12 +547,6 @@ struct PersistedMain<'a> {
     autosave: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     autoreload: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    sidebar: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    sidebar_width: Option<usize>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    sidebar_position: Option<SidebarPosition>,
     #[serde(skip_serializing_if = "Option::is_none")]
     scroll_lines: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -534,15 +574,10 @@ impl PersistedMain<'_> {
             && self.relative_line_numbers.is_none()
             && self.list_scrollbar_vertical.is_none()
             && self.list_scrollbar_horizontal.is_none()
-            && self.sidebar_scrollbar_vertical.is_none()
-            && self.sidebar_scrollbar_horizontal.is_none()
             && self.details_scrollbar_vertical.is_none()
             && self.border.is_none()
             && self.autosave.is_none()
             && self.autoreload.is_none()
-            && self.sidebar.is_none()
-            && self.sidebar_width.is_none()
-            && self.sidebar_position.is_none()
             && self.scroll_lines.is_none()
             && self.page_lines.is_none()
             && self.scroll_moves_selection.is_none()
@@ -550,6 +585,30 @@ impl PersistedMain<'_> {
             && self.case_mode.is_none()
             && self.session_filters.is_none()
             && self.session_stdin.is_none()
+    }
+}
+
+#[derive(Serialize)]
+struct PersistedSidebar {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    enabled: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    width: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    position: Option<SidebarPosition>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    scrollbar_vertical: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    scrollbar_horizontal: Option<bool>,
+}
+
+impl PersistedSidebar {
+    fn is_empty(&self) -> bool {
+        self.enabled.is_none()
+            && self.width.is_none()
+            && self.position.is_none()
+            && self.scrollbar_vertical.is_none()
+            && self.scrollbar_horizontal.is_none()
     }
 }
 
@@ -650,22 +709,12 @@ impl<'a> PersistedConfig<'a> {
                 list_scrollbar_horizontal: (config.list_scrollbar_horizontal
                     != defaults.list_scrollbar_horizontal)
                     .then_some(config.list_scrollbar_horizontal),
-                sidebar_scrollbar_vertical: (config.sidebar_scrollbar_vertical
-                    != defaults.sidebar_scrollbar_vertical)
-                    .then_some(config.sidebar_scrollbar_vertical),
-                sidebar_scrollbar_horizontal: (config.sidebar_scrollbar_horizontal
-                    != defaults.sidebar_scrollbar_horizontal)
-                    .then_some(config.sidebar_scrollbar_horizontal),
                 details_scrollbar_vertical: (config.details_scrollbar_vertical
                     != defaults.details_scrollbar_vertical)
                     .then_some(config.details_scrollbar_vertical),
                 border: (config.border != defaults.border).then_some(config.border),
                 autosave: (config.autosave != defaults.autosave).then_some(config.autosave),
                 autoreload: (config.autoreload != defaults.autoreload).then_some(config.autoreload),
-                sidebar: (config.sidebar != defaults.sidebar).then_some(config.sidebar),
-                sidebar_width: (sidebar_width != defaults.sidebar_width).then_some(sidebar_width),
-                sidebar_position: (config.sidebar_position != defaults.sidebar_position)
-                    .then_some(config.sidebar_position),
                 scroll_lines: (scroll_lines != defaults.scroll_lines).then_some(scroll_lines),
                 page_lines: (config.page_lines != defaults.page_lines).then_some(config.page_lines),
                 scroll_moves_selection: (config.scroll_moves_selection
@@ -678,6 +727,18 @@ impl<'a> PersistedConfig<'a> {
                     .then_some(config.session_filters),
                 session_stdin: (config.session_stdin != defaults.session_stdin)
                     .then_some(config.session_stdin),
+            },
+            sidebar: PersistedSidebar {
+                enabled: (config.sidebar != defaults.sidebar).then_some(config.sidebar),
+                width: (sidebar_width != defaults.sidebar_width).then_some(sidebar_width),
+                position: (config.sidebar_position != defaults.sidebar_position)
+                    .then_some(config.sidebar_position),
+                scrollbar_vertical: (config.sidebar_scrollbar_vertical
+                    != defaults.sidebar_scrollbar_vertical)
+                    .then_some(config.sidebar_scrollbar_vertical),
+                scrollbar_horizontal: (config.sidebar_scrollbar_horizontal
+                    != defaults.sidebar_scrollbar_horizontal)
+                    .then_some(config.sidebar_scrollbar_horizontal),
             },
             theme: &config.theme,
             colors: &config.colors,
@@ -760,6 +821,7 @@ impl Default for Config {
     fn default() -> Self {
         ConfigDocument {
             main: MainConfig::default(),
+            sidebar: SidebarFileConfig::default(),
             theme: ThemeConfig::default(),
             colors: crate::theme::ColorOverrides::default(),
             levels: crate::theme::LevelOverrides::default(),
