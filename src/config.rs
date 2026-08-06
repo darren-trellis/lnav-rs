@@ -145,6 +145,32 @@ impl ThemeConfig {
     }
 }
 
+/// Which side of the main pane the filters sidebar occupies.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum SidebarPosition {
+    Left,
+    #[default]
+    Right,
+}
+
+impl SidebarPosition {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Left => "left",
+            Self::Right => "right",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        match s.to_ascii_lowercase().as_str() {
+            "left" | "l" => Some(Self::Left),
+            "right" | "r" => Some(Self::Right),
+            _ => None,
+        }
+    }
+}
+
 /// Case matching for `/` search and `:filter` regexes.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "lowercase")]
@@ -248,6 +274,9 @@ pub struct Config {
     /// Preferred sidebar width in columns (clamped to fit the terminal).
     pub sidebar_width: usize,
 
+    /// Place the filters sidebar on the `left` or `right` of the main pane.
+    pub sidebar_position: SidebarPosition,
+
     /// Lines to move per mouse-wheel notch in the log list.
     pub scroll_lines: usize,
 
@@ -315,6 +344,8 @@ struct MainConfig {
     sidebar: bool,
     #[serde(default = "default_sidebar_width")]
     sidebar_width: usize,
+    #[serde(default)]
+    sidebar_position: SidebarPosition,
     #[serde(default = "default_scroll_lines")]
     scroll_lines: usize,
     #[serde(default)]
@@ -351,6 +382,7 @@ impl Default for MainConfig {
             autoreload: true,
             sidebar: false,
             sidebar_width: default_sidebar_width(),
+            sidebar_position: SidebarPosition::default(),
             scroll_lines: default_scroll_lines(),
             page_lines: 0,
             scroll_moves_selection: true,
@@ -406,6 +438,7 @@ impl ConfigDocument {
             autoreload: self.main.autoreload,
             sidebar: self.main.sidebar,
             sidebar_width: self.main.sidebar_width,
+            sidebar_position: self.main.sidebar_position,
             scroll_lines: self.main.scroll_lines,
             page_lines: self.main.page_lines,
             scroll_moves_selection: self.main.scroll_moves_selection,
@@ -473,6 +506,8 @@ struct PersistedMain<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     sidebar_width: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    sidebar_position: Option<SidebarPosition>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     scroll_lines: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
     page_lines: Option<usize>,
@@ -507,6 +542,7 @@ impl PersistedMain<'_> {
             && self.autoreload.is_none()
             && self.sidebar.is_none()
             && self.sidebar_width.is_none()
+            && self.sidebar_position.is_none()
             && self.scroll_lines.is_none()
             && self.page_lines.is_none()
             && self.scroll_moves_selection.is_none()
@@ -628,6 +664,8 @@ impl<'a> PersistedConfig<'a> {
                 autoreload: (config.autoreload != defaults.autoreload).then_some(config.autoreload),
                 sidebar: (config.sidebar != defaults.sidebar).then_some(config.sidebar),
                 sidebar_width: (sidebar_width != defaults.sidebar_width).then_some(sidebar_width),
+                sidebar_position: (config.sidebar_position != defaults.sidebar_position)
+                    .then_some(config.sidebar_position),
                 scroll_lines: (scroll_lines != defaults.scroll_lines).then_some(scroll_lines),
                 page_lines: (config.page_lines != defaults.page_lines).then_some(config.page_lines),
                 scroll_moves_selection: (config.scroll_moves_selection

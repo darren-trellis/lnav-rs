@@ -127,6 +127,7 @@ autosave = true
 autoreload = true
 sidebar = false
 sidebar_width = 28
+sidebar_position = "right"   # or "left"
 scroll_lines = 1
 page_lines = 0
 scroll_moves_selection = true
@@ -223,6 +224,7 @@ Log lines that carry both a `trace_id` and `span_id` (OpenTelemetry / Datadog-st
 | `autoreload` | `on` \| `off` \| `toggle` | `on` | Reload when the config file changes on disk |
 | `sidebar` | `on` \| `off` \| `toggle` | `off` | Show filters/hidden sidebar (same as `:view sidebar`) |
 | `sidebar_width` | number \| `+N`/`-N` | `28` | Preferred sidebar width in columns (min `12`; relative adjusts show the sidebar) |
+| `sidebar_position` | `left` \| `right` | `right` | Place the filters sidebar on the left or right of the main pane |
 | `scroll_lines` | number | `1` | Mouse wheel step |
 | `page_lines` | number | `0` | Page up/down step (`0` = viewport height) |
 | `scroll_moves_selection` | `on` \| `off` \| `toggle` | `on` | Wheel moves selection (`off` scrolls the viewport only) |

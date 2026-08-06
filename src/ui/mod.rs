@@ -14,6 +14,7 @@ use ratatui::style::Style;
 use ratatui::widgets::{Block, Clear, Scrollbar, ScrollbarOrientation, ScrollbarState};
 
 use crate::app::{App, InputMode, PrimaryTab};
+use crate::config::SidebarPosition;
 use crate::details;
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -166,9 +167,18 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
     };
 
     let (main, sidebar_area) = if sidebar_w > 0 {
-        let split =
-            Layout::horizontal([Constraint::Min(20), Constraint::Length(sidebar_w)]).split(body);
-        (split[0], Some(split[1]))
+        match app.config.sidebar_position {
+            SidebarPosition::Right => {
+                let split = Layout::horizontal([Constraint::Min(20), Constraint::Length(sidebar_w)])
+                    .split(body);
+                (split[0], Some(split[1]))
+            }
+            SidebarPosition::Left => {
+                let split = Layout::horizontal([Constraint::Length(sidebar_w), Constraint::Min(20)])
+                    .split(body);
+                (split[1], Some(split[0]))
+            }
+        }
     } else {
         (body, None)
     };

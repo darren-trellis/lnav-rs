@@ -1,5 +1,5 @@
 use crate::app::App;
-use crate::config::CaseMode;
+use crate::config::{CaseMode, SidebarPosition};
 use crate::theme::Theme;
 
 #[derive(Clone, Copy)]
@@ -8,6 +8,7 @@ pub enum ValueKind {
     Bool,
     Unsigned,
     CaseMode,
+    SidebarPosition,
     TimestampFormat,
 }
 
@@ -20,6 +21,10 @@ impl ValueKind {
                 .map(str::to_string)
                 .collect(),
             Self::CaseMode => ["sensitive", "insensitive", "smart", "smartcase"]
+                .into_iter()
+                .map(str::to_string)
+                .collect(),
+            Self::SidebarPosition => ["left", "right"]
                 .into_iter()
                 .map(str::to_string)
                 .collect(),
@@ -43,6 +48,7 @@ impl ValueKind {
             Self::Bool => "bool",
             Self::Unsigned => "number",
             Self::CaseMode => "case",
+            Self::SidebarPosition => "side",
             Self::TimestampFormat => "strftime",
         }
     }
@@ -192,6 +198,13 @@ const OPTIONS: &[ConfigOption] = &[
         value_kind: ValueKind::Unsigned,
         getter: get_sidebar_width,
         setter: set_sidebar_width,
+    },
+    ConfigOption {
+        name: "sidebar_position",
+        help: "left|right",
+        value_kind: ValueKind::SidebarPosition,
+        getter: get_sidebar_position,
+        setter: set_sidebar_position,
     },
     ConfigOption {
         name: "scroll_lines",
@@ -603,6 +616,20 @@ fn get_sidebar_width(app: &App) -> String {
         .sidebar_width
         .max(crate::config::default_sidebar_width_min())
         .to_string()
+}
+
+fn get_sidebar_position(app: &App) -> String {
+    app.config.sidebar_position.as_str().to_string()
+}
+
+fn set_sidebar_position(app: &mut App, value: &str) -> bool {
+    let Some(position) = SidebarPosition::parse(value) else {
+        app.status_message = Some("usage: :config set sidebar_position left|right".into());
+        return false;
+    };
+    app.config.sidebar_position = position;
+    app.status_message = Some(format!("sidebar_position={}", position.as_str()));
+    true
 }
 
 fn set_sidebar_width(app: &mut App, value: &str) -> bool {

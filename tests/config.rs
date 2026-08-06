@@ -249,6 +249,26 @@ fn case_mode_smartcase_and_aliases() {
 }
 
 #[test]
+fn sidebar_position_left_and_aliases() {
+    assert_eq!(SidebarPosition::parse("left"), Some(SidebarPosition::Left));
+    assert_eq!(SidebarPosition::parse("L"), Some(SidebarPosition::Left));
+    assert_eq!(SidebarPosition::parse("right"), Some(SidebarPosition::Right));
+    assert_eq!(SidebarPosition::default(), SidebarPosition::Right);
+    let dir = std::env::temp_dir().join(format!("teleminator-side-{}", std::process::id()));
+    let _ = fs::create_dir_all(&dir);
+    let path = dir.join("config.toml");
+    fs::write(&path, "[main]\nsidebar_position = \"left\"\n").unwrap();
+    let (cfg, _) = Config::load_from(&path).unwrap();
+    assert_eq!(cfg.sidebar_position, SidebarPosition::Left);
+    let mut out = cfg;
+    out.sidebar_position = SidebarPosition::Left;
+    out.write_to(&path).unwrap();
+    let raw = fs::read_to_string(&path).unwrap();
+    assert!(raw.contains("sidebar_position = \"left\""));
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn write_main_section_before_theme_tables_roundtrip() {
     let dir = std::env::temp_dir().join(format!("teleminator-write-order-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);

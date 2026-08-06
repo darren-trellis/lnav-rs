@@ -5,6 +5,7 @@ line_numbers = true
 # details_tab_width = 4
 # sidebar = true
 # sidebar_width = 36
+# sidebar_position = "left"   # or "right"
 # list_scrollbar_vertical = true
 # list_scrollbar_horizontal = true
 # sidebar_scrollbar_vertical = true

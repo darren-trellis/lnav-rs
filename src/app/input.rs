@@ -299,7 +299,11 @@ impl App {
                 }));
                 self.preview_config_editor();
             }
-            ValueKind::Theme | ValueKind::Bool | ValueKind::CaseMode | ValueKind::TimestampFormat => {
+            ValueKind::Theme
+            | ValueKind::Bool
+            | ValueKind::CaseMode
+            | ValueKind::SidebarPosition
+            | ValueKind::TimestampFormat => {
                 let values = option.value_kind.suggestions();
                 if values.is_empty() {
                     self.status_message = Some(format!("no values for {}", option.name));
