@@ -9,6 +9,7 @@ use std::time::{Duration, Instant};
 use anyhow::{Context, Result, bail};
 use notify::{EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 
+use crate::assemble::RecordAssembler;
 use crate::model::LogEntry;
 use crate::parse;
 
@@ -56,6 +57,7 @@ pub struct LogSource {
     entries: Vec<LogEntry>,
     source_ranges: Vec<std::ops::Range<u64>>,
     next_line_no: usize,
+    assembler: RecordAssembler,
     backend: Backend,
 }
 
@@ -86,6 +88,7 @@ impl LogSource {
             entries: Vec::new(),
             source_ranges: Vec::new(),
             next_line_no: 1,
+            assembler: RecordAssembler::default(),
             backend: Backend::File {
                 path,
                 offset: 0,
@@ -130,6 +133,7 @@ impl LogSource {
             entries: Vec::new(),
             source_ranges: Vec::new(),
             next_line_no: 1,
+            assembler: RecordAssembler::default(),
             backend: Backend::Stdin {
                 line_rx,
                 _reader: reader,
@@ -160,6 +164,7 @@ impl LogSource {
         self.entries.clear();
         self.source_ranges.clear();
         self.next_line_no = 1;
+        self.assembler.clear();
         n
     }
 
@@ -251,6 +256,7 @@ impl LogSource {
         self.entries.clear();
         self.source_ranges.clear();
         self.next_line_no = 1;
+        self.assembler.clear();
         if let Backend::File { offset, .. } = &mut self.backend {
             *offset = 0;
         }
@@ -286,6 +292,7 @@ impl LogSource {
             self.entries.clear();
             self.source_ranges.clear();
             self.next_line_no = 1;
+            self.assembler.clear();
         }
 
         if len == offset {
@@ -321,18 +328,25 @@ impl LogSource {
             }
 
             if !buf.ends_with('\n') && new_offset + n as u64 >= len {
+                // Incomplete final line — wait for more bytes. Keep assembler pending.
                 break;
             }
 
+            let line_start = new_offset;
             new_offset += n as u64;
             let raw = buf.trim_end_matches(['\r', '\n']).to_string();
             if raw.is_empty() {
                 continue;
             }
-            self.entries.push(parse::parse_line(self.next_line_no, raw));
-            self.source_ranges.push((new_offset - n as u64)..new_offset);
+            let line_no = self.next_line_no;
             self.next_line_no += 1;
-            added += 1;
+            if let Some(rec) =
+                self.assembler
+                    .feed(&raw, line_no, Some(line_start), Some(new_offset))
+            {
+                self.push_completed_record(rec);
+                added += 1;
+            }
         }
 
         if let Backend::File {
@@ -356,6 +370,18 @@ impl LogSource {
         })
     }
 
+    fn push_completed_record(&mut self, rec: crate::assemble::CompletedRecord) {
+        self.entries
+            .push(parse::parse_line(rec.start_line_no, rec.text));
+        if let (Some(start), Some(end)) = (rec.start_offset, rec.end_offset) {
+            self.source_ranges.push(start..end);
+        } else if matches!(self.backend, Backend::File { .. }) {
+            // Shouldn't happen for file feeds; keep lengths aligned.
+            let last_end = self.source_ranges.last().map(|r| r.end).unwrap_or(0);
+            self.source_ranges.push(last_end..last_end);
+        }
+    }
+
     fn drain_stdin_lines(&mut self) -> usize {
         let mut batch = Vec::new();
         if let Backend::Stdin { line_rx, .. } = &self.backend {
@@ -371,9 +397,12 @@ impl LogSource {
 
         let mut added = 0usize;
         for raw in batch {
-            self.entries.push(parse::parse_line(self.next_line_no, raw));
+            let line_no = self.next_line_no;
             self.next_line_no += 1;
-            added += 1;
+            if let Some(rec) = self.assembler.feed(&raw, line_no, None, None) {
+                self.push_completed_record(rec);
+                added += 1;
+            }
         }
         added
     }

@@ -1,4 +1,5 @@
 pub mod app;
+pub mod assemble;
 pub mod columns;
 pub mod command;
 pub mod command_catalog;

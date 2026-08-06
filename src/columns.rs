@@ -205,6 +205,7 @@ fn column_value(source: &str, entry: &LogEntry, opts: &FormatOptions<'_>) -> (Se
         "format" => {
             let f = match entry.format {
                 crate::model::LineFormat::Json => "json",
+                crate::model::LineFormat::Otel => "otel",
                 crate::model::LineFormat::Logfmt => "logf",
                 crate::model::LineFormat::Plain => "text",
             };

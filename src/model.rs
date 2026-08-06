@@ -50,6 +50,8 @@ impl fmt::Display for LogLevel {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LineFormat {
     Json,
+    /// Node util.inspect-style OpenTelemetry ReadableSpan dump.
+    Otel,
     Logfmt,
     Plain,
 }

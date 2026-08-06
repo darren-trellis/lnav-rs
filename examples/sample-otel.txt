@@ -1,0 +1,43 @@
+{"message":"[Network] Request","logLevel":"INFO","timestamp":"2026-08-06T00:20:08.187Z","annotations":{"url":"http://localhost:4012/v1/me/orgs","method":"GET"},"spans":{},"fiberId":"#39"}
+{
+  resource: {
+    attributes: {
+      'service.name': 'node'
+    }
+  },
+  instrumentationScope: { name: 'backend-ts', version: undefined, schemaUrl: undefined },
+  traceId: 'b4c1a73453220bf99e1581fffdb4d79d',
+  parentSpanContext: {
+    traceId: 'b4c1a73453220bf99e1581fffdb4d79d',
+    spanId: '5613e9c06d088aee',
+    traceFlags: 1
+  },
+  name: 'jwt.verify',
+  id: '808bf6eaed2f48a3',
+  kind: 0,
+  timestamp: 1785975608200301.5,
+  duration: 272282.75,
+  attributes: {},
+  status: { code: 1 },
+  events: [],
+  links: []
+}
+{
+  resource: {
+    attributes: {
+      'service.name': 'node'
+    }
+  },
+  instrumentationScope: { name: '@opentelemetry/instrumentation-http', version: undefined, schemaUrl: undefined },
+  traceId: 'b4c1a73453220bf99e1581fffdb4d79d',
+  name: 'HTTP GET',
+  id: '5613e9c06d088aee',
+  kind: 1,
+  timestamp: 1785975608200000,
+  duration: 400000,
+  attributes: {},
+  status: { code: 0 },
+  events: [],
+  links: []
+}
+{"message":"request done","logLevel":"INFO","timestamp":"2026-08-06T00:20:08.600Z","annotations":{},"spans":{},"fiberId":"#40"}

@@ -13,6 +13,7 @@ cargo install --path .
 ```bash
 lnav-rs examples/sample.jsonl
 lnav-rs examples/sample-spans.jsonl
+lnav-rs examples/sample-otel.txt
 lnav-rs examples/sample.logfmt
 lnav-rs --init-config
 

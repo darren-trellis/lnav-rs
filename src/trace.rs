@@ -389,7 +389,10 @@ fn shorten_id(id: &str, max: usize) -> String {
 
 fn extract_span(entry: &LogEntry, source_index: usize) -> Option<ExtractedSpan> {
     let trace_id = lookup_string(entry, TRACE_ID_KEYS)?;
-    let span_id = lookup_string(entry, SPAN_ID_KEYS)?;
+    // Bare `id` is used by OTel ReadableSpan dumps / JSON; only accept it once
+    // a trace id is present so unrelated JSON `id` fields are ignored.
+    let span_id = lookup_string(entry, SPAN_ID_KEYS)
+        .or_else(|| lookup_string(entry, &["id"]))?;
     if trace_id.is_empty() || span_id.is_empty() {
         return None;
     }
@@ -440,6 +443,7 @@ const PARENT_SPAN_ID_KEYS: &[&str] = &[
     "parent_id",
     "parentid",
     "parent.id",
+    "parentSpanContext.spanId",
     "dd.parent_id",
     "otel.parent_id",
     "otel.parent_span_id",
@@ -518,10 +522,13 @@ fn lookup_duration_ns(entry: &LogEntry) -> Option<u64> {
         }
     }
 
-    // Bare `duration`: treat large values as ns, medium as µs, small as ms.
+    // Bare `duration`: OTel inspect dumps use microseconds; otherwise heuristic.
     if let Some(v) = field_by_path(entry, "duration")
         && let Some(n) = value_as_f64(&v)
     {
+        if entry.format == crate::model::LineFormat::Otel {
+            return Some((n * 1_000.0) as u64);
+        }
         if n >= 1_000_000_000.0 {
             return Some(n as u64);
         }

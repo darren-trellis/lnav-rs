@@ -48,8 +48,8 @@ fn delete_entries_rewrites_file() {
     .unwrap();
 
     let mut source = LogSource::open_file(&path).unwrap();
-    // Pretty object is indices 0..=3, then one-line error, then keep.
-    // Find the error line and delete its object span (single line).
+    // Pretty object is assembled into one entry, then one-line error, then keep.
+    assert_eq!(source.len(), 3);
     let err_idx = source
         .entries()
         .iter()
@@ -59,5 +59,6 @@ fn delete_entries_rewrites_file() {
     assert_eq!(removed, 1);
     assert!(source.entries().iter().all(|e| !e.raw.contains("drop")));
     assert!(source.entries().iter().any(|e| e.raw.contains("also-keep")));
+    assert!(source.entries().iter().any(|e| e.raw.contains("keep-me")));
     let _ = fs::remove_dir_all(&dir);
 }
