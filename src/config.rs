@@ -308,21 +308,21 @@ pub struct Config {
 
 /// Scalar settings stored under `[main]` in `config.toml`.
 ///
-/// Legacy sidebar keys (`sidebar`, `sidebar_width`, …) are still accepted here
-/// for older configs; new writes use `[sidebar]` instead.
+/// Legacy sidebar/details keys are still accepted here for older configs;
+/// new writes use `[sidebar]` / `[details]` instead.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 struct MainConfig {
     #[serde(default = "default_true")]
     follow: bool,
-    #[serde(default = "default_true")]
-    wrap_details: bool,
-    #[serde(default = "default_true")]
-    details_json_tree: bool,
-    #[serde(default = "default_details_max_height")]
-    details_max_height: usize,
-    #[serde(default = "default_details_tab_width")]
-    details_tab_width: usize,
+    #[serde(default)]
+    wrap_details: Option<bool>,
+    #[serde(default)]
+    details_json_tree: Option<bool>,
+    #[serde(default)]
+    details_max_height: Option<usize>,
+    #[serde(default)]
+    details_tab_width: Option<usize>,
     #[serde(default)]
     line_numbers: bool,
     #[serde(default)]
@@ -335,8 +335,8 @@ struct MainConfig {
     sidebar_scrollbar_vertical: Option<bool>,
     #[serde(default)]
     sidebar_scrollbar_horizontal: Option<bool>,
-    #[serde(default = "default_true")]
-    details_scrollbar_vertical: bool,
+    #[serde(default)]
+    details_scrollbar_vertical: Option<bool>,
     #[serde(default = "default_true")]
     border: bool,
     #[serde(default = "default_true")]
@@ -369,17 +369,17 @@ impl Default for MainConfig {
     fn default() -> Self {
         Self {
             follow: true,
-            wrap_details: true,
-            details_json_tree: true,
-            details_max_height: default_details_max_height(),
-            details_tab_width: default_details_tab_width(),
+            wrap_details: None,
+            details_json_tree: None,
+            details_max_height: None,
+            details_tab_width: None,
             line_numbers: false,
             relative_line_numbers: false,
             list_scrollbar_vertical: true,
             list_scrollbar_horizontal: true,
             sidebar_scrollbar_vertical: None,
             sidebar_scrollbar_horizontal: None,
-            details_scrollbar_vertical: true,
+            details_scrollbar_vertical: None,
             border: true,
             autosave: true,
             autoreload: true,
@@ -395,6 +395,22 @@ impl Default for MainConfig {
             session_stdin: true,
         }
     }
+}
+
+/// Details overlay settings under `[details]` in `config.toml`.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+struct DetailsFileConfig {
+    #[serde(default)]
+    wrap: Option<bool>,
+    #[serde(default)]
+    json_tree: Option<bool>,
+    #[serde(default)]
+    max_height: Option<usize>,
+    #[serde(default)]
+    tab_width: Option<usize>,
+    #[serde(default)]
+    scrollbar_vertical: Option<bool>,
 }
 
 /// Sidebar settings under `[sidebar]` in `config.toml`.
@@ -413,12 +429,14 @@ struct SidebarFileConfig {
     scrollbar_horizontal: Option<bool>,
 }
 
-/// On-disk TOML shape: scalars live under `[main]` / `[sidebar]`.
+/// On-disk TOML shape: scalars live under `[main]` / `[details]` / `[sidebar]`.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct ConfigDocument {
     #[serde(default)]
     main: MainConfig,
+    #[serde(default)]
+    details: DetailsFileConfig,
     #[serde(default)]
     sidebar: SidebarFileConfig,
     #[serde(default)]
@@ -437,7 +455,33 @@ struct ConfigDocument {
 
 impl ConfigDocument {
     fn into_config(self) -> Config {
-        // `[sidebar]` wins over legacy `[main] sidebar_*` keys.
+        // `[details]` / `[sidebar]` win over legacy `[main]` keys.
+        let wrap_details = self
+            .details
+            .wrap
+            .or(self.main.wrap_details)
+            .unwrap_or(true);
+        let details_json_tree = self
+            .details
+            .json_tree
+            .or(self.main.details_json_tree)
+            .unwrap_or(true);
+        let details_max_height = self
+            .details
+            .max_height
+            .or(self.main.details_max_height)
+            .unwrap_or_else(default_details_max_height);
+        let details_tab_width = self
+            .details
+            .tab_width
+            .or(self.main.details_tab_width)
+            .unwrap_or_else(default_details_tab_width);
+        let details_scrollbar_vertical = self
+            .details
+            .scrollbar_vertical
+            .or(self.main.details_scrollbar_vertical)
+            .unwrap_or(true);
+
         let sidebar = self
             .sidebar
             .enabled
@@ -470,17 +514,17 @@ impl ConfigDocument {
             levels: self.levels,
             ui: self.ui,
             follow: self.main.follow,
-            wrap_details: self.main.wrap_details,
-            details_json_tree: self.main.details_json_tree,
-            details_max_height: self.main.details_max_height,
-            details_tab_width: self.main.details_tab_width,
+            wrap_details,
+            details_json_tree,
+            details_max_height,
+            details_tab_width,
             line_numbers: self.main.line_numbers,
             relative_line_numbers: self.main.relative_line_numbers,
             list_scrollbar_vertical: self.main.list_scrollbar_vertical,
             list_scrollbar_horizontal: self.main.list_scrollbar_horizontal,
             sidebar_scrollbar_vertical,
             sidebar_scrollbar_horizontal,
-            details_scrollbar_vertical: self.main.details_scrollbar_vertical,
+            details_scrollbar_vertical,
             border: self.main.border,
             autosave: self.main.autosave,
             autoreload: self.main.autoreload,
@@ -504,6 +548,8 @@ impl ConfigDocument {
 struct PersistedConfig<'a> {
     #[serde(skip_serializing_if = "PersistedMain::is_empty")]
     main: PersistedMain<'a>,
+    #[serde(skip_serializing_if = "PersistedDetails::is_empty")]
+    details: PersistedDetails,
     #[serde(skip_serializing_if = "PersistedSidebar::is_empty")]
     sidebar: PersistedSidebar,
     theme: &'a ThemeConfig,
@@ -524,14 +570,6 @@ struct PersistedMain<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     follow: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    wrap_details: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    details_json_tree: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    details_max_height: Option<usize>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    details_tab_width: Option<usize>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     line_numbers: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     relative_line_numbers: Option<bool>,
@@ -539,8 +577,6 @@ struct PersistedMain<'a> {
     list_scrollbar_vertical: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     list_scrollbar_horizontal: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    details_scrollbar_vertical: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     border: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -566,15 +602,10 @@ struct PersistedMain<'a> {
 impl PersistedMain<'_> {
     fn is_empty(&self) -> bool {
         self.follow.is_none()
-            && self.wrap_details.is_none()
-            && self.details_json_tree.is_none()
-            && self.details_max_height.is_none()
-            && self.details_tab_width.is_none()
             && self.line_numbers.is_none()
             && self.relative_line_numbers.is_none()
             && self.list_scrollbar_vertical.is_none()
             && self.list_scrollbar_horizontal.is_none()
-            && self.details_scrollbar_vertical.is_none()
             && self.border.is_none()
             && self.autosave.is_none()
             && self.autoreload.is_none()
@@ -585,6 +616,30 @@ impl PersistedMain<'_> {
             && self.case_mode.is_none()
             && self.session_filters.is_none()
             && self.session_stdin.is_none()
+    }
+}
+
+#[derive(Serialize)]
+struct PersistedDetails {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    wrap: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    json_tree: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    max_height: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tab_width: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    scrollbar_vertical: Option<bool>,
+}
+
+impl PersistedDetails {
+    fn is_empty(&self) -> bool {
+        self.wrap.is_none()
+            && self.json_tree.is_none()
+            && self.max_height.is_none()
+            && self.tab_width.is_none()
+            && self.scrollbar_vertical.is_none()
     }
 }
 
@@ -690,14 +745,6 @@ impl<'a> PersistedConfig<'a> {
         Self {
             main: PersistedMain {
                 follow: (config.follow != defaults.follow).then_some(config.follow),
-                wrap_details: (config.wrap_details != defaults.wrap_details)
-                    .then_some(config.wrap_details),
-                details_json_tree: (config.details_json_tree != defaults.details_json_tree)
-                    .then_some(config.details_json_tree),
-                details_max_height: (details_max_height != defaults.details_max_height)
-                    .then_some(details_max_height),
-                details_tab_width: (details_tab_width != defaults.details_tab_width)
-                    .then_some(details_tab_width),
                 line_numbers: (config.line_numbers != defaults.line_numbers)
                     .then_some(config.line_numbers),
                 relative_line_numbers: (config.relative_line_numbers
@@ -709,9 +756,6 @@ impl<'a> PersistedConfig<'a> {
                 list_scrollbar_horizontal: (config.list_scrollbar_horizontal
                     != defaults.list_scrollbar_horizontal)
                     .then_some(config.list_scrollbar_horizontal),
-                details_scrollbar_vertical: (config.details_scrollbar_vertical
-                    != defaults.details_scrollbar_vertical)
-                    .then_some(config.details_scrollbar_vertical),
                 border: (config.border != defaults.border).then_some(config.border),
                 autosave: (config.autosave != defaults.autosave).then_some(config.autosave),
                 autoreload: (config.autoreload != defaults.autoreload).then_some(config.autoreload),
@@ -727,6 +771,18 @@ impl<'a> PersistedConfig<'a> {
                     .then_some(config.session_filters),
                 session_stdin: (config.session_stdin != defaults.session_stdin)
                     .then_some(config.session_stdin),
+            },
+            details: PersistedDetails {
+                wrap: (config.wrap_details != defaults.wrap_details).then_some(config.wrap_details),
+                json_tree: (config.details_json_tree != defaults.details_json_tree)
+                    .then_some(config.details_json_tree),
+                max_height: (details_max_height != defaults.details_max_height)
+                    .then_some(details_max_height),
+                tab_width: (details_tab_width != defaults.details_tab_width)
+                    .then_some(details_tab_width),
+                scrollbar_vertical: (config.details_scrollbar_vertical
+                    != defaults.details_scrollbar_vertical)
+                    .then_some(config.details_scrollbar_vertical),
             },
             sidebar: PersistedSidebar {
                 enabled: (config.sidebar != defaults.sidebar).then_some(config.sidebar),
@@ -821,6 +877,7 @@ impl Default for Config {
     fn default() -> Self {
         ConfigDocument {
             main: MainConfig::default(),
+            details: DetailsFileConfig::default(),
             sidebar: SidebarFileConfig::default(),
             theme: ThemeConfig::default(),
             colors: crate::theme::ColorOverrides::default(),

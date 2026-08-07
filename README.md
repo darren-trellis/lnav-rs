@@ -111,15 +111,10 @@ Default path: `~/.config/teleminator/config.toml`
 ```toml
 [main]
 follow = true
-wrap_details = true
-details_json_tree = true
-details_max_height = 24
-details_tab_width = 4
 line_numbers = false
 relative_line_numbers = false
 list_scrollbar_vertical = true
 list_scrollbar_horizontal = true
-details_scrollbar_vertical = true
 border = true
 autosave = true
 autoreload = true
@@ -130,6 +125,13 @@ timestamp_format = "%H:%M:%S"
 case_mode = "smart"   # or "sensitive" | "insensitive"
 session_filters = true
 session_stdin = true
+
+[details]
+wrap = true
+json_tree = true
+max_height = 24
+tab_width = 4
+scrollbar_vertical = true
 
 [sidebar]
 enabled = false

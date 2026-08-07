@@ -297,6 +297,7 @@ fn write_omits_default_keys() {
     assert!(!raw.contains("autosave = "));
     assert!(!raw.contains("autoreload = "));
     assert!(!raw.contains("page_lines = "));
+    assert!(!raw.contains("[details]"));
     assert!(!raw.contains("[sidebar]"));
     assert!(!raw.contains("sidebar_width = "));
     assert!(!raw.contains("session_filters = "));
@@ -369,6 +370,116 @@ fn write_emits_sidebar_section_not_main_keys() {
     assert!(!raw.contains("sidebar_position = "));
     assert!(!raw.contains("sidebar_scrollbar_"));
     assert!(!raw.contains("[main]\nsidebar"));
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn loads_details_section() {
+    let dir = std::env::temp_dir().join(format!("teleminator-details-sec-{}", std::process::id()));
+    let _ = fs::create_dir_all(&dir);
+    let path = dir.join("config.toml");
+    fs::write(
+        &path,
+        r#"[details]
+wrap = false
+json_tree = false
+max_height = 12
+tab_width = 2
+scrollbar_vertical = false
+"#,
+    )
+    .unwrap();
+    let (cfg, _) = Config::load_from(&path).unwrap();
+    assert!(!cfg.wrap_details);
+    assert!(!cfg.details_json_tree);
+    assert_eq!(cfg.details_max_height, 12);
+    assert_eq!(cfg.details_tab_width, 2);
+    assert!(!cfg.details_scrollbar_vertical);
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn loads_legacy_main_details_keys() {
+    let dir = std::env::temp_dir().join(format!("teleminator-details-leg-{}", std::process::id()));
+    let _ = fs::create_dir_all(&dir);
+    let path = dir.join("config.toml");
+    fs::write(
+        &path,
+        r#"[main]
+wrap_details = false
+details_json_tree = false
+details_max_height = 16
+details_tab_width = 2
+details_scrollbar_vertical = false
+"#,
+    )
+    .unwrap();
+    let (cfg, _) = Config::load_from(&path).unwrap();
+    assert!(!cfg.wrap_details);
+    assert!(!cfg.details_json_tree);
+    assert_eq!(cfg.details_max_height, 16);
+    assert_eq!(cfg.details_tab_width, 2);
+    assert!(!cfg.details_scrollbar_vertical);
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn details_section_wins_over_legacy_main() {
+    let dir = std::env::temp_dir().join(format!("teleminator-details-win-{}", std::process::id()));
+    let _ = fs::create_dir_all(&dir);
+    let path = dir.join("config.toml");
+    fs::write(
+        &path,
+        r#"[main]
+wrap_details = true
+details_max_height = 40
+
+[details]
+wrap = false
+max_height = 10
+"#,
+    )
+    .unwrap();
+    let (cfg, _) = Config::load_from(&path).unwrap();
+    assert!(!cfg.wrap_details);
+    assert_eq!(cfg.details_max_height, 10);
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn write_emits_details_section_not_main_keys() {
+    let dir = std::env::temp_dir().join(format!("teleminator-write-det-{}", std::process::id()));
+    let _ = fs::create_dir_all(&dir);
+    let path = dir.join("config.toml");
+    let mut cfg = Config::default();
+    cfg.wrap_details = false;
+    cfg.details_json_tree = false;
+    cfg.details_max_height = 12;
+    cfg.details_tab_width = 2;
+    cfg.details_scrollbar_vertical = false;
+    cfg.write_to(&path).unwrap();
+    let raw = fs::read_to_string(&path).unwrap();
+    assert!(raw.contains("[details]"));
+    assert!(raw.contains("wrap = false"));
+    assert!(raw.contains("json_tree = false"));
+    assert!(raw.contains("max_height = 12"));
+    assert!(raw.contains("tab_width = 2"));
+    assert!(raw.contains("scrollbar_vertical = false"));
+    assert!(!raw.contains("wrap_details = "));
+    assert!(!raw.contains("details_json_tree = "));
+    assert!(!raw.contains("details_max_height = "));
+    assert!(!raw.contains("details_tab_width = "));
+    assert!(!raw.contains("details_scrollbar_vertical = "));
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn rejects_narrow_details_max_height() {
+    let dir = std::env::temp_dir().join(format!("teleminator-details-h-{}", std::process::id()));
+    let _ = fs::create_dir_all(&dir);
+    let path = dir.join("config.toml");
+    fs::write(&path, "[details]\nmax_height = 2\n").unwrap();
+    assert!(Config::load_from(&path).is_err());
     let _ = fs::remove_dir_all(&dir);
 }
 

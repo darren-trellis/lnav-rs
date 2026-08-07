@@ -1,15 +1,18 @@
 [main]
 line_numbers = true
-# details_json_tree = true
-# details_max_height = 24
-# details_tab_width = 4
 # list_scrollbar_vertical = true
 # list_scrollbar_horizontal = true
-# details_scrollbar_vertical = true
 # case_mode = "insensitive"
 # session_filters = true
 # session_stdin = true
 # border = true
+
+# [details]
+# wrap = true
+# json_tree = true
+# max_height = 24
+# tab_width = 4
+# scrollbar_vertical = true
 
 # [sidebar]
 # enabled = true
