@@ -307,22 +307,11 @@ pub struct Config {
 }
 
 /// Scalar settings stored under `[main]` in `config.toml`.
-///
-/// Legacy sidebar/details keys are still accepted here for older configs;
-/// new writes use `[sidebar]` / `[details]` instead.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 struct MainConfig {
     #[serde(default = "default_true")]
     follow: bool,
-    #[serde(default)]
-    wrap_details: Option<bool>,
-    #[serde(default)]
-    details_json_tree: Option<bool>,
-    #[serde(default)]
-    details_max_height: Option<usize>,
-    #[serde(default)]
-    details_tab_width: Option<usize>,
     #[serde(default)]
     line_numbers: bool,
     #[serde(default)]
@@ -331,24 +320,12 @@ struct MainConfig {
     list_scrollbar_vertical: bool,
     #[serde(default = "default_true")]
     list_scrollbar_horizontal: bool,
-    #[serde(default)]
-    sidebar_scrollbar_vertical: Option<bool>,
-    #[serde(default)]
-    sidebar_scrollbar_horizontal: Option<bool>,
-    #[serde(default)]
-    details_scrollbar_vertical: Option<bool>,
     #[serde(default = "default_true")]
     border: bool,
     #[serde(default = "default_true")]
     autosave: bool,
     #[serde(default = "default_true")]
     autoreload: bool,
-    #[serde(default)]
-    sidebar: Option<bool>,
-    #[serde(default)]
-    sidebar_width: Option<usize>,
-    #[serde(default)]
-    sidebar_position: Option<SidebarPosition>,
     #[serde(default = "default_scroll_lines")]
     scroll_lines: usize,
     #[serde(default)]
@@ -369,23 +346,13 @@ impl Default for MainConfig {
     fn default() -> Self {
         Self {
             follow: true,
-            wrap_details: None,
-            details_json_tree: None,
-            details_max_height: None,
-            details_tab_width: None,
             line_numbers: false,
             relative_line_numbers: false,
             list_scrollbar_vertical: true,
             list_scrollbar_horizontal: true,
-            sidebar_scrollbar_vertical: None,
-            sidebar_scrollbar_horizontal: None,
-            details_scrollbar_vertical: None,
             border: true,
             autosave: true,
             autoreload: true,
-            sidebar: None,
-            sidebar_width: None,
-            sidebar_position: None,
             scroll_lines: default_scroll_lines(),
             page_lines: 0,
             scroll_moves_selection: true,
@@ -398,35 +365,59 @@ impl Default for MainConfig {
 }
 
 /// Details overlay settings under `[details]` in `config.toml`.
-#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 struct DetailsFileConfig {
-    #[serde(default)]
-    wrap: Option<bool>,
-    #[serde(default)]
-    json_tree: Option<bool>,
-    #[serde(default)]
-    max_height: Option<usize>,
-    #[serde(default)]
-    tab_width: Option<usize>,
-    #[serde(default)]
-    scrollbar_vertical: Option<bool>,
+    #[serde(default = "default_true")]
+    wrap: bool,
+    #[serde(default = "default_true")]
+    json_tree: bool,
+    #[serde(default = "default_details_max_height")]
+    max_height: usize,
+    #[serde(default = "default_details_tab_width")]
+    tab_width: usize,
+    #[serde(default = "default_true")]
+    scrollbar_vertical: bool,
+}
+
+impl Default for DetailsFileConfig {
+    fn default() -> Self {
+        Self {
+            wrap: true,
+            json_tree: true,
+            max_height: default_details_max_height(),
+            tab_width: default_details_tab_width(),
+            scrollbar_vertical: true,
+        }
+    }
 }
 
 /// Sidebar settings under `[sidebar]` in `config.toml`.
-#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 struct SidebarFileConfig {
     #[serde(default)]
-    enabled: Option<bool>,
+    enabled: bool,
+    #[serde(default = "default_sidebar_width")]
+    width: usize,
     #[serde(default)]
-    width: Option<usize>,
-    #[serde(default)]
-    position: Option<SidebarPosition>,
-    #[serde(default)]
-    scrollbar_vertical: Option<bool>,
-    #[serde(default)]
-    scrollbar_horizontal: Option<bool>,
+    position: SidebarPosition,
+    #[serde(default = "default_true")]
+    scrollbar_vertical: bool,
+    #[serde(default = "default_true")]
+    scrollbar_horizontal: bool,
+}
+
+impl Default for SidebarFileConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            width: default_sidebar_width(),
+            position: SidebarPosition::default(),
+            scrollbar_vertical: true,
+            scrollbar_horizontal: true,
+        }
+    }
 }
 
 /// On-disk TOML shape: scalars live under `[main]` / `[details]` / `[sidebar]`.
@@ -455,82 +446,29 @@ struct ConfigDocument {
 
 impl ConfigDocument {
     fn into_config(self) -> Config {
-        // `[details]` / `[sidebar]` win over legacy `[main]` keys.
-        let wrap_details = self
-            .details
-            .wrap
-            .or(self.main.wrap_details)
-            .unwrap_or(true);
-        let details_json_tree = self
-            .details
-            .json_tree
-            .or(self.main.details_json_tree)
-            .unwrap_or(true);
-        let details_max_height = self
-            .details
-            .max_height
-            .or(self.main.details_max_height)
-            .unwrap_or_else(default_details_max_height);
-        let details_tab_width = self
-            .details
-            .tab_width
-            .or(self.main.details_tab_width)
-            .unwrap_or_else(default_details_tab_width);
-        let details_scrollbar_vertical = self
-            .details
-            .scrollbar_vertical
-            .or(self.main.details_scrollbar_vertical)
-            .unwrap_or(true);
-
-        let sidebar = self
-            .sidebar
-            .enabled
-            .or(self.main.sidebar)
-            .unwrap_or(false);
-        let sidebar_width = self
-            .sidebar
-            .width
-            .or(self.main.sidebar_width)
-            .unwrap_or_else(default_sidebar_width);
-        let sidebar_position = self
-            .sidebar
-            .position
-            .or(self.main.sidebar_position)
-            .unwrap_or_default();
-        let sidebar_scrollbar_vertical = self
-            .sidebar
-            .scrollbar_vertical
-            .or(self.main.sidebar_scrollbar_vertical)
-            .unwrap_or(true);
-        let sidebar_scrollbar_horizontal = self
-            .sidebar
-            .scrollbar_horizontal
-            .or(self.main.sidebar_scrollbar_horizontal)
-            .unwrap_or(true);
-
         Config {
             theme: self.theme,
             colors: self.colors,
             levels: self.levels,
             ui: self.ui,
             follow: self.main.follow,
-            wrap_details,
-            details_json_tree,
-            details_max_height,
-            details_tab_width,
+            wrap_details: self.details.wrap,
+            details_json_tree: self.details.json_tree,
+            details_max_height: self.details.max_height,
+            details_tab_width: self.details.tab_width,
             line_numbers: self.main.line_numbers,
             relative_line_numbers: self.main.relative_line_numbers,
             list_scrollbar_vertical: self.main.list_scrollbar_vertical,
             list_scrollbar_horizontal: self.main.list_scrollbar_horizontal,
-            sidebar_scrollbar_vertical,
-            sidebar_scrollbar_horizontal,
-            details_scrollbar_vertical,
+            sidebar_scrollbar_vertical: self.sidebar.scrollbar_vertical,
+            sidebar_scrollbar_horizontal: self.sidebar.scrollbar_horizontal,
+            details_scrollbar_vertical: self.details.scrollbar_vertical,
             border: self.main.border,
             autosave: self.main.autosave,
             autoreload: self.main.autoreload,
-            sidebar,
-            sidebar_width,
-            sidebar_position,
+            sidebar: self.sidebar.enabled,
+            sidebar_width: self.sidebar.width,
+            sidebar_position: self.sidebar.position,
             scroll_lines: self.main.scroll_lines,
             page_lines: self.main.page_lines,
             scroll_moves_selection: self.main.scroll_moves_selection,

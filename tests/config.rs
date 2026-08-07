@@ -189,53 +189,12 @@ scrollbar_horizontal = false
 }
 
 #[test]
-fn loads_legacy_main_sidebar_keys() {
+fn rejects_legacy_main_sidebar_keys() {
     let dir = std::env::temp_dir().join(format!("teleminator-sidebar-leg-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
-    fs::write(
-        &path,
-        r#"[main]
-sidebar = true
-sidebar_width = 40
-sidebar_position = "left"
-sidebar_scrollbar_vertical = false
-sidebar_scrollbar_horizontal = false
-"#,
-    )
-    .unwrap();
-    let (cfg, _) = Config::load_from(&path).unwrap();
-    assert!(cfg.sidebar);
-    assert_eq!(cfg.sidebar_width, 40);
-    assert_eq!(cfg.sidebar_position, SidebarPosition::Left);
-    assert!(!cfg.sidebar_scrollbar_vertical);
-    assert!(!cfg.sidebar_scrollbar_horizontal);
-    let _ = fs::remove_dir_all(&dir);
-}
-
-#[test]
-fn sidebar_section_wins_over_legacy_main() {
-    let dir = std::env::temp_dir().join(format!("teleminator-sidebar-win-{}", std::process::id()));
-    let _ = fs::create_dir_all(&dir);
-    let path = dir.join("config.toml");
-    fs::write(
-        &path,
-        r#"[main]
-sidebar = false
-sidebar_width = 40
-sidebar_position = "right"
-
-[sidebar]
-enabled = true
-width = 32
-position = "left"
-"#,
-    )
-    .unwrap();
-    let (cfg, _) = Config::load_from(&path).unwrap();
-    assert!(cfg.sidebar);
-    assert_eq!(cfg.sidebar_width, 32);
-    assert_eq!(cfg.sidebar_position, SidebarPosition::Left);
+    fs::write(&path, "[main]\nsidebar = true\nsidebar_width = 40\n").unwrap();
+    assert!(Config::load_from(&path).is_err());
     let _ = fs::remove_dir_all(&dir);
 }
 
@@ -399,50 +358,12 @@ scrollbar_vertical = false
 }
 
 #[test]
-fn loads_legacy_main_details_keys() {
+fn rejects_legacy_main_details_keys() {
     let dir = std::env::temp_dir().join(format!("teleminator-details-leg-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
-    fs::write(
-        &path,
-        r#"[main]
-wrap_details = false
-details_json_tree = false
-details_max_height = 16
-details_tab_width = 2
-details_scrollbar_vertical = false
-"#,
-    )
-    .unwrap();
-    let (cfg, _) = Config::load_from(&path).unwrap();
-    assert!(!cfg.wrap_details);
-    assert!(!cfg.details_json_tree);
-    assert_eq!(cfg.details_max_height, 16);
-    assert_eq!(cfg.details_tab_width, 2);
-    assert!(!cfg.details_scrollbar_vertical);
-    let _ = fs::remove_dir_all(&dir);
-}
-
-#[test]
-fn details_section_wins_over_legacy_main() {
-    let dir = std::env::temp_dir().join(format!("teleminator-details-win-{}", std::process::id()));
-    let _ = fs::create_dir_all(&dir);
-    let path = dir.join("config.toml");
-    fs::write(
-        &path,
-        r#"[main]
-wrap_details = true
-details_max_height = 40
-
-[details]
-wrap = false
-max_height = 10
-"#,
-    )
-    .unwrap();
-    let (cfg, _) = Config::load_from(&path).unwrap();
-    assert!(!cfg.wrap_details);
-    assert_eq!(cfg.details_max_height, 10);
+    fs::write(&path, "[main]\nwrap_details = false\ndetails_max_height = 16\n").unwrap();
+    assert!(Config::load_from(&path).is_err());
     let _ = fs::remove_dir_all(&dir);
 }
 

@@ -1,11 +1,11 @@
 
 ## Details
 
-Details overlay options are stored under `[details]` (`wrap`, `json_tree`, `max_height`, `tab_width`, `scrollbar_vertical`). Older configs that put `wrap_details`, `details_json_tree`, `details_max_height`, `details_tab_width`, or `details_scrollbar_vertical` under `[main]` still load; `[details]` wins when both are set. Autosave / `:config save` write the new section. `:config set` keeps the flat option names (`wrap_details`, `details_max_height`, …).
+Details overlay options are stored under `[details]` (`wrap`, `json_tree`, `max_height`, `tab_width`, `scrollbar_vertical`). `:config set` keeps the flat option names (`wrap_details`, `details_max_height`, …).
 
 ## Sidebar
 
-Filters sidebar options are stored under `[sidebar]` (`enabled`, `width`, `position`, `scrollbar_vertical`, `scrollbar_horizontal`). Older configs that put `sidebar`, `sidebar_width`, `sidebar_position`, or `sidebar_scrollbar_*` under `[main]` still load; `[sidebar]` wins when both are set. Autosave / `:config save` write the new section. `:config set` keeps the flat option names (`sidebar`, `sidebar_width`, …).
+Filters sidebar options are stored under `[sidebar]` (`enabled`, `width`, `position`, `scrollbar_vertical`, `scrollbar_horizontal`). `:config set` keeps the flat option names (`sidebar`, `sidebar_width`, …).
 
 ## Columns
 
