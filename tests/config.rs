@@ -393,21 +393,35 @@ horizontal = false
 }
 
 #[test]
-fn loads_view_main_scrollbar() {
+fn loads_view_main_section() {
     let dir = std::env::temp_dir().join(format!("teleminator-view-main-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
     fs::write(
         &path,
-        r#"[view.main.scrollbar]
+        r#"[view.main]
+tail_mode = false
+
+[view.main.scrollbar]
 vertical = false
 horizontal = false
 "#,
     )
     .unwrap();
     let (cfg, _) = Config::load_from(&path).unwrap();
+    assert!(!cfg.tail_mode);
     assert!(!cfg.list_scrollbar_vertical);
     assert!(!cfg.list_scrollbar_horizontal);
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn rejects_legacy_main_follow() {
+    let dir = std::env::temp_dir().join(format!("teleminator-follow-leg-{}", std::process::id()));
+    let _ = fs::create_dir_all(&dir);
+    let path = dir.join("config.toml");
+    fs::write(&path, "[main]\nfollow = false\n").unwrap();
+    assert!(Config::load_from(&path).is_err());
     let _ = fs::remove_dir_all(&dir);
 }
 
@@ -496,6 +510,7 @@ fn write_omits_default_keys() {
     assert!(!raw.contains("[keys]"));
     assert!(!raw.contains("[main]"));
     assert!(!raw.contains("follow = "));
+    assert!(!raw.contains("tail_mode = "));
     assert!(!raw.contains("wrap_details = "));
     assert!(!raw.contains("details_json_tree = "));
     assert!(!raw.contains("details_max_height = "));
@@ -676,19 +691,23 @@ fn write_emits_view_details_section_not_legacy_keys() {
 }
 
 #[test]
-fn write_emits_view_main_scrollbar() {
+fn write_emits_view_main_section() {
     let dir = std::env::temp_dir().join(format!("teleminator-write-main-bar-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
     let mut cfg = Config::default();
+    cfg.tail_mode = false;
     cfg.list_scrollbar_vertical = false;
     cfg.list_scrollbar_horizontal = false;
     cfg.write_to(&path).unwrap();
     let raw = fs::read_to_string(&path).unwrap();
+    assert!(raw.contains("[view.main]"));
+    assert!(raw.contains("tail_mode = false"));
     assert!(raw.contains("[view.main.scrollbar]"));
     assert!(raw.contains("vertical = false"));
     assert!(raw.contains("horizontal = false"));
     assert!(!raw.contains("list_scrollbar_"));
+    assert!(!raw.contains("follow = "));
     assert!(!raw.contains("[main]"));
     let _ = fs::remove_dir_all(&dir);
 }

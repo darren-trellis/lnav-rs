@@ -228,14 +228,14 @@ impl App {
 
     pub fn set_follow(&mut self, enabled: bool) {
         self.view.follow = enabled;
-        self.config.follow = enabled;
+        self.config.tail_mode = enabled;
         if enabled && self.display_len() > 0 {
             self.jump_to(self.display_len() - 1);
         }
         self.status_message = Some(if enabled {
-            "follow: on".into()
+            "view.main.tail_mode=on".into()
         } else {
-            "follow: off".into()
+            "view.main.tail_mode=off".into()
         });
     }
 

@@ -227,7 +227,8 @@ pub struct Config {
     /// Patches for theme `[ui]` (config root `[ui]`).
     pub ui: crate::theme::UiOverrides,
 
-    pub follow: bool,
+    /// When true, live-tail as the file or pipe grows (`[view.main] tail_mode`).
+    pub tail_mode: bool,
 
     /// When true, wrap the details overlay content.
     pub wrap_details: bool,
@@ -314,8 +315,6 @@ pub struct Config {
 #[serde(deny_unknown_fields)]
 struct MainConfig {
     #[serde(default = "default_true")]
-    follow: bool,
-    #[serde(default = "default_true")]
     border: bool,
     #[serde(default)]
     page_lines: usize,
@@ -326,7 +325,6 @@ struct MainConfig {
 impl Default for MainConfig {
     fn default() -> Self {
         Self {
-            follow: true,
             border: true,
             page_lines: 0,
             case_mode: CaseMode::default(),
@@ -368,11 +366,22 @@ impl Default for ScrollbarVerticalFileConfig {
 }
 
 /// Main-list view settings under `[view.main]`.
-#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 struct ViewMainFileConfig {
+    #[serde(default = "default_true")]
+    tail_mode: bool,
     #[serde(default)]
     scrollbar: ScrollbarAxesFileConfig,
+}
+
+impl Default for ViewMainFileConfig {
+    fn default() -> Self {
+        Self {
+            tail_mode: true,
+            scrollbar: ScrollbarAxesFileConfig::default(),
+        }
+    }
 }
 
 /// Pane layout settings under `[view]`.
@@ -563,7 +572,7 @@ impl ConfigDocument {
             colors: self.colors,
             levels: self.levels,
             ui: self.ui,
-            follow: self.main.follow,
+            tail_mode: self.view.main.tail_mode,
             wrap_details: self.view.details.wrap,
             details_json_tree: self.view.details.json_tree,
             details_max_height: self.view.details.max_height,
@@ -627,8 +636,6 @@ struct PersistedConfig<'a> {
 #[derive(Serialize)]
 struct PersistedMain {
     #[serde(skip_serializing_if = "Option::is_none")]
-    follow: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     border: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     page_lines: Option<usize>,
@@ -638,10 +645,7 @@ struct PersistedMain {
 
 impl PersistedMain {
     fn is_empty(&self) -> bool {
-        self.follow.is_none()
-            && self.border.is_none()
-            && self.page_lines.is_none()
-            && self.case_mode.is_none()
+        self.border.is_none() && self.page_lines.is_none() && self.case_mode.is_none()
     }
 }
 
@@ -663,13 +667,15 @@ impl PersistedView {
 
 #[derive(Serialize, Default)]
 struct PersistedViewMain {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tail_mode: Option<bool>,
     #[serde(skip_serializing_if = "PersistedScrollbarAxes::is_empty")]
     scrollbar: PersistedScrollbarAxes,
 }
 
 impl PersistedViewMain {
     fn is_empty(&self) -> bool {
-        self.scrollbar.is_empty()
+        self.tail_mode.is_none() && self.scrollbar.is_empty()
     }
 }
 
@@ -893,7 +899,6 @@ impl<'a> PersistedConfig<'a> {
 
         Self {
             main: PersistedMain {
-                follow: (config.follow != defaults.follow).then_some(config.follow),
                 border: (config.border != defaults.border).then_some(config.border),
                 page_lines: (config.page_lines != defaults.page_lines).then_some(config.page_lines),
                 case_mode: (config.case_mode != defaults.case_mode).then_some(config.case_mode),
@@ -908,6 +913,7 @@ impl<'a> PersistedConfig<'a> {
             },
             view: PersistedView {
                 main: PersistedViewMain {
+                    tail_mode: (config.tail_mode != defaults.tail_mode).then_some(config.tail_mode),
                     scrollbar: PersistedScrollbarAxes {
                         vertical: (config.list_scrollbar_vertical
                             != defaults.list_scrollbar_vertical)

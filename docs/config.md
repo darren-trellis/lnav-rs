@@ -8,10 +8,15 @@ Default path: `~/.config/teleminator/config.toml`.
 
 | Option | Values | Default | Description |
 |--------|--------|---------|-------------|
-| `follow` | `true` \| `false` | `true` | Live-tail as the file or pipe grows |
 | `border` | `true` \| `false` | `true` | Draw vertical rules between list columns (overridable per column) |
 | `page_lines` | integer `≥ 0` | `0` | Page up/down step (`0` = viewport height) |
 | `case_mode` | `"sensitive"` \| `"insensitive"` \| `"smart"` | `"smart"` | Case matching for `/` search and `:filter` (`"smartcase"` accepted as an alias for `"smart"`) |
+
+## `[view.main]`
+
+| Option | Values | Default | Description |
+|--------|--------|---------|-------------|
+| `tail_mode` | `true` \| `false` | `true` | Live-tail as the file or pipe grows |
 
 ## `[view.main.scrollbar]`
 

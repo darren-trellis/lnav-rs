@@ -110,10 +110,12 @@ Default path: `~/.config/teleminator/config.toml`
 
 ```toml
 [main]
-follow = true
 border = true
 page_lines = 0
 case_mode = "smart"   # or "sensitive" | "insensitive"
+
+[view.main]
+tail_mode = true
 
 [view.main.scrollbar]
 vertical = true
@@ -230,10 +232,10 @@ Log lines that carry both a `trace_id` and `span_id` (OpenTelemetry / Datadog-st
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `theme.name` | name | `catppuccin` | Color theme (see [Themes](#themes)) |
-| `main.follow` | `on` \| `off` \| `toggle` | `on` | Live-tail as the file or pipe grows |
 | `main.border` | `on` \| `off` \| `toggle` | `on` | Draw vertical rules between list columns |
 | `main.page_lines` | number | `0` | Page up/down step (`0` = viewport height) |
 | `main.case_mode` | `sensitive` \| `insensitive` \| `smart` | `smart` | Case matching for `/` search and `:filter` |
+| `view.main.tail_mode` | `on` \| `off` \| `toggle` | `on` | Live-tail as the file or pipe grows |
 | `view.main.scrollbar.vertical` | `on` \| `off` \| `toggle` | `on` | List vertical scrollbar |
 | `view.main.scrollbar.horizontal` | `on` \| `off` \| `toggle` | `on` | List horizontal scrollbar |
 | `view.details.wrap` | `on` \| `off` \| `toggle` | `on` | Wrap text in the details overlay |

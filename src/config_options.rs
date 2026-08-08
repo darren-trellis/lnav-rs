@@ -81,13 +81,6 @@ const OPTIONS: &[ConfigOption] = &[
         setter: set_theme,
     },
     ConfigOption {
-        name: "main.follow",
-        help: "on|off|toggle",
-        value_kind: ValueKind::Bool,
-        getter: get_follow,
-        setter: set_follow,
-    },
-    ConfigOption {
         name: "main.border",
         help: "on|off|toggle",
         value_kind: ValueKind::Bool,
@@ -177,6 +170,13 @@ const OPTIONS: &[ConfigOption] = &[
         value_kind: ValueKind::Bool,
         getter: get_scroll_moves_selection,
         setter: set_scroll_moves_selection,
+    },
+    ConfigOption {
+        name: "view.main.tail_mode",
+        help: "on|off|toggle",
+        value_kind: ValueKind::Bool,
+        getter: get_tail_mode,
+        setter: set_tail_mode,
     },
     ConfigOption {
         name: "view.main.scrollbar.vertical",
@@ -338,14 +338,14 @@ fn set_theme(app: &mut App, value: &str) -> bool {
         .is_some_and(|message| message.starts_with("error:"))
 }
 
-fn get_follow(app: &App) -> String {
+fn get_tail_mode(app: &App) -> String {
     on_off(app.view.follow)
 }
 
-fn set_follow(app: &mut App, value: &str) -> bool {
+fn set_tail_mode(app: &mut App, value: &str) -> bool {
     set_bool(
         app,
-        "main.follow",
+        "view.main.tail_mode",
         value,
         |app| app.view.follow,
         App::set_follow,

@@ -300,7 +300,7 @@ impl App {
                 visible: Vec::new(),
                 selected: 0,
                 scroll: 0,
-                follow: config.follow,
+                follow: config.tail_mode,
             },
             details: DetailsState {
                 visible: false,
@@ -1161,7 +1161,7 @@ impl App {
 
     pub(crate) fn save_config(&mut self) -> anyhow::Result<PathBuf> {
         self.config.theme.set_name(self.theme.name.clone());
-        self.config.follow = self.view.follow;
+        self.config.tail_mode = self.view.follow;
         let path = self.config.write_to(&self.config_path)?;
         self.rebind_config_watcher();
         self.suppress_config_reload(Duration::from_millis(750));
@@ -1197,7 +1197,7 @@ impl App {
         self.config = config;
         self.theme = theme;
         self.theme_index = theme_index;
-        self.view.follow = self.config.follow;
+        self.view.follow = self.config.tail_mode;
         self.sync_mouse_capture();
         self.mark_spans_dirty();
         if !self.config.sidebar && self.is_sidebar_focused() {
@@ -1315,7 +1315,7 @@ mod refresh_tests {
 
     fn app_for(path: &Path) -> App {
         let mut config = Config::default();
-        config.follow = false;
+        config.tail_mode = false;
         config.session_filters = false;
         let source = LogSource::open_file(path).unwrap();
         let config_path = path.parent().unwrap().join("config.toml");

@@ -2,6 +2,9 @@
 # case_mode = "insensitive"
 # border = true
 
+# [view.main]
+# tail_mode = true
+
 # [view.main.scrollbar]
 # vertical = true
 # horizontal = true

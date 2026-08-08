@@ -26,7 +26,7 @@ fn temp_log(name: &str, lines: &[&str]) -> (std::path::PathBuf, std::path::PathB
 
 fn app_for(path: &std::path::Path) -> App {
     let mut config = Config::default();
-    config.follow = false;
+    config.tail_mode = false;
     config.session_filters = false;
     let source = LogSource::open_file(path).unwrap();
     let config_path = path.parent().unwrap().join("config.toml");
@@ -467,7 +467,7 @@ fn delete_all_clears_stdin_buffer() {
 
     let source = LogSource::open_stdin(reader).unwrap();
     let mut config = Config::default();
-    config.follow = false;
+    config.tail_mode = false;
     config.session_filters = false;
     let mut app = App::new(source, config, std::env::temp_dir().join("teleminator-stdin-cfg.toml"))
         .unwrap();
