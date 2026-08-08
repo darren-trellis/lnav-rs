@@ -111,8 +111,6 @@ Default path: `~/.config/teleminator/config.toml`
 ```toml
 [main]
 follow = true
-line_numbers = false
-relative_line_numbers = false
 list_scrollbar_vertical = true
 list_scrollbar_horizontal = true
 border = true
@@ -123,6 +121,10 @@ timestamp_format = "%H:%M:%S"
 case_mode = "smart"   # or "sensitive" | "insensitive"
 session_filters = true
 session_stdin = true
+
+[line_numbers]
+enabled = false
+relative = false
 
 [mouse]
 enabled = true

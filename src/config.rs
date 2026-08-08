@@ -315,10 +315,6 @@ pub struct Config {
 struct MainConfig {
     #[serde(default = "default_true")]
     follow: bool,
-    #[serde(default)]
-    line_numbers: bool,
-    #[serde(default)]
-    relative_line_numbers: bool,
     #[serde(default = "default_true")]
     list_scrollbar_vertical: bool,
     #[serde(default = "default_true")]
@@ -345,8 +341,6 @@ impl Default for MainConfig {
     fn default() -> Self {
         Self {
             follow: true,
-            line_numbers: false,
-            relative_line_numbers: false,
             list_scrollbar_vertical: true,
             list_scrollbar_horizontal: true,
             border: true,
@@ -359,6 +353,16 @@ impl Default for MainConfig {
             session_stdin: true,
         }
     }
+}
+
+/// Line number gutter settings under `[line_numbers]` in `config.toml`.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+struct LineNumbersFileConfig {
+    #[serde(default)]
+    enabled: bool,
+    #[serde(default)]
+    relative: bool,
 }
 
 /// Mouse settings under `[mouse]` in `config.toml`.
@@ -439,7 +443,7 @@ impl Default for SidebarFileConfig {
     }
 }
 
-/// On-disk TOML shape: scalars live under `[main]` / `[details]` / `[sidebar]` / `[mouse]`.
+/// On-disk TOML shape: scalars live under `[main]` / `[details]` / `[sidebar]` / `[mouse]` / `[line_numbers]`.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct ConfigDocument {
@@ -451,6 +455,8 @@ struct ConfigDocument {
     sidebar: SidebarFileConfig,
     #[serde(default)]
     mouse: MouseFileConfig,
+    #[serde(default)]
+    line_numbers: LineNumbersFileConfig,
     #[serde(default)]
     theme: ThemeConfig,
     #[serde(default)]
@@ -477,8 +483,8 @@ impl ConfigDocument {
             details_json_tree: self.details.json_tree,
             details_max_height: self.details.max_height,
             details_tab_width: self.details.tab_width,
-            line_numbers: self.main.line_numbers,
-            relative_line_numbers: self.main.relative_line_numbers,
+            line_numbers: self.line_numbers.enabled,
+            relative_line_numbers: self.line_numbers.relative,
             list_scrollbar_vertical: self.main.list_scrollbar_vertical,
             list_scrollbar_horizontal: self.main.list_scrollbar_horizontal,
             sidebar_scrollbar_vertical: self.sidebar.scrollbar_vertical,
@@ -514,6 +520,8 @@ struct PersistedConfig<'a> {
     sidebar: PersistedSidebar,
     #[serde(skip_serializing_if = "PersistedMouse::is_empty")]
     mouse: PersistedMouse,
+    #[serde(skip_serializing_if = "PersistedLineNumbers::is_empty")]
+    line_numbers: PersistedLineNumbers,
     theme: &'a ThemeConfig,
     #[serde(skip_serializing_if = "crate::theme::ColorOverrides::is_empty")]
     colors: &'a crate::theme::ColorOverrides,
@@ -531,10 +539,6 @@ struct PersistedConfig<'a> {
 struct PersistedMain<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     follow: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    line_numbers: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    relative_line_numbers: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     list_scrollbar_vertical: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -560,8 +564,6 @@ struct PersistedMain<'a> {
 impl PersistedMain<'_> {
     fn is_empty(&self) -> bool {
         self.follow.is_none()
-            && self.line_numbers.is_none()
-            && self.relative_line_numbers.is_none()
             && self.list_scrollbar_vertical.is_none()
             && self.list_scrollbar_horizontal.is_none()
             && self.border.is_none()
@@ -638,6 +640,20 @@ impl PersistedMouse {
         self.enabled.is_none()
             && self.scroll_lines.is_none()
             && self.scroll_moves_selection.is_none()
+    }
+}
+
+#[derive(Serialize)]
+struct PersistedLineNumbers {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    enabled: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    relative: Option<bool>,
+}
+
+impl PersistedLineNumbers {
+    fn is_empty(&self) -> bool {
+        self.enabled.is_none() && self.relative.is_none()
     }
 }
 
@@ -719,11 +735,6 @@ impl<'a> PersistedConfig<'a> {
         Self {
             main: PersistedMain {
                 follow: (config.follow != defaults.follow).then_some(config.follow),
-                line_numbers: (config.line_numbers != defaults.line_numbers)
-                    .then_some(config.line_numbers),
-                relative_line_numbers: (config.relative_line_numbers
-                    != defaults.relative_line_numbers)
-                    .then_some(config.relative_line_numbers),
                 list_scrollbar_vertical: (config.list_scrollbar_vertical
                     != defaults.list_scrollbar_vertical)
                     .then_some(config.list_scrollbar_vertical),
@@ -748,6 +759,12 @@ impl<'a> PersistedConfig<'a> {
                 scroll_moves_selection: (config.scroll_moves_selection
                     != defaults.scroll_moves_selection)
                     .then_some(config.scroll_moves_selection),
+            },
+            line_numbers: PersistedLineNumbers {
+                enabled: (config.line_numbers != defaults.line_numbers)
+                    .then_some(config.line_numbers),
+                relative: (config.relative_line_numbers != defaults.relative_line_numbers)
+                    .then_some(config.relative_line_numbers),
             },
             details: PersistedDetails {
                 wrap: (config.wrap_details != defaults.wrap_details).then_some(config.wrap_details),
@@ -857,6 +874,7 @@ impl Default for Config {
             details: DetailsFileConfig::default(),
             sidebar: SidebarFileConfig::default(),
             mouse: MouseFileConfig::default(),
+            line_numbers: LineNumbersFileConfig::default(),
             theme: ThemeConfig::default(),
             colors: crate::theme::ColorOverrides::default(),
             levels: crate::theme::LevelOverrides::default(),

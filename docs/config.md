@@ -9,8 +9,6 @@ Default path: `~/.config/teleminator/config.toml`.
 | Option | Values | Default | Description |
 |--------|--------|---------|-------------|
 | `follow` | `true` \| `false` | `true` | Live-tail as the file or pipe grows |
-| `line_numbers` | `true` \| `false` | `false` | Absolute view line numbers in the gutter |
-| `relative_line_numbers` | `true` \| `false` | `false` | Relative (vim-style) line numbers |
 | `list_scrollbar_vertical` | `true` \| `false` | `true` | List vertical scrollbar |
 | `list_scrollbar_horizontal` | `true` \| `false` | `true` | List horizontal scrollbar |
 | `border` | `true` \| `false` | `true` | Draw vertical rules between list columns (overridable per column) |
@@ -49,6 +47,13 @@ Default path: `~/.config/teleminator/config.toml`.
 | `enabled` | `true` \| `false` | `true` | Enable terminal mouse capture (`:config set mouse`) |
 | `scroll_lines` | integer `≥ 1` | `1` | Mouse wheel step in lines |
 | `scroll_moves_selection` | `true` \| `false` | `true` | Wheel moves selection (`false` scrolls the viewport only) |
+
+## `[line_numbers]`
+
+| Option | Values | Default | Description |
+|--------|--------|---------|-------------|
+| `enabled` | `true` \| `false` | `false` | Absolute view line numbers in the gutter (`:config set line_numbers`) |
+| `relative` | `true` \| `false` | `false` | Relative (vim-style) line numbers (`:config set relative_line_numbers`) |
 
 ## `[theme]`
 

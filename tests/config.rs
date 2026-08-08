@@ -205,6 +205,53 @@ fn write_emits_mouse_section_not_main_keys() {
 }
 
 #[test]
+fn loads_line_numbers_section() {
+    let dir = std::env::temp_dir().join(format!("teleminator-ln-sec-{}", std::process::id()));
+    let _ = fs::create_dir_all(&dir);
+    let path = dir.join("config.toml");
+    fs::write(
+        &path,
+        r#"[line_numbers]
+enabled = true
+relative = true
+"#,
+    )
+    .unwrap();
+    let (cfg, _) = Config::load_from(&path).unwrap();
+    assert!(cfg.line_numbers);
+    assert!(cfg.relative_line_numbers);
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn rejects_legacy_main_line_numbers_keys() {
+    let dir = std::env::temp_dir().join(format!("teleminator-ln-leg-{}", std::process::id()));
+    let _ = fs::create_dir_all(&dir);
+    let path = dir.join("config.toml");
+    fs::write(&path, "[main]\nline_numbers = true\nrelative_line_numbers = true\n").unwrap();
+    assert!(Config::load_from(&path).is_err());
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn write_emits_line_numbers_section_not_main_keys() {
+    let dir = std::env::temp_dir().join(format!("teleminator-write-ln-{}", std::process::id()));
+    let _ = fs::create_dir_all(&dir);
+    let path = dir.join("config.toml");
+    let mut cfg = Config::default();
+    cfg.line_numbers = true;
+    cfg.relative_line_numbers = true;
+    cfg.write_to(&path).unwrap();
+    let raw = fs::read_to_string(&path).unwrap();
+    assert!(raw.contains("[line_numbers]"));
+    assert!(raw.contains("enabled = true"));
+    assert!(raw.contains("relative = true"));
+    assert!(!raw.contains("line_numbers = "));
+    assert!(!raw.contains("relative_line_numbers = "));
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn rejects_narrow_sidebar_width() {
     let dir = std::env::temp_dir().join(format!("teleminator-sidebar-w-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
@@ -310,6 +357,7 @@ fn write_omits_default_keys() {
     assert!(!raw.contains("[details]"));
     assert!(!raw.contains("[sidebar]"));
     assert!(!raw.contains("[mouse]"));
+    assert!(!raw.contains("[line_numbers]"));
     assert!(!raw.contains("sidebar_width = "));
     assert!(!raw.contains("scroll_moves_selection = "));
     assert!(!raw.contains("session_filters = "));
@@ -493,14 +541,12 @@ fn write_main_section_before_theme_tables_roundtrip() {
 
     cfg.write_to(&path).unwrap();
     let raw = fs::read_to_string(&path).unwrap();
-    let main_pos = raw.find("[main]").expect("[main] in file");
-    let line_nums_pos = raw
-        .find("line_numbers = true")
-        .expect("line_numbers in file");
+    let line_nums_pos = raw.find("[line_numbers]").expect("[line_numbers] in file");
+    let enabled_pos = raw.find("enabled = true").expect("enabled in file");
     let levels_pos = raw.find("[levels]").expect("[levels] in file");
     assert!(
-        main_pos < line_nums_pos && line_nums_pos < levels_pos,
-        "[main] line_numbers must appear before [levels]\n{raw}"
+        line_nums_pos < enabled_pos && enabled_pos < levels_pos,
+        "[line_numbers] enabled must appear before [levels]\n{raw}"
     );
 
     let (loaded, _) = Config::load_from(&path).unwrap();
