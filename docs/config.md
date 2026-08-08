@@ -1,39 +1,136 @@
+# Config reference
 
-## Details
+Default path: `~/.config/teleminator/config.toml`.
 
-Details overlay options are stored under `[details]` (`wrap`, `json_tree`, `max_height`, `tab_width`, `scrollbar_vertical`). `:config set` keeps the flat option names (`wrap_details`, `details_max_height`, …).
+`:config set` / `:config get` use flat option names for scalars (`wrap_details`, `sidebar_width`, …) even when the file key lives under a section.
 
-## Sidebar
+## `[main]`
 
-Filters sidebar options are stored under `[sidebar]` (`enabled`, `width`, `position`, `scrollbar_vertical`, `scrollbar_horizontal`). `:config set` keeps the flat option names (`sidebar`, `sidebar_width`, …).
+| Option | Values | Default | Description |
+|--------|--------|---------|-------------|
+| `follow` | `true` \| `false` | `true` | Live-tail as the file or pipe grows |
+| `line_numbers` | `true` \| `false` | `false` | Absolute view line numbers in the gutter |
+| `relative_line_numbers` | `true` \| `false` | `false` | Relative (vim-style) line numbers |
+| `list_scrollbar_vertical` | `true` \| `false` | `true` | List vertical scrollbar |
+| `list_scrollbar_horizontal` | `true` \| `false` | `true` | List horizontal scrollbar |
+| `border` | `true` \| `false` | `true` | Draw vertical rules between list columns (overridable per column) |
+| `autosave` | `true` \| `false` | `true` | Write `config.toml` after a successful `:config set` |
+| `autoreload` | `true` \| `false` | `true` | Reload when the config file changes on disk |
+| `scroll_lines` | integer `≥ 1` | `1` | Mouse wheel step in lines |
+| `page_lines` | integer `≥ 0` | `0` | Page up/down step (`0` = viewport height) |
+| `scroll_moves_selection` | `true` \| `false` | `true` | Wheel moves selection (`false` scrolls the viewport only) |
+| `timestamp_format` | strftime string \| `"raw"` | `"%H:%M:%S"` | Timestamp column format (`"raw"` keeps the log string) |
+| `case_mode` | `"sensitive"` \| `"insensitive"` \| `"smart"` | `"smart"` | Case matching for `/` search and `:filter` (`"smartcase"` accepted as an alias for `"smart"`) |
+| `session_filters` | `true` \| `false` | `true` | Persist filters per log file |
+| `session_stdin` | `true` \| `false` | `true` | Persist filters for stdin |
 
-## Columns
+## `[details]`
 
-`[[columns]]` define the list layout. `source` is a builtin (`level`, `timestamp`, `message`, `raw`, `line`, `format`) or a field path (`annotations.url`, `items.0.id`). Columns without `width` auto-size to the widest value in the current viewport so fields share an X position. Set `width` to fix/truncate; `align` is `"left"` (default), `"center"`, or `"right"`. `padding` is spaces around the cell (`1` for both sides, or `{ left = 1, right = 2 }`). Optional `border` / `border_color` / `border_width` / `border_padding` control the leading rule before that column (`border` overrides `[main].border`; omit to inherit). The first column’s border is also used between line numbers and the list. When the full row is wider than the list pane, `h`/`l` (or ←/→) scroll all columns together horizontally.
+| Option | Values | Default | Description |
+|--------|--------|---------|-------------|
+| `wrap` | `true` \| `false` | `true` | Wrap text in the details overlay (`:config set wrap_details`) |
+| `json_tree` | `true` \| `false` | `true` | Tree-view nested JSON in details (`:config set details_json_tree`) |
+| `max_height` | integer `≥ 4` | `24` | Max details overlay height in rows (`:config set details_max_height`; relative `+N`/`-N` are layout/content-capped) |
+| `tab_width` | integer `≥ 2` | `4` | Details tree indent width (`:config set details_tab_width`) |
+| `scrollbar_vertical` | `true` \| `false` | `true` | Details vertical scrollbar (`:config set details_scrollbar_vertical`) |
 
-## Themes and colors
+## `[sidebar]`
 
-`[theme]` selects the theme name. Optional `[colors]` / `[levels]` / `[ui]` patches at the config root use the same keys as `themes/*.toml` (not nested under `[theme]`).
+| Option | Values | Default | Description |
+|--------|--------|---------|-------------|
+| `enabled` | `true` \| `false` | `false` | Show filters/hidden sidebar (`:config set sidebar`) |
+| `width` | integer `≥ 12` | `28` | Preferred sidebar width in columns (`:config set sidebar_width`; relative adjusts show the sidebar) |
+| `position` | `"left"` \| `"right"` | `"right"` | Place the filters sidebar on the left or right of the main pane (`:config set sidebar_position`) |
+| `scrollbar_vertical` | `true` \| `false` | `true` | Sidebar vertical scrollbar (`:config set sidebar_scrollbar_vertical`) |
+| `scrollbar_horizontal` | `true` \| `false` | `true` | Sidebar horizontal scrollbar (`:config set sidebar_scrollbar_horizontal`) |
 
-Text colors (`foreground`, `border`, `window_focus_border`, `search_match`, `dim`, levels, and `[ui]` color keys) accept a hex string (fg only) or `{ fg = "...", bg = "..." }`. Surface keys (`background`, `overlay_bg`, `selection_*`, `status_*`) stay plain color strings.
+## `[theme]`
 
-Focused chrome: `window_focus_border` is the border of the focused pane (list or details); unfocused panes use `[colors].border`. List column separators: `[ui].border_color`, `[ui].border_width` (`0` = space between columns; `N` draws `N`× `│`), and `[ui].border_padding` (`1` or `{ left, right }`, like column `padding`), gated by `[main].border` unless a column sets `border = true|false`. The same rule is drawn between line numbers and the first column when line numbers are on.
+| Option | Values | Default | Description |
+|--------|--------|---------|-------------|
+| `name` | theme name | `"catppuccin"` | Color theme (bundled names or `~/.config/teleminator/themes/<name>.toml`) |
 
-Drop custom TOML themes in `~/.config/teleminator/themes/<name>.toml` (same shape as files in `themes/`), then `:config set theme <name>` or `:config set theme` for the picker.
+## `[colors]`
 
-Unknown keys, invalid colors, unknown theme names, and unknown keybinding commands are rejected.
+Optional patches over the selected theme. Omit a key to keep the theme default.
 
-## Keybindings
+Text colors accept a hex string (`"#cdd6f4"`, fg only) or `{ fg = "...", bg = "..." }`. Surface keys are plain color strings.
 
-`[keys]` overrides defaults (merged). Use `key = ""` to unbind. Chain commands with `;` (e.g. `r = "view details on; focus toggle"`). Special key names: `enter`, `esc`, `up`, `down`, `left`, `right`, `home`, `end`, `pagedown`, `pageup`, `space`, `backspace`, `S-backspace`, `C-c`, `D-` (Super/Command), combinable as `A-S-left`.
+| Option | Values | Default | Description |
+|--------|--------|---------|-------------|
+| `background` | color string | theme | Main background |
+| `foreground` | color / `{ fg, bg }` | theme | Default text |
+| `selection_bg` | color string | theme | Selection background |
+| `selection_fg` | color string | theme | Selection foreground |
+| `overlay_bg` | color string | theme | Details / modal overlay background |
+| `status_bg` | color string | theme | Status line background |
+| `status_fg` | color string | theme | Status line foreground |
+| `border` | color / `{ fg, bg }` | theme | Unfocused pane border |
+| `window_focus_border` | color / `{ fg, bg }` | theme | Focused pane border |
+| `search_match` | color / `{ fg, bg }` | theme | Search match highlight |
+| `dim` | color / `{ fg, bg }` | theme | Dimmed text |
 
-- `[keys.details]` overrides `[keys]` while the details overlay is focused.
-- `[keys.sidebar]` overrides `[keys]` while the filters sidebar is focused.
-- `[keys.spans]` overrides `[keys]` while the Spans tab tree is focused.
-- An empty binding in either contextual section blocks fallback to the same key in `[keys]`.
+## `[levels]`
 
-Keybinding-only commands (`nav`, `page`, `scroll`, `match`, `focus`, `search`, `command`) are listed in the README Commands section; they are omitted from `:` completions.
+Optional per-level colors. Each accepts a hex string or `{ fg = "...", bg = "..." }`. Omit a key to keep the theme default.
 
-Default resize chords (Alt/Option+Shift, encoded `A-S-…`) call `:config set` with relative values: `A-S-left`/`A-S-h` → `sidebar_width +1`, `A-S-right`/`A-S-l` → `sidebar_width -1`, `A-S-up`/`A-S-k` → `details_max_height +1`, `A-S-down`/`A-S-j` → `details_max_height -1`. Relative `details_max_height` adjusts are capped by content height and main viewport minus pinned rows minus 5; relative `sidebar_width` is capped to leave room for the list.
+| Option | Values | Default | Description |
+|--------|--------|---------|-------------|
+| `trace` | color / `{ fg, bg }` | theme | Trace level |
+| `debug` | color / `{ fg, bg }` | theme | Debug level |
+| `info` | color / `{ fg, bg }` | theme | Info level |
+| `warn` | color / `{ fg, bg }` | theme | Warn level |
+| `error` | color / `{ fg, bg }` | theme | Error level |
+| `fatal` | color / `{ fg, bg }` | theme | Fatal level |
+| `unknown` | color / `{ fg, bg }` | theme | Unknown / missing level |
 
-`?` / `:help` opens a cheatsheet modal (Esc / `q` / `?` closes; `j`/`k` and `h`/`l` scroll).
+## `[ui]`
+
+Optional UI / syntax colors and list column-separator chrome. Color keys accept a hex string or `{ fg, bg }`. Omit a key to keep the theme default.
+
+| Option | Values | Default | Description |
+|--------|--------|---------|-------------|
+| `timestamp` | color / `{ fg, bg }` | theme | Timestamp column / field color |
+| `key` | color / `{ fg, bg }` | theme | JSON / field key color |
+| `string` | color / `{ fg, bg }` | theme | String value color |
+| `number` | color / `{ fg, bg }` | theme | Number value color |
+| `bool` | color / `{ fg, bg }` | theme | Boolean value color |
+| `null` | color / `{ fg, bg }` | theme | Null value color |
+| `border_color` | color / `{ fg, bg }` | theme | List column separator color |
+| `border_width` | integer | theme (`1`) | Separator width (`0` = space; `N` draws `N`× `│`) |
+| `border_padding` | integer \| `{ left, right }` | theme (`1`) | Spaces around the separator |
+
+## `[[columns]]`
+
+Array of list columns. Defaults when omitted: `level` (width `5`, center, padding `1`), `timestamp`, `message`.
+
+| Option | Values | Default | Description |
+|--------|--------|---------|-------------|
+| `source` | builtin or field path | (required) | Builtin: `level`, `timestamp`, `message`, `raw`, `line`, `format`; or a field path like `annotations.url` |
+| `width` | integer | unset (auto) | Fixed width / truncate; omit to size to the widest value in the viewport |
+| `align` | `"left"` \| `"center"` \| `"right"` | `"left"` | Cell alignment |
+| `padding` | integer \| `{ left, right }` | `0` | Spaces around the cell (`1` = both sides) |
+| `border` | `true` \| `false` | inherit `[main].border` | Leading separator before this column |
+| `border_color` | color / `{ fg, bg }` | inherit `[ui].border_color` | Leading separator color |
+| `border_width` | integer | inherit `[ui].border_width` | Leading separator width |
+| `border_padding` | integer \| `{ left, right }` | inherit `[ui].border_padding` | Leading separator padding |
+
+## `[keys]`
+
+Key → command map, merged over built-in defaults. Use `key = ""` to unbind. Chain commands with `;`.
+
+| Option | Values | Default | Description |
+|--------|--------|---------|-------------|
+| *(key chord)* | command string \| `""` | built-in bindings | Override or unbind a key. Chords: `enter`, `esc`, `up`/`down`/`left`/`right`, `home`, `end`, `pagedown`, `pageup`, `space`, `backspace`, `S-backspace`, `C-c`, `D-…` (Super/Command), combinable as `A-S-left` |
+
+### `[keys.details]`
+
+Same shape as `[keys]`. Overrides `[keys]` while the details overlay is focused. An empty binding blocks fallback to `[keys]` for that chord.
+
+### `[keys.sidebar]`
+
+Same shape as `[keys]`. Overrides `[keys]` while the filters sidebar is focused. An empty binding blocks fallback to `[keys]` for that chord.
+
+### `[keys.spans]`
+
+Same shape as `[keys]`. Overrides `[keys]` while the Spans tab tree is focused. An empty binding blocks fallback to `[keys]` for that chord.
