@@ -768,7 +768,7 @@ fn set_option(app: &mut App, rest: &str) {
     }
     if option.set(app, value) {
         // Theme changes autosave inside `commit_theme`; other options save here.
-        if option.name != "theme" {
+        if option.name != "theme.name" {
             app.maybe_autosave();
         }
     }

@@ -499,7 +499,7 @@ impl App {
             self.status_message = Some(format!("unknown option: {name}"));
             return;
         };
-        if option.set(self, value) && option.name != "theme" {
+        if option.set(self, value) && option.name != "theme.name" {
             self.maybe_autosave();
         }
     }

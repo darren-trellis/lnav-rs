@@ -2,7 +2,7 @@
 
 Default path: `~/.config/teleminator/config.toml`.
 
-`:config set` / `:config get` use flat option names for scalars (`wrap_details`, `sidebar_width`, …) even when the file key lives under a section.
+`:config set` / `:config get` use dotted paths that match the file (`section.key`), e.g. `:config set line_numbers.enabled on`.
 
 ## `[main]`
 
@@ -27,33 +27,33 @@ Default path: `~/.config/teleminator/config.toml`.
 
 | Option | Values | Default | Description |
 |--------|--------|---------|-------------|
-| `filters` | `true` \| `false` | `true` | Persist filters for log files and stdin under `~/.local/share/teleminator/sessions/` (`:config set session_filters`) |
+| `filters` | `true` \| `false` | `true` | Persist filters for log files and stdin under `~/.local/share/teleminator/sessions/` |
 
 ## `[details]`
 
 | Option | Values | Default | Description |
 |--------|--------|---------|-------------|
-| `wrap` | `true` \| `false` | `true` | Wrap text in the details overlay (`:config set wrap_details`) |
-| `json_tree` | `true` \| `false` | `true` | Tree-view nested JSON in details (`:config set details_json_tree`) |
-| `max_height` | integer `≥ 4` | `24` | Max details overlay height in rows (`:config set details_max_height`; relative `+N`/`-N` are layout/content-capped) |
-| `tab_width` | integer `≥ 2` | `4` | Details tree indent width (`:config set details_tab_width`) |
-| `scrollbar_vertical` | `true` \| `false` | `true` | Details vertical scrollbar (`:config set details_scrollbar_vertical`) |
+| `wrap` | `true` \| `false` | `true` | Wrap text in the details overlay |
+| `json_tree` | `true` \| `false` | `true` | Tree-view nested JSON in details |
+| `max_height` | integer `≥ 4` | `24` | Max details overlay height in rows (relative `+N`/`-N` are layout/content-capped) |
+| `tab_width` | integer `≥ 2` | `4` | Details tree indent width |
+| `scrollbar_vertical` | `true` \| `false` | `true` | Details vertical scrollbar |
 
 ## `[sidebar]`
 
 | Option | Values | Default | Description |
 |--------|--------|---------|-------------|
-| `enabled` | `true` \| `false` | `false` | Show filters/hidden sidebar (`:config set sidebar`) |
-| `width` | integer `≥ 12` | `28` | Preferred sidebar width in columns (`:config set sidebar_width`; relative adjusts show the sidebar) |
-| `position` | `"left"` \| `"right"` | `"right"` | Place the filters sidebar on the left or right of the main pane (`:config set sidebar_position`) |
-| `scrollbar_vertical` | `true` \| `false` | `true` | Sidebar vertical scrollbar (`:config set sidebar_scrollbar_vertical`) |
-| `scrollbar_horizontal` | `true` \| `false` | `true` | Sidebar horizontal scrollbar (`:config set sidebar_scrollbar_horizontal`) |
+| `enabled` | `true` \| `false` | `false` | Show filters/hidden sidebar |
+| `width` | integer `≥ 12` | `28` | Preferred sidebar width in columns (relative adjusts show the sidebar) |
+| `position` | `"left"` \| `"right"` | `"right"` | Place the filters sidebar on the left or right of the main pane |
+| `scrollbar_vertical` | `true` \| `false` | `true` | Sidebar vertical scrollbar |
+| `scrollbar_horizontal` | `true` \| `false` | `true` | Sidebar horizontal scrollbar |
 
 ## `[mouse]`
 
 | Option | Values | Default | Description |
 |--------|--------|---------|-------------|
-| `enabled` | `true` \| `false` | `true` | Enable terminal mouse capture (`:config set mouse`) |
+| `enabled` | `true` \| `false` | `true` | Enable terminal mouse capture |
 | `scroll_lines` | integer `≥ 1` | `1` | Mouse wheel step in lines |
 | `scroll_moves_selection` | `true` \| `false` | `true` | Wheel moves selection (`false` scrolls the viewport only) |
 
@@ -61,8 +61,8 @@ Default path: `~/.config/teleminator/config.toml`.
 
 | Option | Values | Default | Description |
 |--------|--------|---------|-------------|
-| `enabled` | `true` \| `false` | `false` | Absolute view line numbers in the gutter (`:config set line_numbers`) |
-| `relative` | `true` \| `false` | `false` | Relative (vim-style) line numbers (`:config set relative_line_numbers`) |
+| `enabled` | `true` \| `false` | `false` | Absolute view line numbers in the gutter |
+| `relative` | `true` \| `false` | `false` | Relative (vim-style) line numbers |
 
 ## `[theme]`
 

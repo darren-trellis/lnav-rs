@@ -74,186 +74,186 @@ impl ConfigOption {
 
 const OPTIONS: &[ConfigOption] = &[
     ConfigOption {
-        name: "theme",
+        name: "theme.name",
         help: "theme name",
         value_kind: ValueKind::Theme,
         getter: get_theme,
         setter: set_theme,
     },
     ConfigOption {
-        name: "follow",
+        name: "main.follow",
         help: "on|off|toggle",
         value_kind: ValueKind::Bool,
         getter: get_follow,
         setter: set_follow,
     },
     ConfigOption {
-        name: "wrap_details",
-        help: "on|off|toggle",
-        value_kind: ValueKind::Bool,
-        getter: get_wrap_details,
-        setter: set_wrap_details,
-    },
-    ConfigOption {
-        name: "details_json_tree",
-        help: "on|off|toggle",
-        value_kind: ValueKind::Bool,
-        getter: get_details_json_tree,
-        setter: set_details_json_tree,
-    },
-    ConfigOption {
-        name: "details_max_height",
-        help: "max overlay rows",
-        value_kind: ValueKind::Unsigned,
-        getter: get_details_max_height,
-        setter: set_details_max_height,
-    },
-    ConfigOption {
-        name: "details_tab_width",
-        help: "tree indent columns",
-        value_kind: ValueKind::Unsigned,
-        getter: get_details_tab_width,
-        setter: set_details_tab_width,
-    },
-    ConfigOption {
-        name: "line_numbers",
-        help: "on|off|toggle",
-        value_kind: ValueKind::Bool,
-        getter: get_line_numbers,
-        setter: set_line_numbers,
-    },
-    ConfigOption {
-        name: "relative_line_numbers",
-        help: "on|off|toggle",
-        value_kind: ValueKind::Bool,
-        getter: get_relative_line_numbers,
-        setter: set_relative_line_numbers,
-    },
-    ConfigOption {
-        name: "list_scrollbar_vertical",
+        name: "main.list_scrollbar_vertical",
         help: "on|off|toggle",
         value_kind: ValueKind::Bool,
         getter: get_list_scrollbar_vertical,
         setter: set_list_scrollbar_vertical,
     },
     ConfigOption {
-        name: "list_scrollbar_horizontal",
+        name: "main.list_scrollbar_horizontal",
         help: "on|off|toggle",
         value_kind: ValueKind::Bool,
         getter: get_list_scrollbar_horizontal,
         setter: set_list_scrollbar_horizontal,
     },
     ConfigOption {
-        name: "sidebar_scrollbar_vertical",
-        help: "on|off|toggle",
-        value_kind: ValueKind::Bool,
-        getter: get_sidebar_scrollbar_vertical,
-        setter: set_sidebar_scrollbar_vertical,
-    },
-    ConfigOption {
-        name: "sidebar_scrollbar_horizontal",
-        help: "on|off|toggle",
-        value_kind: ValueKind::Bool,
-        getter: get_sidebar_scrollbar_horizontal,
-        setter: set_sidebar_scrollbar_horizontal,
-    },
-    ConfigOption {
-        name: "details_scrollbar_vertical",
-        help: "on|off|toggle",
-        value_kind: ValueKind::Bool,
-        getter: get_details_scrollbar_vertical,
-        setter: set_details_scrollbar_vertical,
-    },
-    ConfigOption {
-        name: "border",
+        name: "main.border",
         help: "on|off|toggle",
         value_kind: ValueKind::Bool,
         getter: get_border,
         setter: set_border,
     },
     ConfigOption {
-        name: "autosave",
-        help: "on|off|toggle",
-        value_kind: ValueKind::Bool,
-        getter: get_autosave,
-        setter: set_autosave,
-    },
-    ConfigOption {
-        name: "autoreload",
-        help: "on|off|toggle",
-        value_kind: ValueKind::Bool,
-        getter: get_autoreload,
-        setter: set_autoreload,
-    },
-    ConfigOption {
-        name: "sidebar",
-        help: "on|off|toggle",
-        value_kind: ValueKind::Bool,
-        getter: get_sidebar,
-        setter: set_sidebar,
-    },
-    ConfigOption {
-        name: "sidebar_width",
-        help: "sidebar columns",
-        value_kind: ValueKind::Unsigned,
-        getter: get_sidebar_width,
-        setter: set_sidebar_width,
-    },
-    ConfigOption {
-        name: "sidebar_position",
-        help: "left|right",
-        value_kind: ValueKind::SidebarPosition,
-        getter: get_sidebar_position,
-        setter: set_sidebar_position,
-    },
-    ConfigOption {
-        name: "mouse",
-        help: "on|off|toggle",
-        value_kind: ValueKind::Bool,
-        getter: get_mouse,
-        setter: set_mouse,
-    },
-    ConfigOption {
-        name: "scroll_lines",
-        help: "mouse wheel step",
-        value_kind: ValueKind::Unsigned,
-        getter: get_scroll_lines,
-        setter: set_scroll_lines,
-    },
-    ConfigOption {
-        name: "page_lines",
+        name: "main.page_lines",
         help: "page up/down step (0 = viewport)",
         value_kind: ValueKind::Unsigned,
         getter: get_page_lines,
         setter: set_page_lines,
     },
     ConfigOption {
-        name: "scroll_moves_selection",
-        help: "on|off|toggle",
-        value_kind: ValueKind::Bool,
-        getter: get_scroll_moves_selection,
-        setter: set_scroll_moves_selection,
-    },
-    ConfigOption {
-        name: "timestamp_format",
+        name: "main.timestamp_format",
         help: "strftime or raw",
         value_kind: ValueKind::TimestampFormat,
         getter: get_timestamp_format,
         setter: set_timestamp_format,
     },
     ConfigOption {
-        name: "case_mode",
+        name: "main.case_mode",
         help: "sensitive|insensitive|smart",
         value_kind: ValueKind::CaseMode,
         getter: get_case_mode,
         setter: set_case_mode,
     },
     ConfigOption {
-        name: "session_filters",
+        name: "config.autosave",
+        help: "on|off|toggle",
+        value_kind: ValueKind::Bool,
+        getter: get_autosave,
+        setter: set_autosave,
+    },
+    ConfigOption {
+        name: "config.autoreload",
+        help: "on|off|toggle",
+        value_kind: ValueKind::Bool,
+        getter: get_autoreload,
+        setter: set_autoreload,
+    },
+    ConfigOption {
+        name: "persist.filters",
         help: "on|off|toggle",
         value_kind: ValueKind::Bool,
         getter: get_session_filters,
         setter: set_session_filters,
+    },
+    ConfigOption {
+        name: "line_numbers.enabled",
+        help: "on|off|toggle",
+        value_kind: ValueKind::Bool,
+        getter: get_line_numbers,
+        setter: set_line_numbers,
+    },
+    ConfigOption {
+        name: "line_numbers.relative",
+        help: "on|off|toggle",
+        value_kind: ValueKind::Bool,
+        getter: get_relative_line_numbers,
+        setter: set_relative_line_numbers,
+    },
+    ConfigOption {
+        name: "mouse.enabled",
+        help: "on|off|toggle",
+        value_kind: ValueKind::Bool,
+        getter: get_mouse,
+        setter: set_mouse,
+    },
+    ConfigOption {
+        name: "mouse.scroll_lines",
+        help: "mouse wheel step",
+        value_kind: ValueKind::Unsigned,
+        getter: get_scroll_lines,
+        setter: set_scroll_lines,
+    },
+    ConfigOption {
+        name: "mouse.scroll_moves_selection",
+        help: "on|off|toggle",
+        value_kind: ValueKind::Bool,
+        getter: get_scroll_moves_selection,
+        setter: set_scroll_moves_selection,
+    },
+    ConfigOption {
+        name: "details.wrap",
+        help: "on|off|toggle",
+        value_kind: ValueKind::Bool,
+        getter: get_wrap_details,
+        setter: set_wrap_details,
+    },
+    ConfigOption {
+        name: "details.json_tree",
+        help: "on|off|toggle",
+        value_kind: ValueKind::Bool,
+        getter: get_details_json_tree,
+        setter: set_details_json_tree,
+    },
+    ConfigOption {
+        name: "details.max_height",
+        help: "max overlay rows",
+        value_kind: ValueKind::Unsigned,
+        getter: get_details_max_height,
+        setter: set_details_max_height,
+    },
+    ConfigOption {
+        name: "details.tab_width",
+        help: "tree indent columns",
+        value_kind: ValueKind::Unsigned,
+        getter: get_details_tab_width,
+        setter: set_details_tab_width,
+    },
+    ConfigOption {
+        name: "details.scrollbar_vertical",
+        help: "on|off|toggle",
+        value_kind: ValueKind::Bool,
+        getter: get_details_scrollbar_vertical,
+        setter: set_details_scrollbar_vertical,
+    },
+    ConfigOption {
+        name: "sidebar.enabled",
+        help: "on|off|toggle",
+        value_kind: ValueKind::Bool,
+        getter: get_sidebar,
+        setter: set_sidebar,
+    },
+    ConfigOption {
+        name: "sidebar.width",
+        help: "sidebar columns",
+        value_kind: ValueKind::Unsigned,
+        getter: get_sidebar_width,
+        setter: set_sidebar_width,
+    },
+    ConfigOption {
+        name: "sidebar.position",
+        help: "left|right",
+        value_kind: ValueKind::SidebarPosition,
+        getter: get_sidebar_position,
+        setter: set_sidebar_position,
+    },
+    ConfigOption {
+        name: "sidebar.scrollbar_vertical",
+        help: "on|off|toggle",
+        value_kind: ValueKind::Bool,
+        getter: get_sidebar_scrollbar_vertical,
+        setter: set_sidebar_scrollbar_vertical,
+    },
+    ConfigOption {
+        name: "sidebar.scrollbar_horizontal",
+        help: "on|off|toggle",
+        value_kind: ValueKind::Bool,
+        getter: get_sidebar_scrollbar_horizontal,
+        setter: set_sidebar_scrollbar_horizontal,
     },
 ];
 
@@ -270,11 +270,11 @@ pub fn find(name: &str) -> Option<&'static ConfigOption> {
 /// Minimum accepted value for unsigned config options (for spinner adjust).
 pub fn unsigned_min(name: &str) -> usize {
     match name {
-        "details_max_height" => 4,
-        "details_tab_width" => 2,
-        "sidebar_width" => crate::config::default_sidebar_width_min(),
-        "scroll_lines" => 1,
-        "page_lines" => 0,
+        "details.max_height" => 4,
+        "details.tab_width" => 2,
+        "sidebar.width" => crate::config::default_sidebar_width_min(),
+        "mouse.scroll_lines" => 1,
+        "main.page_lines" => 0,
         _ => 0,
     }
 }
@@ -338,7 +338,7 @@ fn get_follow(app: &App) -> String {
 fn set_follow(app: &mut App, value: &str) -> bool {
     set_bool(
         app,
-        "follow",
+        "main.follow",
         value,
         |app| app.view.follow,
         App::set_follow,
@@ -353,7 +353,7 @@ fn get_wrap_details(app: &App) -> String {
 fn set_wrap_details(app: &mut App, value: &str) -> bool {
     set_bool(
         app,
-        "wrap_details",
+        "details.wrap",
         value,
         |app| app.config.wrap_details,
         |app, enabled| app.config.wrap_details = enabled,
@@ -368,7 +368,7 @@ fn get_details_json_tree(app: &App) -> String {
 fn set_details_json_tree(app: &mut App, value: &str) -> bool {
     set_bool(
         app,
-        "details_json_tree",
+        "details.json_tree",
         value,
         |app| app.config.details_json_tree,
         |app, enabled| {
@@ -400,18 +400,18 @@ fn set_details_max_height(app: &mut App, value: &str) -> bool {
         if !app.details.visible {
             app.open_details();
         }
-        app.status_message = Some(format!("details_max_height={next}"));
+        app.status_message = Some(format!("details.max_height={next}"));
         return true;
     }
     match value.parse::<usize>() {
         Ok(height) if height >= MIN => {
             app.config.details_max_height = height;
-            app.status_message = Some(format!("details_max_height={height}"));
+            app.status_message = Some(format!("details.max_height={height}"));
             true
         }
         _ => {
             app.status_message = Some(
-                "usage: :config set details_max_height N|+N|-N (N >= 4)".into(),
+                "usage: :config set details.max_height N|+N|-N (N >= 4)".into(),
             );
             false
         }
@@ -426,11 +426,11 @@ fn set_details_tab_width(app: &mut App, value: &str) -> bool {
     match value.parse::<usize>() {
         Ok(width) if width >= 2 => {
             app.config.details_tab_width = width;
-            app.status_message = Some(format!("details_tab_width={width}"));
+            app.status_message = Some(format!("details.tab_width={width}"));
             true
         }
         _ => {
-            app.status_message = Some("usage: :config set details_tab_width N (N >= 2)".into());
+            app.status_message = Some("usage: :config set details.tab_width N (N >= 2)".into());
             false
         }
     }
@@ -443,7 +443,7 @@ fn get_line_numbers(app: &App) -> String {
 fn set_line_numbers(app: &mut App, value: &str) -> bool {
     set_bool(
         app,
-        "line_numbers",
+        "line_numbers.enabled",
         value,
         |app| app.config.line_numbers,
         |app, enabled| app.config.line_numbers = enabled,
@@ -458,7 +458,7 @@ fn get_relative_line_numbers(app: &App) -> String {
 fn set_relative_line_numbers(app: &mut App, value: &str) -> bool {
     set_bool(
         app,
-        "relative_line_numbers",
+        "line_numbers.relative",
         value,
         |app| app.config.relative_line_numbers,
         |app, enabled| app.config.relative_line_numbers = enabled,
@@ -473,7 +473,7 @@ fn get_list_scrollbar_vertical(app: &App) -> String {
 fn set_list_scrollbar_vertical(app: &mut App, value: &str) -> bool {
     set_bool(
         app,
-        "list_scrollbar_vertical",
+        "main.list_scrollbar_vertical",
         value,
         |app| app.config.list_scrollbar_vertical,
         |app, enabled| app.config.list_scrollbar_vertical = enabled,
@@ -488,7 +488,7 @@ fn get_list_scrollbar_horizontal(app: &App) -> String {
 fn set_list_scrollbar_horizontal(app: &mut App, value: &str) -> bool {
     set_bool(
         app,
-        "list_scrollbar_horizontal",
+        "main.list_scrollbar_horizontal",
         value,
         |app| app.config.list_scrollbar_horizontal,
         |app, enabled| app.config.list_scrollbar_horizontal = enabled,
@@ -503,7 +503,7 @@ fn get_sidebar_scrollbar_vertical(app: &App) -> String {
 fn set_sidebar_scrollbar_vertical(app: &mut App, value: &str) -> bool {
     set_bool(
         app,
-        "sidebar_scrollbar_vertical",
+        "sidebar.scrollbar_vertical",
         value,
         |app| app.config.sidebar_scrollbar_vertical,
         |app, enabled| app.config.sidebar_scrollbar_vertical = enabled,
@@ -518,7 +518,7 @@ fn get_sidebar_scrollbar_horizontal(app: &App) -> String {
 fn set_sidebar_scrollbar_horizontal(app: &mut App, value: &str) -> bool {
     set_bool(
         app,
-        "sidebar_scrollbar_horizontal",
+        "sidebar.scrollbar_horizontal",
         value,
         |app| app.config.sidebar_scrollbar_horizontal,
         |app, enabled| app.config.sidebar_scrollbar_horizontal = enabled,
@@ -533,7 +533,7 @@ fn get_details_scrollbar_vertical(app: &App) -> String {
 fn set_details_scrollbar_vertical(app: &mut App, value: &str) -> bool {
     set_bool(
         app,
-        "details_scrollbar_vertical",
+        "details.scrollbar_vertical",
         value,
         |app| app.config.details_scrollbar_vertical,
         |app, enabled| app.config.details_scrollbar_vertical = enabled,
@@ -548,7 +548,7 @@ fn get_border(app: &App) -> String {
 fn set_border(app: &mut App, value: &str) -> bool {
     set_bool(
         app,
-        "border",
+        "main.border",
         value,
         |app| app.config.border,
         |app, enabled| app.config.border = enabled,
@@ -563,7 +563,7 @@ fn get_autosave(app: &App) -> String {
 fn set_autosave(app: &mut App, value: &str) -> bool {
     set_bool(
         app,
-        "autosave",
+        "config.autosave",
         value,
         |app| app.config.autosave,
         |app, enabled| app.config.autosave = enabled,
@@ -578,7 +578,7 @@ fn get_autoreload(app: &App) -> String {
 fn set_autoreload(app: &mut App, value: &str) -> bool {
     set_bool(
         app,
-        "autoreload",
+        "config.autoreload",
         value,
         |app| app.config.autoreload,
         |app, enabled| app.config.autoreload = enabled,
@@ -593,7 +593,7 @@ fn get_sidebar(app: &App) -> String {
 fn set_sidebar(app: &mut App, value: &str) -> bool {
     set_bool(
         app,
-        "sidebar",
+        "sidebar.enabled",
         value,
         |app| app.config.sidebar,
         |app, enabled| {
@@ -624,11 +624,11 @@ fn get_sidebar_position(app: &App) -> String {
 
 fn set_sidebar_position(app: &mut App, value: &str) -> bool {
     let Some(position) = SidebarPosition::parse(value) else {
-        app.status_message = Some("usage: :config set sidebar_position left|right".into());
+        app.status_message = Some("usage: :config set sidebar.position left|right".into());
         return false;
     };
     app.config.sidebar_position = position;
-    app.status_message = Some(format!("sidebar_position={}", position.as_str()));
+    app.status_message = Some(format!("sidebar.position={}", position.as_str()));
     true
 }
 
@@ -641,18 +641,18 @@ fn set_sidebar_width(app: &mut App, value: &str) -> bool {
         let next = (current as isize + delta).clamp(min as isize, max as isize) as usize;
         app.config.sidebar_width = next;
         app.config.sidebar = true;
-        app.status_message = Some(format!("sidebar_width={next}"));
+        app.status_message = Some(format!("sidebar.width={next}"));
         return true;
     }
     match value.parse::<usize>() {
         Ok(width) if width >= min => {
             app.config.sidebar_width = width;
-            app.status_message = Some(format!("sidebar_width={width}"));
+            app.status_message = Some(format!("sidebar.width={width}"));
             true
         }
         _ => {
             app.status_message = Some(format!(
-                "usage: :config set sidebar_width N|+N|-N (N >= {min})"
+                "usage: :config set sidebar.width N|+N|-N (N >= {min})"
             ));
             false
         }
@@ -678,7 +678,7 @@ fn get_mouse(app: &App) -> String {
 fn set_mouse(app: &mut App, value: &str) -> bool {
     set_bool(
         app,
-        "mouse",
+        "mouse.enabled",
         value,
         |app| app.config.mouse,
         |app, enabled| {
@@ -698,12 +698,12 @@ fn get_scroll_lines(app: &App) -> String {
 fn set_scroll_lines(app: &mut App, value: &str) -> bool {
     match value.parse::<usize>() {
         Ok(0) | Err(_) => {
-            app.status_message = Some("usage: :config set scroll_lines N (N >= 1)".into());
+            app.status_message = Some("usage: :config set mouse.scroll_lines N (N >= 1)".into());
             false
         }
         Ok(lines) => {
             app.config.scroll_lines = lines;
-            app.status_message = Some(format!("scroll_lines={lines}"));
+            app.status_message = Some(format!("mouse.scroll_lines={lines}"));
             true
         }
     }
@@ -717,15 +717,15 @@ fn set_page_lines(app: &mut App, value: &str) -> bool {
     match value.parse::<usize>() {
         Err(_) => {
             app.status_message =
-                Some("usage: :config set page_lines N (0 = viewport height)".into());
+                Some("usage: :config set main.page_lines N (0 = viewport height)".into());
             false
         }
         Ok(lines) => {
             app.config.page_lines = lines;
             app.status_message = Some(if lines == 0 {
-                "page_lines=0 (viewport)".into()
+                "main.page_lines=0 (viewport)".into()
             } else {
-                format!("page_lines={lines}")
+                format!("main.page_lines={lines}")
             });
             true
         }
@@ -739,7 +739,7 @@ fn get_scroll_moves_selection(app: &App) -> String {
 fn set_scroll_moves_selection(app: &mut App, value: &str) -> bool {
     set_bool(
         app,
-        "scroll_moves_selection",
+        "mouse.scroll_moves_selection",
         value,
         |app| app.config.scroll_moves_selection,
         |app, enabled| app.config.scroll_moves_selection = enabled,
@@ -753,7 +753,7 @@ fn get_timestamp_format(app: &App) -> String {
 
 fn set_timestamp_format(app: &mut App, value: &str) -> bool {
     app.config.timestamp_format = value.to_string();
-    app.status_message = Some(format!("timestamp_format={}", app.config.timestamp_format));
+    app.status_message = Some(format!("main.timestamp_format={}", app.config.timestamp_format));
     true
 }
 
@@ -764,7 +764,7 @@ fn get_case_mode(app: &App) -> String {
 fn set_case_mode(app: &mut App, value: &str) -> bool {
     let Some(mode) = CaseMode::parse(value) else {
         app.status_message =
-            Some("usage: :config set case_mode sensitive|insensitive|smart".into());
+            Some("usage: :config set main.case_mode sensitive|insensitive|smart".into());
         return false;
     };
     app.config.case_mode = mode;
@@ -772,7 +772,7 @@ fn set_case_mode(app: &mut App, value: &str) -> bool {
         app.status_message = Some(error);
         false
     } else {
-        app.status_message = Some(format!("case_mode={}", mode.as_str()));
+        app.status_message = Some(format!("main.case_mode={}", mode.as_str()));
         true
     }
 }
@@ -784,7 +784,7 @@ fn get_session_filters(app: &App) -> String {
 fn set_session_filters(app: &mut App, value: &str) -> bool {
     set_bool(
         app,
-        "session_filters",
+        "persist.filters",
         value,
         |app| app.config.session_filters,
         |app, enabled| app.config.session_filters = enabled,

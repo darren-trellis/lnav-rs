@@ -74,7 +74,8 @@ fn completes_config_set_get() {
     assert!(items.iter().any(|s| s.text == "set"));
     assert!(items.iter().any(|s| s.text == "get"));
     let keys = config_suggestions("get ", 4);
-    assert!(keys.iter().any(|s| s.text == "follow"));
+    assert!(keys.iter().any(|s| s.text == "main.follow"));
+    assert!(keys.iter().any(|s| s.text == "line_numbers.enabled"));
 }
 
 #[test]

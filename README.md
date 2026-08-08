@@ -68,8 +68,8 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 | `d` | `hide` operator — `dd` current, `dj`/`dG`/… range; in sidebar `dd` deletes filter / unhides line (`dj`/`dG`/… range over sidebar rows) |
 | `Backspace` | `hide line` (same as `dd`; accepts a count); in sidebar `filter delete line` (unhides if on a hidden row) |
 | `Shift+Backspace` | `delete line` (same as `DD`; accepts a count); in sidebar deletes the selected hidden line |
-| `Alt+Shift+←/→` / `h`/`l` | `config set sidebar_width +1` / `-1` (← grows, → shrinks; accepts a count) |
-| `Alt+Shift+↑/↓` / `k`/`j` | `config set details_max_height +1` / `-1` (capped by content/layout; accepts a count) |
+| `Alt+Shift+←/→` / `h`/`l` | `config set sidebar.width +1` / `-1` (← grows, → shrinks; accepts a count) |
+| `Alt+Shift+↑/↓` / `k`/`j` | `config set details.max_height +1` / `-1` (capped by content/layout; accepts a count) |
 | `p` | `pin` — toggle sticky pin at top of list (accepts a count) |
 | `D` | `delete` operator — `DD` current, `Dj`/`DG`/… range (in-place; safe with `tee -a`); in sidebar `DD`/`Dj`/`DG`/… deletes hidden lines or lines matching selected filter(s) |
 | `Ctrl+L` | `delete all` — clear every line (rewrites the file, or drops the in-memory stdin buffer) |
@@ -216,34 +216,36 @@ Log lines that carry both a `trace_id` and `span_id` (OpenTelemetry / Datadog-st
 
 ## Options
 
+`:config set` / `:config get` keys match the TOML path (`section.key`). Full tables: [config reference](docs/config.md).
+
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `theme` | name | `catppuccin` | Color theme (see [Themes](#themes)) |
-| `follow` | `on` \| `off` \| `toggle` | `on` | Live-tail as the file or pipe grows |
-| `wrap_details` | `on` \| `off` \| `toggle` | `on` | Wrap text in the details overlay |
-| `details_json_tree` | `on` \| `off` \| `toggle` | `on` | Tree-view nested JSON in details |
-| `details_max_height` | number \| `+N`/`-N` | `24` | Max details overlay height in rows (relative adjusts are layout/content-capped) |
-| `details_tab_width` | number | `4` | Details tree indent width (min `2`) |
-| `line_numbers` | `on` \| `off` \| `toggle` | `off` | Absolute view line numbers in the gutter |
-| `relative_line_numbers` | `on` \| `off` \| `toggle` | `off` | Relative (vim-style) line numbers |
-| `list_scrollbar_vertical` | `on` \| `off` \| `toggle` | `on` | List vertical scrollbar |
-| `list_scrollbar_horizontal` | `on` \| `off` \| `toggle` | `on` | List horizontal scrollbar |
-| `sidebar_scrollbar_vertical` | `on` \| `off` \| `toggle` | `on` | Sidebar vertical scrollbar |
-| `sidebar_scrollbar_horizontal` | `on` \| `off` \| `toggle` | `on` | Sidebar horizontal scrollbar |
-| `details_scrollbar_vertical` | `on` \| `off` \| `toggle` | `on` | Details vertical scrollbar |
-| `border` | `on` \| `off` \| `toggle` | `on` | Draw vertical rules between list columns |
-| `autosave` | `on` \| `off` \| `toggle` | `on` | Write `config.toml` after successful `:config set` (`[config]`) |
-| `autoreload` | `on` \| `off` \| `toggle` | `on` | Reload when the config file changes on disk (`[config]`) |
-| `sidebar` | `on` \| `off` \| `toggle` | `off` | Show filters/hidden sidebar (same as `:view sidebar`) |
-| `sidebar_width` | number \| `+N`/`-N` | `28` | Preferred sidebar width in columns (min `12`; relative adjusts show the sidebar) |
-| `sidebar_position` | `left` \| `right` | `right` | Place the filters sidebar on the left or right of the main pane |
-| `mouse` | `on` \| `off` \| `toggle` | `on` | Enable terminal mouse capture |
-| `scroll_lines` | number | `1` | Mouse wheel step |
-| `page_lines` | number | `0` | Page up/down step (`0` = viewport height) |
-| `scroll_moves_selection` | `on` \| `off` \| `toggle` | `on` | Wheel moves selection (`off` scrolls the viewport only) |
-| `timestamp_format` | strftime \| `raw` | `%H:%M:%S` | Timestamp column format (`raw` keeps the log string) |
-| `case_mode` | `sensitive` \| `insensitive` \| `smart` | `smart` | Case matching for `/` search and `:filter` |
-| `session_filters` | `on` \| `off` \| `toggle` | `on` | Persist filters for log files and stdin (`[persist] filters`) |
+| `theme.name` | name | `catppuccin` | Color theme (see [Themes](#themes)) |
+| `main.follow` | `on` \| `off` \| `toggle` | `on` | Live-tail as the file or pipe grows |
+| `main.list_scrollbar_vertical` | `on` \| `off` \| `toggle` | `on` | List vertical scrollbar |
+| `main.list_scrollbar_horizontal` | `on` \| `off` \| `toggle` | `on` | List horizontal scrollbar |
+| `main.border` | `on` \| `off` \| `toggle` | `on` | Draw vertical rules between list columns |
+| `main.page_lines` | number | `0` | Page up/down step (`0` = viewport height) |
+| `main.timestamp_format` | strftime \| `raw` | `%H:%M:%S` | Timestamp column format (`raw` keeps the log string) |
+| `main.case_mode` | `sensitive` \| `insensitive` \| `smart` | `smart` | Case matching for `/` search and `:filter` |
+| `config.autosave` | `on` \| `off` \| `toggle` | `on` | Write `config.toml` after successful `:config set` |
+| `config.autoreload` | `on` \| `off` \| `toggle` | `on` | Reload when the config file changes on disk |
+| `persist.filters` | `on` \| `off` \| `toggle` | `on` | Persist filters for log files and stdin |
+| `line_numbers.enabled` | `on` \| `off` \| `toggle` | `off` | Absolute view line numbers in the gutter |
+| `line_numbers.relative` | `on` \| `off` \| `toggle` | `off` | Relative (vim-style) line numbers |
+| `mouse.enabled` | `on` \| `off` \| `toggle` | `on` | Enable terminal mouse capture |
+| `mouse.scroll_lines` | number | `1` | Mouse wheel step |
+| `mouse.scroll_moves_selection` | `on` \| `off` \| `toggle` | `on` | Wheel moves selection (`off` scrolls the viewport only) |
+| `details.wrap` | `on` \| `off` \| `toggle` | `on` | Wrap text in the details overlay |
+| `details.json_tree` | `on` \| `off` \| `toggle` | `on` | Tree-view nested JSON in details |
+| `details.max_height` | number \| `+N`/`-N` | `24` | Max details overlay height in rows (relative adjusts are layout/content-capped) |
+| `details.tab_width` | number | `4` | Details tree indent width (min `2`) |
+| `details.scrollbar_vertical` | `on` \| `off` \| `toggle` | `on` | Details vertical scrollbar |
+| `sidebar.enabled` | `on` \| `off` \| `toggle` | `off` | Show filters/hidden sidebar (same as `:view sidebar`) |
+| `sidebar.width` | number \| `+N`/`-N` | `28` | Preferred sidebar width in columns (min `12`; relative adjusts show the sidebar) |
+| `sidebar.position` | `left` \| `right` | `right` | Place the filters sidebar on the left or right of the main pane |
+| `sidebar.scrollbar_vertical` | `on` \| `off` \| `toggle` | `on` | Sidebar vertical scrollbar |
+| `sidebar.scrollbar_horizontal` | `on` \| `off` \| `toggle` | `on` | Sidebar horizontal scrollbar |
 
 ## Themes
 
