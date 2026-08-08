@@ -468,7 +468,7 @@ fn delete_all_clears_stdin_buffer() {
     let source = LogSource::open_stdin(reader).unwrap();
     let mut config = Config::default();
     config.follow = false;
-    config.session_stdin = false;
+    config.session_filters = false;
     let mut app = App::new(source, config, std::env::temp_dir().join("teleminator-stdin-cfg.toml"))
         .unwrap();
 

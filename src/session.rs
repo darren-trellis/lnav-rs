@@ -90,17 +90,14 @@ pub fn path_key(path: &Path) -> String {
 
 /// Session file for this source, if persistence is enabled in config.
 pub fn session_path(source: &LogSource, config: &Config) -> Option<PathBuf> {
+    if !config.session_filters {
+        return None;
+    }
     if source.is_file() {
-        if !config.session_filters {
-            return None;
-        }
         let path = source.path()?;
         return Some(Config::sessions_dir().join(format!("{}.toml", path_key(path))));
     }
     // stdin / pipe
-    if !config.session_stdin {
-        return None;
-    }
     Some(Config::sessions_dir().join("stdin.toml"))
 }
 

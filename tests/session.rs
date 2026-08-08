@@ -58,7 +58,6 @@ fn session_path_respects_flags() {
     let source = LogSource::open_file(&log).unwrap();
     let mut config = Config::default();
     assert!(config.session_filters);
-    assert!(config.session_stdin);
     let path = session_path(&source, &config).unwrap();
     assert!(path.extension().is_some_and(|e| e == "toml"));
 

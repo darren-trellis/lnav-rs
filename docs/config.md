@@ -12,13 +12,22 @@ Default path: `~/.config/teleminator/config.toml`.
 | `list_scrollbar_vertical` | `true` \| `false` | `true` | List vertical scrollbar |
 | `list_scrollbar_horizontal` | `true` \| `false` | `true` | List horizontal scrollbar |
 | `border` | `true` \| `false` | `true` | Draw vertical rules between list columns (overridable per column) |
-| `autosave` | `true` \| `false` | `true` | Write `config.toml` after a successful `:config set` |
-| `autoreload` | `true` \| `false` | `true` | Reload when the config file changes on disk |
 | `page_lines` | integer `≥ 0` | `0` | Page up/down step (`0` = viewport height) |
 | `timestamp_format` | strftime string \| `"raw"` | `"%H:%M:%S"` | Timestamp column format (`"raw"` keeps the log string) |
 | `case_mode` | `"sensitive"` \| `"insensitive"` \| `"smart"` | `"smart"` | Case matching for `/` search and `:filter` (`"smartcase"` accepted as an alias for `"smart"`) |
-| `session_filters` | `true` \| `false` | `true` | Persist filters per log file |
-| `session_stdin` | `true` \| `false` | `true` | Persist filters for stdin |
+
+## `[config]`
+
+| Option | Values | Default | Description |
+|--------|--------|---------|-------------|
+| `autosave` | `true` \| `false` | `true` | Write `config.toml` after a successful `:config set` |
+| `autoreload` | `true` \| `false` | `true` | Reload when the config file changes on disk |
+
+## `[persist]`
+
+| Option | Values | Default | Description |
+|--------|--------|---------|-------------|
+| `filters` | `true` \| `false` | `true` | Persist filters for log files and stdin under `~/.local/share/teleminator/sessions/` (`:config set session_filters`) |
 
 ## `[details]`
 

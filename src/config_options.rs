@@ -255,13 +255,6 @@ const OPTIONS: &[ConfigOption] = &[
         getter: get_session_filters,
         setter: set_session_filters,
     },
-    ConfigOption {
-        name: "session_stdin",
-        help: "on|off|toggle",
-        value_kind: ValueKind::Bool,
-        getter: get_session_stdin,
-        setter: set_session_stdin,
-    },
 ];
 
 pub fn catalog() -> &'static [ConfigOption] {
@@ -795,21 +788,6 @@ fn set_session_filters(app: &mut App, value: &str) -> bool {
         value,
         |app| app.config.session_filters,
         |app, enabled| app.config.session_filters = enabled,
-        false,
-    )
-}
-
-fn get_session_stdin(app: &App) -> String {
-    on_off(app.config.session_stdin)
-}
-
-fn set_session_stdin(app: &mut App, value: &str) -> bool {
-    set_bool(
-        app,
-        "session_stdin",
-        value,
-        |app| app.config.session_stdin,
-        |app, enabled| app.config.session_stdin = enabled,
         false,
     )
 }

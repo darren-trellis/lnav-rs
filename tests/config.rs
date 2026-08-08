@@ -252,6 +252,64 @@ fn write_emits_line_numbers_section_not_main_keys() {
 }
 
 #[test]
+fn loads_config_and_persist_sections() {
+    let dir = std::env::temp_dir().join(format!("teleminator-cfg-persist-{}", std::process::id()));
+    let _ = fs::create_dir_all(&dir);
+    let path = dir.join("config.toml");
+    fs::write(
+        &path,
+        r#"[config]
+autosave = false
+autoreload = false
+
+[persist]
+filters = false
+"#,
+    )
+    .unwrap();
+    let (cfg, _) = Config::load_from(&path).unwrap();
+    assert!(!cfg.autosave);
+    assert!(!cfg.autoreload);
+    assert!(!cfg.session_filters);
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn rejects_legacy_main_config_and_persist_keys() {
+    let dir = std::env::temp_dir().join(format!("teleminator-cfg-leg-{}", std::process::id()));
+    let _ = fs::create_dir_all(&dir);
+    let path = dir.join("config.toml");
+    fs::write(
+        &path,
+        "[main]\nautosave = false\nsession_filters = false\nsession_stdin = false\n",
+    )
+    .unwrap();
+    assert!(Config::load_from(&path).is_err());
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn write_emits_config_and_persist_sections() {
+    let dir = std::env::temp_dir().join(format!("teleminator-write-cfg-{}", std::process::id()));
+    let _ = fs::create_dir_all(&dir);
+    let path = dir.join("config.toml");
+    let mut cfg = Config::default();
+    cfg.autosave = false;
+    cfg.autoreload = false;
+    cfg.session_filters = false;
+    cfg.write_to(&path).unwrap();
+    let raw = fs::read_to_string(&path).unwrap();
+    assert!(raw.contains("[config]"));
+    assert!(raw.contains("autosave = false"));
+    assert!(raw.contains("autoreload = false"));
+    assert!(raw.contains("[persist]"));
+    assert!(raw.contains("filters = false"));
+    assert!(!raw.contains("session_filters = "));
+    assert!(!raw.contains("session_stdin = "));
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn rejects_narrow_sidebar_width() {
     let dir = std::env::temp_dir().join(format!("teleminator-sidebar-w-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
@@ -354,6 +412,8 @@ fn write_omits_default_keys() {
     assert!(!raw.contains("autosave = "));
     assert!(!raw.contains("autoreload = "));
     assert!(!raw.contains("page_lines = "));
+    assert!(!raw.contains("[config]"));
+    assert!(!raw.contains("[persist]"));
     assert!(!raw.contains("[details]"));
     assert!(!raw.contains("[sidebar]"));
     assert!(!raw.contains("[mouse]"));

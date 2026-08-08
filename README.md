@@ -114,13 +114,16 @@ follow = true
 list_scrollbar_vertical = true
 list_scrollbar_horizontal = true
 border = true
-autosave = true
-autoreload = true
 page_lines = 0
 timestamp_format = "%H:%M:%S"
 case_mode = "smart"   # or "sensitive" | "insensitive"
-session_filters = true
-session_stdin = true
+
+[config]
+autosave = true
+autoreload = true
+
+[persist]
+filters = true
 
 [line_numbers]
 enabled = false
@@ -229,8 +232,8 @@ Log lines that carry both a `trace_id` and `span_id` (OpenTelemetry / Datadog-st
 | `sidebar_scrollbar_horizontal` | `on` \| `off` \| `toggle` | `on` | Sidebar horizontal scrollbar |
 | `details_scrollbar_vertical` | `on` \| `off` \| `toggle` | `on` | Details vertical scrollbar |
 | `border` | `on` \| `off` \| `toggle` | `on` | Draw vertical rules between list columns |
-| `autosave` | `on` \| `off` \| `toggle` | `on` | Write `config.toml` after successful `:config set` |
-| `autoreload` | `on` \| `off` \| `toggle` | `on` | Reload when the config file changes on disk |
+| `autosave` | `on` \| `off` \| `toggle` | `on` | Write `config.toml` after successful `:config set` (`[config]`) |
+| `autoreload` | `on` \| `off` \| `toggle` | `on` | Reload when the config file changes on disk (`[config]`) |
 | `sidebar` | `on` \| `off` \| `toggle` | `off` | Show filters/hidden sidebar (same as `:view sidebar`) |
 | `sidebar_width` | number \| `+N`/`-N` | `28` | Preferred sidebar width in columns (min `12`; relative adjusts show the sidebar) |
 | `sidebar_position` | `left` \| `right` | `right` | Place the filters sidebar on the left or right of the main pane |
@@ -240,8 +243,7 @@ Log lines that carry both a `trace_id` and `span_id` (OpenTelemetry / Datadog-st
 | `scroll_moves_selection` | `on` \| `off` \| `toggle` | `on` | Wheel moves selection (`off` scrolls the viewport only) |
 | `timestamp_format` | strftime \| `raw` | `%H:%M:%S` | Timestamp column format (`raw` keeps the log string) |
 | `case_mode` | `sensitive` \| `insensitive` \| `smart` | `smart` | Case matching for `/` search and `:filter` |
-| `session_filters` | `on` \| `off` \| `toggle` | `on` | Persist filters per log file |
-| `session_stdin` | `on` \| `off` \| `toggle` | `on` | Persist filters for stdin |
+| `session_filters` | `on` \| `off` \| `toggle` | `on` | Persist filters for log files and stdin (`[persist] filters`) |
 
 ## Themes
 

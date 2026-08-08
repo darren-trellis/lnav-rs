@@ -268,6 +268,9 @@ pub struct Config {
     /// When true, reload settings when the config file changes on disk.
     pub autoreload: bool,
 
+    /// Persist filters under `~/.local/share/teleminator/sessions/` (files and stdin).
+    pub session_filters: bool,
+
     /// Show a filters sidebar listing active filters.
     pub sidebar: bool,
 
@@ -301,12 +304,6 @@ pub struct Config {
 
     /// Keybindings: `[keys]`, `[keys.details]`, `[keys.sidebar]`, `[keys.spans]`.
     pub keys: KeysConfig,
-
-    /// Persist filters per log file under `~/.local/share/teleminator/sessions/`.
-    pub session_filters: bool,
-
-    /// Persist filters for stdin under a shared `sessions/stdin.toml`.
-    pub session_stdin: bool,
 }
 
 /// Scalar settings stored under `[main]` in `config.toml`.
@@ -321,20 +318,12 @@ struct MainConfig {
     list_scrollbar_horizontal: bool,
     #[serde(default = "default_true")]
     border: bool,
-    #[serde(default = "default_true")]
-    autosave: bool,
-    #[serde(default = "default_true")]
-    autoreload: bool,
     #[serde(default)]
     page_lines: usize,
     #[serde(default = "default_timestamp_format")]
     timestamp_format: String,
     #[serde(default)]
     case_mode: CaseMode,
-    #[serde(default = "default_true")]
-    session_filters: bool,
-    #[serde(default = "default_true")]
-    session_stdin: bool,
 }
 
 impl Default for MainConfig {
@@ -344,14 +333,43 @@ impl Default for MainConfig {
             list_scrollbar_vertical: true,
             list_scrollbar_horizontal: true,
             border: true,
-            autosave: true,
-            autoreload: true,
             page_lines: 0,
             timestamp_format: default_timestamp_format(),
             case_mode: CaseMode::default(),
-            session_filters: true,
-            session_stdin: true,
         }
+    }
+}
+
+/// Meta settings under `[config]` in `config.toml`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+struct ConfigFileConfig {
+    #[serde(default = "default_true")]
+    autosave: bool,
+    #[serde(default = "default_true")]
+    autoreload: bool,
+}
+
+impl Default for ConfigFileConfig {
+    fn default() -> Self {
+        Self {
+            autosave: true,
+            autoreload: true,
+        }
+    }
+}
+
+/// Persistence settings under `[persist]` in `config.toml`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+struct PersistFileConfig {
+    #[serde(default = "default_true")]
+    filters: bool,
+}
+
+impl Default for PersistFileConfig {
+    fn default() -> Self {
+        Self { filters: true }
     }
 }
 
@@ -443,12 +461,16 @@ impl Default for SidebarFileConfig {
     }
 }
 
-/// On-disk TOML shape: scalars live under `[main]` / `[details]` / `[sidebar]` / `[mouse]` / `[line_numbers]`.
+/// On-disk TOML shape: scalars live under `[main]` / `[config]` / `[persist]` / pane sections.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct ConfigDocument {
     #[serde(default)]
     main: MainConfig,
+    #[serde(default)]
+    config: ConfigFileConfig,
+    #[serde(default)]
+    persist: PersistFileConfig,
     #[serde(default)]
     details: DetailsFileConfig,
     #[serde(default)]
@@ -491,8 +513,9 @@ impl ConfigDocument {
             sidebar_scrollbar_horizontal: self.sidebar.scrollbar_horizontal,
             details_scrollbar_vertical: self.details.scrollbar_vertical,
             border: self.main.border,
-            autosave: self.main.autosave,
-            autoreload: self.main.autoreload,
+            autosave: self.config.autosave,
+            autoreload: self.config.autoreload,
+            session_filters: self.persist.filters,
             sidebar: self.sidebar.enabled,
             sidebar_width: self.sidebar.width,
             sidebar_position: self.sidebar.position,
@@ -504,8 +527,6 @@ impl ConfigDocument {
             case_mode: self.main.case_mode,
             columns: self.columns,
             keys: self.keys,
-            session_filters: self.main.session_filters,
-            session_stdin: self.main.session_stdin,
         }
     }
 }
@@ -514,6 +535,10 @@ impl ConfigDocument {
 struct PersistedConfig<'a> {
     #[serde(skip_serializing_if = "PersistedMain::is_empty")]
     main: PersistedMain<'a>,
+    #[serde(skip_serializing_if = "PersistedConfigMeta::is_empty")]
+    config: PersistedConfigMeta,
+    #[serde(skip_serializing_if = "PersistedPersist::is_empty")]
+    persist: PersistedPersist,
     #[serde(skip_serializing_if = "PersistedDetails::is_empty")]
     details: PersistedDetails,
     #[serde(skip_serializing_if = "PersistedSidebar::is_empty")]
@@ -546,19 +571,11 @@ struct PersistedMain<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     border: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    autosave: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    autoreload: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     page_lines: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
     timestamp_format: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     case_mode: Option<CaseMode>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    session_filters: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    session_stdin: Option<bool>,
 }
 
 impl PersistedMain<'_> {
@@ -567,13 +584,35 @@ impl PersistedMain<'_> {
             && self.list_scrollbar_vertical.is_none()
             && self.list_scrollbar_horizontal.is_none()
             && self.border.is_none()
-            && self.autosave.is_none()
-            && self.autoreload.is_none()
             && self.page_lines.is_none()
             && self.timestamp_format.is_none()
             && self.case_mode.is_none()
-            && self.session_filters.is_none()
-            && self.session_stdin.is_none()
+    }
+}
+
+#[derive(Serialize)]
+struct PersistedConfigMeta {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    autosave: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    autoreload: Option<bool>,
+}
+
+impl PersistedConfigMeta {
+    fn is_empty(&self) -> bool {
+        self.autosave.is_none() && self.autoreload.is_none()
+    }
+}
+
+#[derive(Serialize)]
+struct PersistedPersist {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    filters: Option<bool>,
+}
+
+impl PersistedPersist {
+    fn is_empty(&self) -> bool {
+        self.filters.is_none()
     }
 }
 
@@ -742,16 +781,18 @@ impl<'a> PersistedConfig<'a> {
                     != defaults.list_scrollbar_horizontal)
                     .then_some(config.list_scrollbar_horizontal),
                 border: (config.border != defaults.border).then_some(config.border),
-                autosave: (config.autosave != defaults.autosave).then_some(config.autosave),
-                autoreload: (config.autoreload != defaults.autoreload).then_some(config.autoreload),
                 page_lines: (config.page_lines != defaults.page_lines).then_some(config.page_lines),
                 timestamp_format: (config.timestamp_format != defaults.timestamp_format)
                     .then_some(config.timestamp_format.as_str()),
                 case_mode: (config.case_mode != defaults.case_mode).then_some(config.case_mode),
-                session_filters: (config.session_filters != defaults.session_filters)
+            },
+            config: PersistedConfigMeta {
+                autosave: (config.autosave != defaults.autosave).then_some(config.autosave),
+                autoreload: (config.autoreload != defaults.autoreload).then_some(config.autoreload),
+            },
+            persist: PersistedPersist {
+                filters: (config.session_filters != defaults.session_filters)
                     .then_some(config.session_filters),
-                session_stdin: (config.session_stdin != defaults.session_stdin)
-                    .then_some(config.session_stdin),
             },
             mouse: PersistedMouse {
                 enabled: (config.mouse != defaults.mouse).then_some(config.mouse),
@@ -871,6 +912,8 @@ impl Default for Config {
     fn default() -> Self {
         ConfigDocument {
             main: MainConfig::default(),
+            config: ConfigFileConfig::default(),
+            persist: PersistFileConfig::default(),
             details: DetailsFileConfig::default(),
             sidebar: SidebarFileConfig::default(),
             mouse: MouseFileConfig::default(),

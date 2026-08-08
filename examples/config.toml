@@ -2,9 +2,14 @@
 # list_scrollbar_vertical = true
 # list_scrollbar_horizontal = true
 # case_mode = "insensitive"
-# session_filters = true
-# session_stdin = true
 # border = true
+
+# [config]
+# autosave = true
+# autoreload = true
+
+# [persist]
+# filters = true
 
 # [line_numbers]
 # enabled = true
