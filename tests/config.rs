@@ -148,8 +148,59 @@ fn rejects_zero_scroll_lines() {
     let dir = std::env::temp_dir().join(format!("teleminator-scroll-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
-    fs::write(&path, "[main]\nscroll_lines = 0\n").unwrap();
+    fs::write(&path, "[mouse]\nscroll_lines = 0\n").unwrap();
     assert!(Config::load_from(&path).is_err());
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn rejects_legacy_main_mouse_keys() {
+    let dir = std::env::temp_dir().join(format!("teleminator-mouse-leg-{}", std::process::id()));
+    let _ = fs::create_dir_all(&dir);
+    let path = dir.join("config.toml");
+    fs::write(&path, "[main]\nscroll_lines = 3\nscroll_moves_selection = false\n").unwrap();
+    assert!(Config::load_from(&path).is_err());
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn loads_mouse_section() {
+    let dir = std::env::temp_dir().join(format!("teleminator-mouse-sec-{}", std::process::id()));
+    let _ = fs::create_dir_all(&dir);
+    let path = dir.join("config.toml");
+    fs::write(
+        &path,
+        r#"[mouse]
+enabled = false
+scroll_lines = 3
+scroll_moves_selection = false
+"#,
+    )
+    .unwrap();
+    let (cfg, _) = Config::load_from(&path).unwrap();
+    assert!(!cfg.mouse);
+    assert_eq!(cfg.scroll_lines, 3);
+    assert!(!cfg.scroll_moves_selection);
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn write_emits_mouse_section_not_main_keys() {
+    let dir = std::env::temp_dir().join(format!("teleminator-write-mouse-{}", std::process::id()));
+    let _ = fs::create_dir_all(&dir);
+    let path = dir.join("config.toml");
+    let mut cfg = Config::default();
+    cfg.mouse = false;
+    cfg.scroll_lines = 3;
+    cfg.scroll_moves_selection = false;
+    cfg.write_to(&path).unwrap();
+    let raw = fs::read_to_string(&path).unwrap();
+    assert!(raw.contains("[mouse]"));
+    assert!(raw.contains("enabled = false"));
+    assert!(raw.contains("scroll_lines = 3"));
+    assert!(raw.contains("scroll_moves_selection = false"));
+    assert!(!raw.contains("[main]\nscroll_lines"));
+    assert!(!raw.contains("[main]\nscroll_moves_selection"));
     let _ = fs::remove_dir_all(&dir);
 }
 
@@ -258,7 +309,9 @@ fn write_omits_default_keys() {
     assert!(!raw.contains("page_lines = "));
     assert!(!raw.contains("[details]"));
     assert!(!raw.contains("[sidebar]"));
+    assert!(!raw.contains("[mouse]"));
     assert!(!raw.contains("sidebar_width = "));
+    assert!(!raw.contains("scroll_moves_selection = "));
     assert!(!raw.contains("session_filters = "));
     assert!(!raw.contains("session_stdin = "));
     assert!(!raw.contains("case_mode = "));

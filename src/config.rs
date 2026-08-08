@@ -277,6 +277,9 @@ pub struct Config {
     /// Place the filters sidebar on the `left` or `right` of the main pane.
     pub sidebar_position: SidebarPosition,
 
+    /// When true, enable terminal mouse capture (clicks, wheel, drag).
+    pub mouse: bool,
+
     /// Lines to move per mouse-wheel notch in the log list.
     pub scroll_lines: usize,
 
@@ -326,12 +329,8 @@ struct MainConfig {
     autosave: bool,
     #[serde(default = "default_true")]
     autoreload: bool,
-    #[serde(default = "default_scroll_lines")]
-    scroll_lines: usize,
     #[serde(default)]
     page_lines: usize,
-    #[serde(default = "default_true")]
-    scroll_moves_selection: bool,
     #[serde(default = "default_timestamp_format")]
     timestamp_format: String,
     #[serde(default)]
@@ -353,13 +352,33 @@ impl Default for MainConfig {
             border: true,
             autosave: true,
             autoreload: true,
-            scroll_lines: default_scroll_lines(),
             page_lines: 0,
-            scroll_moves_selection: true,
             timestamp_format: default_timestamp_format(),
             case_mode: CaseMode::default(),
             session_filters: true,
             session_stdin: true,
+        }
+    }
+}
+
+/// Mouse settings under `[mouse]` in `config.toml`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+struct MouseFileConfig {
+    #[serde(default = "default_true")]
+    enabled: bool,
+    #[serde(default = "default_scroll_lines")]
+    scroll_lines: usize,
+    #[serde(default = "default_true")]
+    scroll_moves_selection: bool,
+}
+
+impl Default for MouseFileConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            scroll_lines: default_scroll_lines(),
+            scroll_moves_selection: true,
         }
     }
 }
@@ -420,7 +439,7 @@ impl Default for SidebarFileConfig {
     }
 }
 
-/// On-disk TOML shape: scalars live under `[main]` / `[details]` / `[sidebar]`.
+/// On-disk TOML shape: scalars live under `[main]` / `[details]` / `[sidebar]` / `[mouse]`.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct ConfigDocument {
@@ -430,6 +449,8 @@ struct ConfigDocument {
     details: DetailsFileConfig,
     #[serde(default)]
     sidebar: SidebarFileConfig,
+    #[serde(default)]
+    mouse: MouseFileConfig,
     #[serde(default)]
     theme: ThemeConfig,
     #[serde(default)]
@@ -469,9 +490,10 @@ impl ConfigDocument {
             sidebar: self.sidebar.enabled,
             sidebar_width: self.sidebar.width,
             sidebar_position: self.sidebar.position,
-            scroll_lines: self.main.scroll_lines,
+            mouse: self.mouse.enabled,
+            scroll_lines: self.mouse.scroll_lines,
             page_lines: self.main.page_lines,
-            scroll_moves_selection: self.main.scroll_moves_selection,
+            scroll_moves_selection: self.mouse.scroll_moves_selection,
             timestamp_format: self.main.timestamp_format,
             case_mode: self.main.case_mode,
             columns: self.columns,
@@ -490,6 +512,8 @@ struct PersistedConfig<'a> {
     details: PersistedDetails,
     #[serde(skip_serializing_if = "PersistedSidebar::is_empty")]
     sidebar: PersistedSidebar,
+    #[serde(skip_serializing_if = "PersistedMouse::is_empty")]
+    mouse: PersistedMouse,
     theme: &'a ThemeConfig,
     #[serde(skip_serializing_if = "crate::theme::ColorOverrides::is_empty")]
     colors: &'a crate::theme::ColorOverrides,
@@ -522,11 +546,7 @@ struct PersistedMain<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     autoreload: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    scroll_lines: Option<usize>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     page_lines: Option<usize>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    scroll_moves_selection: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     timestamp_format: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -547,9 +567,7 @@ impl PersistedMain<'_> {
             && self.border.is_none()
             && self.autosave.is_none()
             && self.autoreload.is_none()
-            && self.scroll_lines.is_none()
             && self.page_lines.is_none()
-            && self.scroll_moves_selection.is_none()
             && self.timestamp_format.is_none()
             && self.case_mode.is_none()
             && self.session_filters.is_none()
@@ -602,6 +620,24 @@ impl PersistedSidebar {
             && self.position.is_none()
             && self.scrollbar_vertical.is_none()
             && self.scrollbar_horizontal.is_none()
+    }
+}
+
+#[derive(Serialize)]
+struct PersistedMouse {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    enabled: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    scroll_lines: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    scroll_moves_selection: Option<bool>,
+}
+
+impl PersistedMouse {
+    fn is_empty(&self) -> bool {
+        self.enabled.is_none()
+            && self.scroll_lines.is_none()
+            && self.scroll_moves_selection.is_none()
     }
 }
 
@@ -697,11 +733,7 @@ impl<'a> PersistedConfig<'a> {
                 border: (config.border != defaults.border).then_some(config.border),
                 autosave: (config.autosave != defaults.autosave).then_some(config.autosave),
                 autoreload: (config.autoreload != defaults.autoreload).then_some(config.autoreload),
-                scroll_lines: (scroll_lines != defaults.scroll_lines).then_some(scroll_lines),
                 page_lines: (config.page_lines != defaults.page_lines).then_some(config.page_lines),
-                scroll_moves_selection: (config.scroll_moves_selection
-                    != defaults.scroll_moves_selection)
-                    .then_some(config.scroll_moves_selection),
                 timestamp_format: (config.timestamp_format != defaults.timestamp_format)
                     .then_some(config.timestamp_format.as_str()),
                 case_mode: (config.case_mode != defaults.case_mode).then_some(config.case_mode),
@@ -709,6 +741,13 @@ impl<'a> PersistedConfig<'a> {
                     .then_some(config.session_filters),
                 session_stdin: (config.session_stdin != defaults.session_stdin)
                     .then_some(config.session_stdin),
+            },
+            mouse: PersistedMouse {
+                enabled: (config.mouse != defaults.mouse).then_some(config.mouse),
+                scroll_lines: (scroll_lines != defaults.scroll_lines).then_some(scroll_lines),
+                scroll_moves_selection: (config.scroll_moves_selection
+                    != defaults.scroll_moves_selection)
+                    .then_some(config.scroll_moves_selection),
             },
             details: PersistedDetails {
                 wrap: (config.wrap_details != defaults.wrap_details).then_some(config.wrap_details),
@@ -817,6 +856,7 @@ impl Default for Config {
             main: MainConfig::default(),
             details: DetailsFileConfig::default(),
             sidebar: SidebarFileConfig::default(),
+            mouse: MouseFileConfig::default(),
             theme: ThemeConfig::default(),
             colors: crate::theme::ColorOverrides::default(),
             levels: crate::theme::LevelOverrides::default(),

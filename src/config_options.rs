@@ -207,6 +207,13 @@ const OPTIONS: &[ConfigOption] = &[
         setter: set_sidebar_position,
     },
     ConfigOption {
+        name: "mouse",
+        help: "on|off|toggle",
+        value_kind: ValueKind::Bool,
+        getter: get_mouse,
+        setter: set_mouse,
+    },
+    ConfigOption {
         name: "scroll_lines",
         help: "mouse wheel step",
         value_kind: ValueKind::Unsigned,
@@ -669,6 +676,26 @@ fn parse_relative_delta(value: &str) -> Option<isize> {
         return None;
     }
     value.parse().ok()
+}
+
+fn get_mouse(app: &App) -> String {
+    on_off(app.config.mouse)
+}
+
+fn set_mouse(app: &mut App, value: &str) -> bool {
+    set_bool(
+        app,
+        "mouse",
+        value,
+        |app| app.config.mouse,
+        |app, enabled| {
+            app.config.mouse = enabled;
+            if !app.config_preview {
+                app.sync_mouse_capture();
+            }
+        },
+        false,
+    )
 }
 
 fn get_scroll_lines(app: &App) -> String {

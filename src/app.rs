@@ -640,12 +640,20 @@ impl App {
     }
 
     pub fn run(&mut self, terminal: &mut ratatui::DefaultTerminal) -> Result<()> {
-        let _ = execute!(stdout(), EnableMouseCapture);
+        self.sync_mouse_capture();
         let result = self.run_loop(terminal);
         let _ = execute!(stdout(), DisableMouseCapture);
         self.close_config_modal(false);
         self.close_help_modal();
         result
+    }
+
+    pub(crate) fn sync_mouse_capture(&self) {
+        if self.config.mouse {
+            let _ = execute!(stdout(), EnableMouseCapture);
+        } else {
+            let _ = execute!(stdout(), DisableMouseCapture);
+        }
     }
 
     fn run_loop(&mut self, terminal: &mut ratatui::DefaultTerminal) -> Result<()> {
@@ -675,7 +683,7 @@ impl App {
                     Event::Key(key) if key.kind == KeyEventKind::Press => {
                         self.handle_key(key);
                     }
-                    Event::Mouse(mouse) => self.handle_mouse(mouse),
+                    Event::Mouse(mouse) if self.config.mouse => self.handle_mouse(mouse),
                     Event::Resize(_, _) => {}
                     _ => {}
                 }
@@ -1190,6 +1198,7 @@ impl App {
         self.theme = theme;
         self.theme_index = theme_index;
         self.view.follow = self.config.follow;
+        self.sync_mouse_capture();
         self.mark_spans_dirty();
         if !self.config.sidebar && self.is_sidebar_focused() {
             self.focus_list();

@@ -16,9 +16,7 @@ Default path: `~/.config/teleminator/config.toml`.
 | `border` | `true` \| `false` | `true` | Draw vertical rules between list columns (overridable per column) |
 | `autosave` | `true` \| `false` | `true` | Write `config.toml` after a successful `:config set` |
 | `autoreload` | `true` \| `false` | `true` | Reload when the config file changes on disk |
-| `scroll_lines` | integer `≥ 1` | `1` | Mouse wheel step in lines |
 | `page_lines` | integer `≥ 0` | `0` | Page up/down step (`0` = viewport height) |
-| `scroll_moves_selection` | `true` \| `false` | `true` | Wheel moves selection (`false` scrolls the viewport only) |
 | `timestamp_format` | strftime string \| `"raw"` | `"%H:%M:%S"` | Timestamp column format (`"raw"` keeps the log string) |
 | `case_mode` | `"sensitive"` \| `"insensitive"` \| `"smart"` | `"smart"` | Case matching for `/` search and `:filter` (`"smartcase"` accepted as an alias for `"smart"`) |
 | `session_filters` | `true` \| `false` | `true` | Persist filters per log file |
@@ -43,6 +41,14 @@ Default path: `~/.config/teleminator/config.toml`.
 | `position` | `"left"` \| `"right"` | `"right"` | Place the filters sidebar on the left or right of the main pane (`:config set sidebar_position`) |
 | `scrollbar_vertical` | `true` \| `false` | `true` | Sidebar vertical scrollbar (`:config set sidebar_scrollbar_vertical`) |
 | `scrollbar_horizontal` | `true` \| `false` | `true` | Sidebar horizontal scrollbar (`:config set sidebar_scrollbar_horizontal`) |
+
+## `[mouse]`
+
+| Option | Values | Default | Description |
+|--------|--------|---------|-------------|
+| `enabled` | `true` \| `false` | `true` | Enable terminal mouse capture (`:config set mouse`) |
+| `scroll_lines` | integer `≥ 1` | `1` | Mouse wheel step in lines |
+| `scroll_moves_selection` | `true` \| `false` | `true` | Wheel moves selection (`false` scrolls the viewport only) |
 
 ## `[theme]`
 

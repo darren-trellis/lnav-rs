@@ -118,13 +118,16 @@ list_scrollbar_horizontal = true
 border = true
 autosave = true
 autoreload = true
-scroll_lines = 1
 page_lines = 0
-scroll_moves_selection = true
 timestamp_format = "%H:%M:%S"
 case_mode = "smart"   # or "sensitive" | "insensitive"
 session_filters = true
 session_stdin = true
+
+[mouse]
+enabled = true
+scroll_lines = 1
+scroll_moves_selection = true
 
 [details]
 wrap = true
@@ -229,6 +232,7 @@ Log lines that carry both a `trace_id` and `span_id` (OpenTelemetry / Datadog-st
 | `sidebar` | `on` \| `off` \| `toggle` | `off` | Show filters/hidden sidebar (same as `:view sidebar`) |
 | `sidebar_width` | number \| `+N`/`-N` | `28` | Preferred sidebar width in columns (min `12`; relative adjusts show the sidebar) |
 | `sidebar_position` | `left` \| `right` | `right` | Place the filters sidebar on the left or right of the main pane |
+| `mouse` | `on` \| `off` \| `toggle` | `on` | Enable terminal mouse capture |
 | `scroll_lines` | number | `1` | Mouse wheel step |
 | `page_lines` | number | `0` | Page up/down step (`0` = viewport height) |
 | `scroll_moves_selection` | `on` \| `off` \| `toggle` | `on` | Wheel moves selection (`off` scrolls the viewport only) |

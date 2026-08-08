@@ -21,6 +21,11 @@ line_numbers = true
 # scrollbar_vertical = true
 # scrollbar_horizontal = true
 
+# [mouse]
+# enabled = true
+# scroll_lines = 1
+# scroll_moves_selection = false
+
 [theme]
 name = "catppuccin"
 

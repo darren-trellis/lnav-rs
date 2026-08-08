@@ -1,5 +1,7 @@
 # Mouse
 
+Controlled by `[mouse]` in config (`enabled`, `scroll_lines`, `scroll_moves_selection`). When `enabled` is off, terminal mouse capture is disabled.
+
 | Action | Effect |
 |--------|--------|
 | Click a log line | Select it (completes a pending `d`/`D` operator) |
