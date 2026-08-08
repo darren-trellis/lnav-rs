@@ -11,6 +11,10 @@
 # [persist]
 # filters = true
 
+# [timestamp]
+# format = "%H:%M:%S"
+# localized = true
+
 # [line_numbers]
 # enabled = true
 # relative = false

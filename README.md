@@ -115,8 +115,11 @@ list_scrollbar_vertical = true
 list_scrollbar_horizontal = true
 border = true
 page_lines = 0
-timestamp_format = "%H:%M:%S"
 case_mode = "smart"   # or "sensitive" | "insensitive"
+
+[timestamp]
+format = "%H:%M:%S"
+localized = true
 
 [config]
 autosave = true
@@ -226,8 +229,9 @@ Log lines that carry both a `trace_id` and `span_id` (OpenTelemetry / Datadog-st
 | `main.list_scrollbar_horizontal` | `on` \| `off` \| `toggle` | `on` | List horizontal scrollbar |
 | `main.border` | `on` \| `off` \| `toggle` | `on` | Draw vertical rules between list columns |
 | `main.page_lines` | number | `0` | Page up/down step (`0` = viewport height) |
-| `main.timestamp_format` | strftime \| `raw` | `%H:%M:%S` | Timestamp column format (`raw` keeps the log string) |
 | `main.case_mode` | `sensitive` \| `insensitive` \| `smart` | `smart` | Case matching for `/` search and `:filter` |
+| `timestamp.format` | strftime \| `raw` | `%H:%M:%S` | Timestamp column format (`raw` keeps the log string) |
+| `timestamp.localized` | `on` \| `off` \| `toggle` | `on` | Convert timestamps to the local timezone (`off` keeps UTC) |
 | `config.autosave` | `on` \| `off` \| `toggle` | `on` | Write `config.toml` after successful `:config set` |
 | `config.autoreload` | `on` \| `off` \| `toggle` | `on` | Reload when the config file changes on disk |
 | `persist.filters` | `on` \| `off` \| `toggle` | `on` | Persist filters for log files and stdin |

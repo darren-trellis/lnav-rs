@@ -9,6 +9,7 @@ use crate::timestamp;
 #[derive(Debug, Clone)]
 pub struct FormatOptions<'a> {
     pub timestamp_format: &'a str,
+    pub timestamp_localized: bool,
     /// 1-based index in the current visible list (lnav view line).
     pub view_line: usize,
 }
@@ -87,12 +88,14 @@ pub fn measure_widths(
     columns: &[Column],
     rows: &[(&LogEntry, usize)],
     timestamp_format: &str,
+    timestamp_localized: bool,
 ) -> Vec<usize> {
     let mut widths: Vec<usize> = columns.iter().map(|c| c.width.unwrap_or(0)).collect();
 
     for (entry, view_line) in rows {
         let opts = FormatOptions {
             timestamp_format,
+            timestamp_localized,
             view_line: *view_line,
         };
         for (i, col) in columns.iter().enumerate() {
@@ -112,7 +115,12 @@ pub fn render_segments(
     opts: &FormatOptions<'_>,
     default_border: &ColumnBorderStyle,
 ) -> Vec<Segment> {
-    let widths = measure_widths(columns, &[(entry, opts.view_line)], opts.timestamp_format);
+    let widths = measure_widths(
+        columns,
+        &[(entry, opts.view_line)],
+        opts.timestamp_format,
+        opts.timestamp_localized,
+    );
     render_segments_sized(columns, &widths, entry, opts, default_border)
 }
 
@@ -197,7 +205,7 @@ fn column_value(source: &str, entry: &LogEntry, opts: &FormatOptions<'_>) -> (Se
         "level" => (SegmentKind::Level, entry.level.as_str().to_string()),
         "timestamp" | "time" | "ts" => (
             SegmentKind::Timestamp,
-            format_timestamp(entry, opts.timestamp_format),
+            format_timestamp(entry, opts.timestamp_format, opts.timestamp_localized),
         ),
         "message" | "msg" => (SegmentKind::Message, entry.summary_message().to_string()),
         "raw" => (SegmentKind::Raw, entry.raw.clone()),
@@ -303,10 +311,10 @@ fn json_leaf_display(val: &Value) -> String {
     }
 }
 
-fn format_timestamp(entry: &LogEntry, fmt: &str) -> String {
+fn format_timestamp(entry: &LogEntry, fmt: &str, localized: bool) -> String {
     let raw = entry.timestamp.as_deref().unwrap_or("");
     if raw.is_empty() {
         return String::new();
     }
-    timestamp::format(raw, entry.timestamp_parsed.as_ref(), fmt)
+    timestamp::format(raw, entry.timestamp_parsed.as_ref(), fmt, localized)
 }

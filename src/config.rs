@@ -296,6 +296,9 @@ pub struct Config {
     /// strftime format for timestamp columns (chrono syntax), or `"raw"`.
     pub timestamp_format: String,
 
+    /// When true, display timestamps in the local timezone; otherwise keep UTC.
+    pub timestamp_localized: bool,
+
     /// Case matching for search and filters: `sensitive`, `insensitive`, or `smart`.
     pub case_mode: CaseMode,
 
@@ -320,8 +323,6 @@ struct MainConfig {
     border: bool,
     #[serde(default)]
     page_lines: usize,
-    #[serde(default = "default_timestamp_format")]
-    timestamp_format: String,
     #[serde(default)]
     case_mode: CaseMode,
 }
@@ -334,8 +335,26 @@ impl Default for MainConfig {
             list_scrollbar_horizontal: true,
             border: true,
             page_lines: 0,
-            timestamp_format: default_timestamp_format(),
             case_mode: CaseMode::default(),
+        }
+    }
+}
+
+/// Timestamp display settings under `[timestamp]` in `config.toml`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+struct TimestampFileConfig {
+    #[serde(default = "default_timestamp_format")]
+    format: String,
+    #[serde(default = "default_true")]
+    localized: bool,
+}
+
+impl Default for TimestampFileConfig {
+    fn default() -> Self {
+        Self {
+            format: default_timestamp_format(),
+            localized: true,
         }
     }
 }
@@ -480,6 +499,8 @@ struct ConfigDocument {
     #[serde(default)]
     line_numbers: LineNumbersFileConfig,
     #[serde(default)]
+    timestamp: TimestampFileConfig,
+    #[serde(default)]
     theme: ThemeConfig,
     #[serde(default)]
     colors: crate::theme::ColorOverrides,
@@ -523,7 +544,8 @@ impl ConfigDocument {
             scroll_lines: self.mouse.scroll_lines,
             page_lines: self.main.page_lines,
             scroll_moves_selection: self.mouse.scroll_moves_selection,
-            timestamp_format: self.main.timestamp_format,
+            timestamp_format: self.timestamp.format,
+            timestamp_localized: self.timestamp.localized,
             case_mode: self.main.case_mode,
             columns: self.columns,
             keys: self.keys,
@@ -534,7 +556,7 @@ impl ConfigDocument {
 #[derive(Serialize)]
 struct PersistedConfig<'a> {
     #[serde(skip_serializing_if = "PersistedMain::is_empty")]
-    main: PersistedMain<'a>,
+    main: PersistedMain,
     #[serde(skip_serializing_if = "PersistedConfigMeta::is_empty")]
     config: PersistedConfigMeta,
     #[serde(skip_serializing_if = "PersistedPersist::is_empty")]
@@ -547,6 +569,8 @@ struct PersistedConfig<'a> {
     mouse: PersistedMouse,
     #[serde(skip_serializing_if = "PersistedLineNumbers::is_empty")]
     line_numbers: PersistedLineNumbers,
+    #[serde(skip_serializing_if = "PersistedTimestamp::is_empty")]
+    timestamp: PersistedTimestamp<'a>,
     theme: &'a ThemeConfig,
     #[serde(skip_serializing_if = "crate::theme::ColorOverrides::is_empty")]
     colors: &'a crate::theme::ColorOverrides,
@@ -561,7 +585,7 @@ struct PersistedConfig<'a> {
 }
 
 #[derive(Serialize)]
-struct PersistedMain<'a> {
+struct PersistedMain {
     #[serde(skip_serializing_if = "Option::is_none")]
     follow: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -573,20 +597,31 @@ struct PersistedMain<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     page_lines: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    timestamp_format: Option<&'a str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     case_mode: Option<CaseMode>,
 }
 
-impl PersistedMain<'_> {
+impl PersistedMain {
     fn is_empty(&self) -> bool {
         self.follow.is_none()
             && self.list_scrollbar_vertical.is_none()
             && self.list_scrollbar_horizontal.is_none()
             && self.border.is_none()
             && self.page_lines.is_none()
-            && self.timestamp_format.is_none()
             && self.case_mode.is_none()
+    }
+}
+
+#[derive(Serialize)]
+struct PersistedTimestamp<'a> {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    format: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    localized: Option<bool>,
+}
+
+impl PersistedTimestamp<'_> {
+    fn is_empty(&self) -> bool {
+        self.format.is_none() && self.localized.is_none()
     }
 }
 
@@ -782,8 +817,6 @@ impl<'a> PersistedConfig<'a> {
                     .then_some(config.list_scrollbar_horizontal),
                 border: (config.border != defaults.border).then_some(config.border),
                 page_lines: (config.page_lines != defaults.page_lines).then_some(config.page_lines),
-                timestamp_format: (config.timestamp_format != defaults.timestamp_format)
-                    .then_some(config.timestamp_format.as_str()),
                 case_mode: (config.case_mode != defaults.case_mode).then_some(config.case_mode),
             },
             config: PersistedConfigMeta {
@@ -806,6 +839,12 @@ impl<'a> PersistedConfig<'a> {
                     .then_some(config.line_numbers),
                 relative: (config.relative_line_numbers != defaults.relative_line_numbers)
                     .then_some(config.relative_line_numbers),
+            },
+            timestamp: PersistedTimestamp {
+                format: (config.timestamp_format != defaults.timestamp_format)
+                    .then_some(config.timestamp_format.as_str()),
+                localized: (config.timestamp_localized != defaults.timestamp_localized)
+                    .then_some(config.timestamp_localized),
             },
             details: PersistedDetails {
                 wrap: (config.wrap_details != defaults.wrap_details).then_some(config.wrap_details),
@@ -918,6 +957,7 @@ impl Default for Config {
             sidebar: SidebarFileConfig::default(),
             mouse: MouseFileConfig::default(),
             line_numbers: LineNumbersFileConfig::default(),
+            timestamp: TimestampFileConfig::default(),
             theme: ThemeConfig::default(),
             colors: crate::theme::ColorOverrides::default(),
             levels: crate::theme::LevelOverrides::default(),
@@ -1003,7 +1043,7 @@ impl Config {
             bail!("details_tab_width must be >= 2");
         }
         if self.timestamp_format.trim().is_empty() {
-            bail!("timestamp_format must not be empty");
+            bail!("timestamp.format must not be empty");
         }
         self.theme.validate()?;
         self.theme_overrides()

@@ -51,6 +51,7 @@ fn cols(sources: &[(&str, Option<usize>, Align)]) -> Vec<Column> {
 fn per_column_border_width_overrides_default() {
     let opts = FormatOptions {
         timestamp_format: "raw",
+        timestamp_localized: true,
         view_line: 1,
     };
     let mut columns = cols(&[
@@ -81,6 +82,7 @@ fn per_column_border_width_overrides_default() {
 fn per_column_border_overrides_global() {
     let opts = FormatOptions {
         timestamp_format: "raw",
+        timestamp_localized: true,
         view_line: 1,
     };
     let mut columns = cols(&[
@@ -111,6 +113,7 @@ fn per_column_border_overrides_global() {
 fn per_column_border_color_overrides_default() {
     let opts = FormatOptions {
         timestamp_format: "raw",
+        timestamp_localized: true,
         view_line: 1,
     };
     let mut columns = cols(&[
@@ -140,6 +143,7 @@ fn per_column_border_color_overrides_default() {
 fn renders_default_style_columns() {
     let opts = FormatOptions {
         timestamp_format: "%H:%M:%S",
+        timestamp_localized: true,
         view_line: 3,
     };
     let entry = entry();
@@ -166,6 +170,7 @@ fn renders_default_style_columns() {
 fn width_and_align() {
     let opts = FormatOptions {
         timestamp_format: "raw",
+        timestamp_localized: true,
         view_line: 1,
     };
     let columns = cols(&[("level", Some(8), Align::Right)]);
@@ -179,6 +184,7 @@ fn width_and_align() {
 fn center_aligns_in_fixed_width() {
     let opts = FormatOptions {
         timestamp_format: "raw",
+        timestamp_localized: true,
         view_line: 1,
     };
     let err = entry();
@@ -213,6 +219,7 @@ fn center_aligns_in_fixed_width() {
 fn truncates_wide_columns() {
     let opts = FormatOptions {
         timestamp_format: "raw",
+        timestamp_localized: true,
         view_line: 1,
     };
     let columns = cols(&[("message", Some(2), Align::Left)]);
@@ -228,6 +235,7 @@ fn truncates_wide_columns() {
 fn resolves_dotted_nested_fields() {
     let opts = FormatOptions {
         timestamp_format: "raw",
+        timestamp_localized: true,
         view_line: 1,
     };
     let columns = cols(&[("annotations.url", None, Align::Left)]);
@@ -246,6 +254,7 @@ fn resolves_dotted_nested_fields() {
 fn segments_preserve_kinds() {
     let opts = FormatOptions {
         timestamp_format: "%H:%M:%S",
+        timestamp_localized: true,
         view_line: 1,
     };
     let columns = cols(&[
@@ -316,6 +325,7 @@ fn padding_wraps_fitted_content() {
 
     let opts = FormatOptions {
         timestamp_format: "raw",
+        timestamp_localized: true,
         view_line: 1,
     };
     let columns = vec![Column {
@@ -349,7 +359,7 @@ fn auto_widths_align_across_rows() {
     long.fields[0].value = FieldValue::Number("500".into());
 
     let rows = [(&short as &LogEntry, 1usize), (&long, 2)];
-    let widths = measure_widths(&columns, &rows, "raw");
+    let widths = measure_widths(&columns, &rows, "raw", true);
     assert_eq!(widths[0], 5);
     assert_eq!(widths[1], UnicodeWidthStr::width("[Network] Response"));
     assert_eq!(widths[2], 3); // "500"
@@ -360,6 +370,7 @@ fn auto_widths_align_across_rows() {
         &short,
         &FormatOptions {
             timestamp_format: "raw",
+            timestamp_localized: true,
             view_line: 1,
         },
         &ColumnBorderStyle::default(),
@@ -373,6 +384,7 @@ fn auto_widths_align_across_rows() {
         &long,
         &FormatOptions {
             timestamp_format: "raw",
+            timestamp_localized: true,
             view_line: 2,
         },
         &ColumnBorderStyle::default(),

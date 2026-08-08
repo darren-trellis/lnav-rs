@@ -124,7 +124,12 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
         let src = app.view.visible[body_idx];
         measure_rows.push((&app.source.entries()[src], display + 1));
     }
-    let col_widths = columns::measure_widths(&app.config.columns, &measure_rows, ts_fmt);
+    let col_widths = columns::measure_widths(
+        &app.config.columns,
+        &measure_rows,
+        ts_fmt,
+        app.config.timestamp_localized,
+    );
 
     let default_border = columns::ColumnBorderStyle {
         width: app.theme.column_border_width,
@@ -331,6 +336,7 @@ fn render_line<'a>(app: &'a App, entry: &'a LogEntry, options: LineRenderOptions
         entry,
         &columns::FormatOptions {
             timestamp_format: &app.config.timestamp_format,
+            timestamp_localized: app.config.timestamp_localized,
             view_line,
         },
         &default_border,

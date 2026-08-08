@@ -13,8 +13,14 @@ Default path: `~/.config/teleminator/config.toml`.
 | `list_scrollbar_horizontal` | `true` \| `false` | `true` | List horizontal scrollbar |
 | `border` | `true` \| `false` | `true` | Draw vertical rules between list columns (overridable per column) |
 | `page_lines` | integer `≥ 0` | `0` | Page up/down step (`0` = viewport height) |
-| `timestamp_format` | strftime string \| `"raw"` | `"%H:%M:%S"` | Timestamp column format (`"raw"` keeps the log string) |
 | `case_mode` | `"sensitive"` \| `"insensitive"` \| `"smart"` | `"smart"` | Case matching for `/` search and `:filter` (`"smartcase"` accepted as an alias for `"smart"`) |
+
+## `[timestamp]`
+
+| Option | Values | Default | Description |
+|--------|--------|---------|-------------|
+| `format` | strftime string \| `"raw"` | `"%H:%M:%S"` | Timestamp column format (`"raw"` keeps the log string) |
+| `localized` | `true` \| `false` | `true` | Convert timestamps to the local timezone before formatting (`false` keeps UTC) |
 
 ## `[config]`
 

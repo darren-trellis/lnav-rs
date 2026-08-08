@@ -116,18 +116,25 @@ const OPTIONS: &[ConfigOption] = &[
         setter: set_page_lines,
     },
     ConfigOption {
-        name: "main.timestamp_format",
+        name: "main.case_mode",
+        help: "sensitive|insensitive|smart",
+        value_kind: ValueKind::CaseMode,
+        getter: get_case_mode,
+        setter: set_case_mode,
+    },
+    ConfigOption {
+        name: "timestamp.format",
         help: "strftime or raw",
         value_kind: ValueKind::TimestampFormat,
         getter: get_timestamp_format,
         setter: set_timestamp_format,
     },
     ConfigOption {
-        name: "main.case_mode",
-        help: "sensitive|insensitive|smart",
-        value_kind: ValueKind::CaseMode,
-        getter: get_case_mode,
-        setter: set_case_mode,
+        name: "timestamp.localized",
+        help: "on|off|toggle",
+        value_kind: ValueKind::Bool,
+        getter: get_timestamp_localized,
+        setter: set_timestamp_localized,
     },
     ConfigOption {
         name: "config.autosave",
@@ -753,8 +760,23 @@ fn get_timestamp_format(app: &App) -> String {
 
 fn set_timestamp_format(app: &mut App, value: &str) -> bool {
     app.config.timestamp_format = value.to_string();
-    app.status_message = Some(format!("main.timestamp_format={}", app.config.timestamp_format));
+    app.status_message = Some(format!("timestamp.format={}", app.config.timestamp_format));
     true
+}
+
+fn get_timestamp_localized(app: &App) -> String {
+    on_off(app.config.timestamp_localized)
+}
+
+fn set_timestamp_localized(app: &mut App, value: &str) -> bool {
+    set_bool(
+        app,
+        "timestamp.localized",
+        value,
+        |app| app.config.timestamp_localized,
+        |app, enabled| app.config.timestamp_localized = enabled,
+        false,
+    )
 }
 
 fn get_case_mode(app: &App) -> String {

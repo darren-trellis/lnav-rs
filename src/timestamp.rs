@@ -56,9 +56,11 @@ pub fn parse(raw: &str) -> Option<DateTime<Utc>> {
     None
 }
 
-/// Format a timestamp in the local timezone.
-/// `fmt` of `""` or `"raw"` returns the original string.
-pub fn format(raw: &str, parsed: Option<&DateTime<Utc>>, fmt: &str) -> String {
+/// Format a timestamp.
+///
+/// When `localized` is true, convert to the local timezone before formatting;
+/// otherwise keep UTC. `fmt` of `""` or `"raw"` returns the original string.
+pub fn format(raw: &str, parsed: Option<&DateTime<Utc>>, fmt: &str, localized: bool) -> String {
     let fmt = fmt.trim();
     if fmt.is_empty() || fmt.eq_ignore_ascii_case("raw") {
         return raw.to_string();
@@ -66,7 +68,8 @@ pub fn format(raw: &str, parsed: Option<&DateTime<Utc>>, fmt: &str) -> String {
 
     let dt = parsed.copied().or_else(|| parse(raw));
     match dt {
-        Some(dt) => dt.with_timezone(&Local).format(fmt).to_string(),
+        Some(dt) if localized => dt.with_timezone(&Local).format(fmt).to_string(),
+        Some(dt) => dt.format(fmt).to_string(),
         None => raw.to_string(),
     }
 }

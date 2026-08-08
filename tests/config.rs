@@ -289,6 +289,52 @@ fn rejects_legacy_main_config_and_persist_keys() {
 }
 
 #[test]
+fn loads_timestamp_section() {
+    let dir = std::env::temp_dir().join(format!("teleminator-ts-sec-{}", std::process::id()));
+    let _ = fs::create_dir_all(&dir);
+    let path = dir.join("config.toml");
+    fs::write(
+        &path,
+        r#"[timestamp]
+format = "raw"
+localized = false
+"#,
+    )
+    .unwrap();
+    let (cfg, _) = Config::load_from(&path).unwrap();
+    assert_eq!(cfg.timestamp_format, "raw");
+    assert!(!cfg.timestamp_localized);
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn rejects_legacy_main_timestamp_format() {
+    let dir = std::env::temp_dir().join(format!("teleminator-ts-leg-{}", std::process::id()));
+    let _ = fs::create_dir_all(&dir);
+    let path = dir.join("config.toml");
+    fs::write(&path, "[main]\ntimestamp_format = \"raw\"\n").unwrap();
+    assert!(Config::load_from(&path).is_err());
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn write_emits_timestamp_section_not_main_keys() {
+    let dir = std::env::temp_dir().join(format!("teleminator-write-ts-{}", std::process::id()));
+    let _ = fs::create_dir_all(&dir);
+    let path = dir.join("config.toml");
+    let mut cfg = Config::default();
+    cfg.timestamp_format = "raw".into();
+    cfg.timestamp_localized = false;
+    cfg.write_to(&path).unwrap();
+    let raw = fs::read_to_string(&path).unwrap();
+    assert!(raw.contains("[timestamp]"));
+    assert!(raw.contains("format = \"raw\""));
+    assert!(raw.contains("localized = false"));
+    assert!(!raw.contains("timestamp_format = "));
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn write_emits_config_and_persist_sections() {
     let dir = std::env::temp_dir().join(format!("teleminator-write-cfg-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
@@ -418,7 +464,9 @@ fn write_omits_default_keys() {
     assert!(!raw.contains("[sidebar]"));
     assert!(!raw.contains("[mouse]"));
     assert!(!raw.contains("[line_numbers]"));
+    assert!(!raw.contains("[timestamp]"));
     assert!(!raw.contains("sidebar_width = "));
+    assert!(!raw.contains("timestamp_format = "));
     assert!(!raw.contains("scroll_moves_selection = "));
     assert!(!raw.contains("session_filters = "));
     assert!(!raw.contains("session_stdin = "));
