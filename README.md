@@ -114,31 +114,21 @@ border = true
 page_lines = 0
 case_mode = "smart"   # or "sensitive" | "insensitive"
 
-[view.main]
-tail_mode = true
-
-[view.main.scrollbar]
-vertical = true
-horizontal = true
-
-[view.details]
-wrap = true
-json_tree = true
-max_height = 24
-tab_width = 4
-
-[view.details.scrollbar]
-vertical = true
-horizontal = true
-
-[view.sidebar]
-enabled = false
-width = 28
-position = "right"   # or "left"
-
-[view.sidebar.scrollbar]
-vertical = true
-horizontal = true
+[view]
+main.tail_mode = true
+main.scrollbar.vertical = true
+main.scrollbar.horizontal = true
+details.wrap = true
+details.json_tree = true
+details.max_height = 24
+details.tab_width = 4
+details.scrollbar.vertical = true
+details.scrollbar.horizontal = true
+sidebar.enabled = false
+sidebar.width = 28
+sidebar.position = "right"   # or "left"
+sidebar.scrollbar.vertical = true
+sidebar.scrollbar.horizontal = true
 
 [timestamp]
 format = "%H:%M:%S"

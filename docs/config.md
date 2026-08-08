@@ -12,49 +12,24 @@ Default path: `~/.config/teleminator/config.toml`.
 | `page_lines` | integer `≥ 0` | `0` | Page up/down step (`0` = viewport height) |
 | `case_mode` | `"sensitive"` \| `"insensitive"` \| `"smart"` | `"smart"` | Case matching for `/` search and `:filter` (`"smartcase"` accepted as an alias for `"smart"`) |
 
-## `[view.main]`
+## `[view]`
 
 | Option | Values | Default | Description |
 |--------|--------|---------|-------------|
-| `tail_mode` | `true` \| `false` | `true` | Live-tail as the file or pipe grows |
-
-## `[view.main.scrollbar]`
-
-| Option | Values | Default | Description |
-|--------|--------|---------|-------------|
-| `vertical` | `true` \| `false` | `true` | List vertical scrollbar |
-| `horizontal` | `true` \| `false` | `true` | List horizontal scrollbar |
-
-## `[view.details]`
-
-| Option | Values | Default | Description |
-|--------|--------|---------|-------------|
-| `wrap` | `true` \| `false` | `true` | Wrap text in the details overlay |
-| `json_tree` | `true` \| `false` | `true` | Tree-view nested JSON in details |
-| `max_height` | integer `≥ 4` | `24` | Max details overlay height in rows (relative `+N`/`-N` are layout/content-capped) |
-| `tab_width` | integer `≥ 2` | `4` | Details tree indent width |
-
-## `[view.details.scrollbar]`
-
-| Option | Values | Default | Description |
-|--------|--------|---------|-------------|
-| `vertical` | `true` \| `false` | `true` | Details vertical scrollbar |
-| `horizontal` | `true` \| `false` | `true` | Details horizontal scrollbar (shown when `wrap` is `false`) |
-
-## `[view.sidebar]`
-
-| Option | Values | Default | Description |
-|--------|--------|---------|-------------|
-| `enabled` | `true` \| `false` | `false` | Show filters/hidden sidebar |
-| `width` | integer `≥ 12` | `28` | Preferred sidebar width in columns (relative adjusts show the sidebar) |
-| `position` | `"left"` \| `"right"` | `"right"` | Place the filters sidebar on the left or right of the main pane |
-
-## `[view.sidebar.scrollbar]`
-
-| Option | Values | Default | Description |
-|--------|--------|---------|-------------|
-| `vertical` | `true` \| `false` | `true` | Sidebar vertical scrollbar |
-| `horizontal` | `true` \| `false` | `true` | Sidebar horizontal scrollbar |
+| `main.tail_mode` | `true` \| `false` | `true` | Live-tail as the file or pipe grows |
+| `main.scrollbar.vertical` | `true` \| `false` | `true` | List vertical scrollbar |
+| `main.scrollbar.horizontal` | `true` \| `false` | `true` | List horizontal scrollbar |
+| `details.wrap` | `true` \| `false` | `true` | Wrap text in the details overlay |
+| `details.json_tree` | `true` \| `false` | `true` | Tree-view nested JSON in details |
+| `details.max_height` | integer `≥ 4` | `24` | Max details overlay height in rows (relative `+N`/`-N` are layout/content-capped) |
+| `details.tab_width` | integer `≥ 2` | `4` | Details tree indent width |
+| `details.scrollbar.vertical` | `true` \| `false` | `true` | Details vertical scrollbar |
+| `details.scrollbar.horizontal` | `true` \| `false` | `true` | Details horizontal scrollbar (shown when `details.wrap` is `false`) |
+| `sidebar.enabled` | `true` \| `false` | `false` | Show filters/hidden sidebar |
+| `sidebar.width` | integer `≥ 12` | `28` | Preferred sidebar width in columns (relative adjusts show the sidebar) |
+| `sidebar.position` | `"left"` \| `"right"` | `"right"` | Place the filters sidebar on the left or right of the main pane |
+| `sidebar.scrollbar.vertical` | `true` \| `false` | `true` | Sidebar vertical scrollbar |
+| `sidebar.scrollbar.horizontal` | `true` \| `false` | `true` | Sidebar horizontal scrollbar |
 
 ## `[timestamp]`
 
