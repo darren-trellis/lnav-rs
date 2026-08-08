@@ -360,24 +360,26 @@ fn rejects_narrow_sidebar_width() {
     let dir = std::env::temp_dir().join(format!("teleminator-sidebar-w-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
-    fs::write(&path, "[sidebar]\nwidth = 8\n").unwrap();
+    fs::write(&path, "[view.sidebar]\nwidth = 8\n").unwrap();
     assert!(Config::load_from(&path).is_err());
     let _ = fs::remove_dir_all(&dir);
 }
 
 #[test]
-fn loads_sidebar_section() {
+fn loads_view_sidebar_section() {
     let dir = std::env::temp_dir().join(format!("teleminator-sidebar-sec-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
     fs::write(
         &path,
-        r#"[sidebar]
+        r#"[view.sidebar]
 enabled = true
 width = 36
 position = "left"
-scrollbar_vertical = false
-scrollbar_horizontal = false
+
+[view.sidebar.scrollbar]
+vertical = false
+horizontal = false
 "#,
     )
     .unwrap();
@@ -391,11 +393,50 @@ scrollbar_horizontal = false
 }
 
 #[test]
+fn loads_view_main_scrollbar() {
+    let dir = std::env::temp_dir().join(format!("teleminator-view-main-{}", std::process::id()));
+    let _ = fs::create_dir_all(&dir);
+    let path = dir.join("config.toml");
+    fs::write(
+        &path,
+        r#"[view.main.scrollbar]
+vertical = false
+horizontal = false
+"#,
+    )
+    .unwrap();
+    let (cfg, _) = Config::load_from(&path).unwrap();
+    assert!(!cfg.list_scrollbar_vertical);
+    assert!(!cfg.list_scrollbar_horizontal);
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn rejects_legacy_main_sidebar_keys() {
     let dir = std::env::temp_dir().join(format!("teleminator-sidebar-leg-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
     fs::write(&path, "[main]\nsidebar = true\nsidebar_width = 40\n").unwrap();
+    assert!(Config::load_from(&path).is_err());
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn rejects_legacy_top_level_sidebar_section() {
+    let dir = std::env::temp_dir().join(format!("teleminator-sidebar-top-{}", std::process::id()));
+    let _ = fs::create_dir_all(&dir);
+    let path = dir.join("config.toml");
+    fs::write(&path, "[sidebar]\nenabled = true\n").unwrap();
+    assert!(Config::load_from(&path).is_err());
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn rejects_legacy_main_list_scrollbar_keys() {
+    let dir = std::env::temp_dir().join(format!("teleminator-list-bar-leg-{}", std::process::id()));
+    let _ = fs::create_dir_all(&dir);
+    let path = dir.join("config.toml");
+    fs::write(&path, "[main]\nlist_scrollbar_vertical = false\n").unwrap();
     assert!(Config::load_from(&path).is_err());
     let _ = fs::remove_dir_all(&dir);
 }
@@ -416,6 +457,16 @@ fn rejects_legacy_scrollbar_key() {
     let _ = fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
     fs::write(&path, "[main]\nscrollbar = false\n").unwrap();
+    assert!(Config::load_from(&path).is_err());
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn rejects_legacy_flat_view_scrollbar_keys() {
+    let dir = std::env::temp_dir().join(format!("teleminator-flat-bar-{}", std::process::id()));
+    let _ = fs::create_dir_all(&dir);
+    let path = dir.join("config.toml");
+    fs::write(&path, "[view.sidebar]\nscrollbar_vertical = false\n").unwrap();
     assert!(Config::load_from(&path).is_err());
     let _ = fs::remove_dir_all(&dir);
 }
@@ -453,6 +504,8 @@ fn write_omits_default_keys() {
     assert!(!raw.contains("list_scrollbar_vertical = "));
     assert!(!raw.contains("list_scrollbar_horizontal = "));
     assert!(!raw.contains("details_scrollbar_vertical = "));
+    assert!(!raw.contains("scrollbar_vertical = "));
+    assert!(!raw.contains("scrollbar_horizontal = "));
     assert!(!raw.contains("scrollbar = "));
     assert!(!raw.contains("border = "));
     assert!(!raw.contains("autosave = "));
@@ -460,6 +513,7 @@ fn write_omits_default_keys() {
     assert!(!raw.contains("page_lines = "));
     assert!(!raw.contains("[config]"));
     assert!(!raw.contains("[persist]"));
+    assert!(!raw.contains("[view]"));
     assert!(!raw.contains("[details]"));
     assert!(!raw.contains("[sidebar]"));
     assert!(!raw.contains("[mouse]"));
@@ -501,14 +555,14 @@ fn sidebar_position_left_and_aliases() {
     let dir = std::env::temp_dir().join(format!("teleminator-side-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
-    fs::write(&path, "[sidebar]\nposition = \"left\"\n").unwrap();
+    fs::write(&path, "[view.sidebar]\nposition = \"left\"\n").unwrap();
     let (cfg, _) = Config::load_from(&path).unwrap();
     assert_eq!(cfg.sidebar_position, SidebarPosition::Left);
     let mut out = cfg;
     out.sidebar_position = SidebarPosition::Left;
     out.write_to(&path).unwrap();
     let raw = fs::read_to_string(&path).unwrap();
-    assert!(raw.contains("[sidebar]"));
+    assert!(raw.contains("[view.sidebar]"));
     assert!(raw.contains("position = \"left\""));
     assert!(!raw.contains("sidebar_position = "));
     assert!(!raw.contains("[main]"));
@@ -516,7 +570,7 @@ fn sidebar_position_left_and_aliases() {
 }
 
 #[test]
-fn write_emits_sidebar_section_not_main_keys() {
+fn write_emits_view_sidebar_section_not_legacy_keys() {
     let dir = std::env::temp_dir().join(format!("teleminator-write-side-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
@@ -528,32 +582,37 @@ fn write_emits_sidebar_section_not_main_keys() {
     cfg.sidebar_scrollbar_horizontal = false;
     cfg.write_to(&path).unwrap();
     let raw = fs::read_to_string(&path).unwrap();
-    assert!(raw.contains("[sidebar]"));
+    assert!(raw.contains("[view.sidebar]"));
     assert!(raw.contains("enabled = true"));
     assert!(raw.contains("width = 36"));
     assert!(raw.contains("position = \"left\""));
-    assert!(raw.contains("scrollbar_vertical = false"));
-    assert!(raw.contains("scrollbar_horizontal = false"));
+    assert!(raw.contains("[view.sidebar.scrollbar]"));
+    assert!(raw.contains("vertical = false"));
+    assert!(raw.contains("horizontal = false"));
     assert!(!raw.contains("sidebar_width = "));
     assert!(!raw.contains("sidebar_position = "));
     assert!(!raw.contains("sidebar_scrollbar_"));
+    assert!(!raw.contains("scrollbar_vertical = "));
+    assert!(!raw.contains("[sidebar]"));
     assert!(!raw.contains("[main]\nsidebar"));
     let _ = fs::remove_dir_all(&dir);
 }
 
 #[test]
-fn loads_details_section() {
+fn loads_view_details_section() {
     let dir = std::env::temp_dir().join(format!("teleminator-details-sec-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
     fs::write(
         &path,
-        r#"[details]
+        r#"[view.details]
 wrap = false
 json_tree = false
 max_height = 12
 tab_width = 2
-scrollbar_vertical = false
+
+[view.details.scrollbar]
+vertical = false
 "#,
     )
     .unwrap();
@@ -577,7 +636,17 @@ fn rejects_legacy_main_details_keys() {
 }
 
 #[test]
-fn write_emits_details_section_not_main_keys() {
+fn rejects_legacy_top_level_details_section() {
+    let dir = std::env::temp_dir().join(format!("teleminator-details-top-{}", std::process::id()));
+    let _ = fs::create_dir_all(&dir);
+    let path = dir.join("config.toml");
+    fs::write(&path, "[details]\nmax_height = 12\n").unwrap();
+    assert!(Config::load_from(&path).is_err());
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn write_emits_view_details_section_not_legacy_keys() {
     let dir = std::env::temp_dir().join(format!("teleminator-write-det-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
@@ -589,17 +658,38 @@ fn write_emits_details_section_not_main_keys() {
     cfg.details_scrollbar_vertical = false;
     cfg.write_to(&path).unwrap();
     let raw = fs::read_to_string(&path).unwrap();
-    assert!(raw.contains("[details]"));
+    assert!(raw.contains("[view.details]"));
     assert!(raw.contains("wrap = false"));
     assert!(raw.contains("json_tree = false"));
     assert!(raw.contains("max_height = 12"));
     assert!(raw.contains("tab_width = 2"));
-    assert!(raw.contains("scrollbar_vertical = false"));
+    assert!(raw.contains("[view.details.scrollbar]"));
+    assert!(raw.contains("vertical = false"));
     assert!(!raw.contains("wrap_details = "));
     assert!(!raw.contains("details_json_tree = "));
     assert!(!raw.contains("details_max_height = "));
     assert!(!raw.contains("details_tab_width = "));
     assert!(!raw.contains("details_scrollbar_vertical = "));
+    assert!(!raw.contains("scrollbar_vertical = "));
+    assert!(!raw.contains("[details]"));
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn write_emits_view_main_scrollbar() {
+    let dir = std::env::temp_dir().join(format!("teleminator-write-main-bar-{}", std::process::id()));
+    let _ = fs::create_dir_all(&dir);
+    let path = dir.join("config.toml");
+    let mut cfg = Config::default();
+    cfg.list_scrollbar_vertical = false;
+    cfg.list_scrollbar_horizontal = false;
+    cfg.write_to(&path).unwrap();
+    let raw = fs::read_to_string(&path).unwrap();
+    assert!(raw.contains("[view.main.scrollbar]"));
+    assert!(raw.contains("vertical = false"));
+    assert!(raw.contains("horizontal = false"));
+    assert!(!raw.contains("list_scrollbar_"));
+    assert!(!raw.contains("[main]"));
     let _ = fs::remove_dir_all(&dir);
 }
 
@@ -608,7 +698,7 @@ fn rejects_narrow_details_max_height() {
     let dir = std::env::temp_dir().join(format!("teleminator-details-h-{}", std::process::id()));
     let _ = fs::create_dir_all(&dir);
     let path = dir.join("config.toml");
-    fs::write(&path, "[details]\nmax_height = 2\n").unwrap();
+    fs::write(&path, "[view.details]\nmax_height = 2\n").unwrap();
     assert!(Config::load_from(&path).is_err());
     let _ = fs::remove_dir_all(&dir);
 }

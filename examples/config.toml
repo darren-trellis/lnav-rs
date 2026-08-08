@@ -1,8 +1,28 @@
 [main]
-# list_scrollbar_vertical = true
-# list_scrollbar_horizontal = true
 # case_mode = "insensitive"
 # border = true
+
+# [view.main.scrollbar]
+# vertical = true
+# horizontal = true
+
+# [view.details]
+# wrap = true
+# json_tree = true
+# max_height = 24
+# tab_width = 4
+
+# [view.details.scrollbar]
+# vertical = true
+
+# [view.sidebar]
+# enabled = true
+# width = 36
+# position = "left"   # or "right"
+
+# [view.sidebar.scrollbar]
+# vertical = true
+# horizontal = true
 
 # [config]
 # autosave = true
@@ -18,20 +38,6 @@
 # [line_numbers]
 # enabled = true
 # relative = false
-
-# [details]
-# wrap = true
-# json_tree = true
-# max_height = 24
-# tab_width = 4
-# scrollbar_vertical = true
-
-# [sidebar]
-# enabled = true
-# width = 36
-# position = "left"   # or "right"
-# scrollbar_vertical = true
-# scrollbar_horizontal = true
 
 # [mouse]
 # enabled = true

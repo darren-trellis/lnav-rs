@@ -88,20 +88,6 @@ const OPTIONS: &[ConfigOption] = &[
         setter: set_follow,
     },
     ConfigOption {
-        name: "main.list_scrollbar_vertical",
-        help: "on|off|toggle",
-        value_kind: ValueKind::Bool,
-        getter: get_list_scrollbar_vertical,
-        setter: set_list_scrollbar_vertical,
-    },
-    ConfigOption {
-        name: "main.list_scrollbar_horizontal",
-        help: "on|off|toggle",
-        value_kind: ValueKind::Bool,
-        getter: get_list_scrollbar_horizontal,
-        setter: set_list_scrollbar_horizontal,
-    },
-    ConfigOption {
         name: "main.border",
         help: "on|off|toggle",
         value_kind: ValueKind::Bool,
@@ -193,70 +179,84 @@ const OPTIONS: &[ConfigOption] = &[
         setter: set_scroll_moves_selection,
     },
     ConfigOption {
-        name: "details.wrap",
+        name: "view.main.scrollbar.vertical",
+        help: "on|off|toggle",
+        value_kind: ValueKind::Bool,
+        getter: get_list_scrollbar_vertical,
+        setter: set_list_scrollbar_vertical,
+    },
+    ConfigOption {
+        name: "view.main.scrollbar.horizontal",
+        help: "on|off|toggle",
+        value_kind: ValueKind::Bool,
+        getter: get_list_scrollbar_horizontal,
+        setter: set_list_scrollbar_horizontal,
+    },
+    ConfigOption {
+        name: "view.details.wrap",
         help: "on|off|toggle",
         value_kind: ValueKind::Bool,
         getter: get_wrap_details,
         setter: set_wrap_details,
     },
     ConfigOption {
-        name: "details.json_tree",
+        name: "view.details.json_tree",
         help: "on|off|toggle",
         value_kind: ValueKind::Bool,
         getter: get_details_json_tree,
         setter: set_details_json_tree,
     },
     ConfigOption {
-        name: "details.max_height",
+        name: "view.details.max_height",
         help: "max overlay rows",
         value_kind: ValueKind::Unsigned,
         getter: get_details_max_height,
         setter: set_details_max_height,
     },
     ConfigOption {
-        name: "details.tab_width",
+        name: "view.details.tab_width",
         help: "tree indent columns",
         value_kind: ValueKind::Unsigned,
         getter: get_details_tab_width,
         setter: set_details_tab_width,
     },
     ConfigOption {
-        name: "details.scrollbar_vertical",
+        name: "view.details.scrollbar.vertical",
         help: "on|off|toggle",
         value_kind: ValueKind::Bool,
         getter: get_details_scrollbar_vertical,
         setter: set_details_scrollbar_vertical,
     },
     ConfigOption {
-        name: "sidebar.enabled",
+        name: "view.sidebar.enabled",
         help: "on|off|toggle",
         value_kind: ValueKind::Bool,
         getter: get_sidebar,
         setter: set_sidebar,
     },
     ConfigOption {
-        name: "sidebar.width",
+        name: "view.sidebar.width",
         help: "sidebar columns",
         value_kind: ValueKind::Unsigned,
         getter: get_sidebar_width,
         setter: set_sidebar_width,
     },
     ConfigOption {
-        name: "sidebar.position",
+        name: "view.sidebar.position",
         help: "left|right",
         value_kind: ValueKind::SidebarPosition,
         getter: get_sidebar_position,
         setter: set_sidebar_position,
     },
     ConfigOption {
-        name: "sidebar.scrollbar_vertical",
+        name: "view.sidebar.scrollbar.vertical",
         help: "on|off|toggle",
         value_kind: ValueKind::Bool,
         getter: get_sidebar_scrollbar_vertical,
         setter: set_sidebar_scrollbar_vertical,
     },
     ConfigOption {
-        name: "sidebar.scrollbar_horizontal",
+        name: "view.sidebar.scrollbar.horizontal",
         help: "on|off|toggle",
         value_kind: ValueKind::Bool,
         getter: get_sidebar_scrollbar_horizontal,
@@ -277,9 +277,9 @@ pub fn find(name: &str) -> Option<&'static ConfigOption> {
 /// Minimum accepted value for unsigned config options (for spinner adjust).
 pub fn unsigned_min(name: &str) -> usize {
     match name {
-        "details.max_height" => 4,
-        "details.tab_width" => 2,
-        "sidebar.width" => crate::config::default_sidebar_width_min(),
+        "view.details.max_height" => 4,
+        "view.details.tab_width" => 2,
+        "view.sidebar.width" => crate::config::default_sidebar_width_min(),
         "mouse.scroll_lines" => 1,
         "main.page_lines" => 0,
         _ => 0,
@@ -360,7 +360,7 @@ fn get_wrap_details(app: &App) -> String {
 fn set_wrap_details(app: &mut App, value: &str) -> bool {
     set_bool(
         app,
-        "details.wrap",
+        "view.details.wrap",
         value,
         |app| app.config.wrap_details,
         |app, enabled| app.config.wrap_details = enabled,
@@ -375,7 +375,7 @@ fn get_details_json_tree(app: &App) -> String {
 fn set_details_json_tree(app: &mut App, value: &str) -> bool {
     set_bool(
         app,
-        "details.json_tree",
+        "view.details.json_tree",
         value,
         |app| app.config.details_json_tree,
         |app, enabled| {
@@ -407,18 +407,18 @@ fn set_details_max_height(app: &mut App, value: &str) -> bool {
         if !app.details.visible {
             app.open_details();
         }
-        app.status_message = Some(format!("details.max_height={next}"));
+        app.status_message = Some(format!("view.details.max_height={next}"));
         return true;
     }
     match value.parse::<usize>() {
         Ok(height) if height >= MIN => {
             app.config.details_max_height = height;
-            app.status_message = Some(format!("details.max_height={height}"));
+            app.status_message = Some(format!("view.details.max_height={height}"));
             true
         }
         _ => {
             app.status_message = Some(
-                "usage: :config set details.max_height N|+N|-N (N >= 4)".into(),
+                "usage: :config set view.details.max_height N|+N|-N (N >= 4)".into(),
             );
             false
         }
@@ -433,11 +433,12 @@ fn set_details_tab_width(app: &mut App, value: &str) -> bool {
     match value.parse::<usize>() {
         Ok(width) if width >= 2 => {
             app.config.details_tab_width = width;
-            app.status_message = Some(format!("details.tab_width={width}"));
+            app.status_message = Some(format!("view.details.tab_width={width}"));
             true
         }
         _ => {
-            app.status_message = Some("usage: :config set details.tab_width N (N >= 2)".into());
+            app.status_message =
+                Some("usage: :config set view.details.tab_width N (N >= 2)".into());
             false
         }
     }
@@ -480,7 +481,7 @@ fn get_list_scrollbar_vertical(app: &App) -> String {
 fn set_list_scrollbar_vertical(app: &mut App, value: &str) -> bool {
     set_bool(
         app,
-        "main.list_scrollbar_vertical",
+        "view.main.scrollbar.vertical",
         value,
         |app| app.config.list_scrollbar_vertical,
         |app, enabled| app.config.list_scrollbar_vertical = enabled,
@@ -495,7 +496,7 @@ fn get_list_scrollbar_horizontal(app: &App) -> String {
 fn set_list_scrollbar_horizontal(app: &mut App, value: &str) -> bool {
     set_bool(
         app,
-        "main.list_scrollbar_horizontal",
+        "view.main.scrollbar.horizontal",
         value,
         |app| app.config.list_scrollbar_horizontal,
         |app, enabled| app.config.list_scrollbar_horizontal = enabled,
@@ -510,7 +511,7 @@ fn get_sidebar_scrollbar_vertical(app: &App) -> String {
 fn set_sidebar_scrollbar_vertical(app: &mut App, value: &str) -> bool {
     set_bool(
         app,
-        "sidebar.scrollbar_vertical",
+        "view.sidebar.scrollbar.vertical",
         value,
         |app| app.config.sidebar_scrollbar_vertical,
         |app, enabled| app.config.sidebar_scrollbar_vertical = enabled,
@@ -525,7 +526,7 @@ fn get_sidebar_scrollbar_horizontal(app: &App) -> String {
 fn set_sidebar_scrollbar_horizontal(app: &mut App, value: &str) -> bool {
     set_bool(
         app,
-        "sidebar.scrollbar_horizontal",
+        "view.sidebar.scrollbar.horizontal",
         value,
         |app| app.config.sidebar_scrollbar_horizontal,
         |app, enabled| app.config.sidebar_scrollbar_horizontal = enabled,
@@ -540,7 +541,7 @@ fn get_details_scrollbar_vertical(app: &App) -> String {
 fn set_details_scrollbar_vertical(app: &mut App, value: &str) -> bool {
     set_bool(
         app,
-        "details.scrollbar_vertical",
+        "view.details.scrollbar.vertical",
         value,
         |app| app.config.details_scrollbar_vertical,
         |app, enabled| app.config.details_scrollbar_vertical = enabled,
@@ -600,7 +601,7 @@ fn get_sidebar(app: &App) -> String {
 fn set_sidebar(app: &mut App, value: &str) -> bool {
     set_bool(
         app,
-        "sidebar.enabled",
+        "view.sidebar.enabled",
         value,
         |app| app.config.sidebar,
         |app, enabled| {
@@ -631,11 +632,11 @@ fn get_sidebar_position(app: &App) -> String {
 
 fn set_sidebar_position(app: &mut App, value: &str) -> bool {
     let Some(position) = SidebarPosition::parse(value) else {
-        app.status_message = Some("usage: :config set sidebar.position left|right".into());
+        app.status_message = Some("usage: :config set view.sidebar.position left|right".into());
         return false;
     };
     app.config.sidebar_position = position;
-    app.status_message = Some(format!("sidebar.position={}", position.as_str()));
+    app.status_message = Some(format!("view.sidebar.position={}", position.as_str()));
     true
 }
 
@@ -648,18 +649,18 @@ fn set_sidebar_width(app: &mut App, value: &str) -> bool {
         let next = (current as isize + delta).clamp(min as isize, max as isize) as usize;
         app.config.sidebar_width = next;
         app.config.sidebar = true;
-        app.status_message = Some(format!("sidebar.width={next}"));
+        app.status_message = Some(format!("view.sidebar.width={next}"));
         return true;
     }
     match value.parse::<usize>() {
         Ok(width) if width >= min => {
             app.config.sidebar_width = width;
-            app.status_message = Some(format!("sidebar.width={width}"));
+            app.status_message = Some(format!("view.sidebar.width={width}"));
             true
         }
         _ => {
             app.status_message = Some(format!(
-                "usage: :config set sidebar.width N|+N|-N (N >= {min})"
+                "usage: :config set view.sidebar.width N|+N|-N (N >= {min})"
             ));
             false
         }

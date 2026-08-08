@@ -316,10 +316,6 @@ struct MainConfig {
     #[serde(default = "default_true")]
     follow: bool,
     #[serde(default = "default_true")]
-    list_scrollbar_vertical: bool,
-    #[serde(default = "default_true")]
-    list_scrollbar_horizontal: bool,
-    #[serde(default = "default_true")]
     border: bool,
     #[serde(default)]
     page_lines: usize,
@@ -331,13 +327,64 @@ impl Default for MainConfig {
     fn default() -> Self {
         Self {
             follow: true,
-            list_scrollbar_vertical: true,
-            list_scrollbar_horizontal: true,
             border: true,
             page_lines: 0,
             case_mode: CaseMode::default(),
         }
     }
+}
+
+/// Vertical + horizontal scrollbar toggles (`[view.*.scrollbar]`).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+struct ScrollbarAxesFileConfig {
+    #[serde(default = "default_true")]
+    vertical: bool,
+    #[serde(default = "default_true")]
+    horizontal: bool,
+}
+
+impl Default for ScrollbarAxesFileConfig {
+    fn default() -> Self {
+        Self {
+            vertical: true,
+            horizontal: true,
+        }
+    }
+}
+
+/// Vertical-only scrollbar (`[view.details.scrollbar]`).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+struct ScrollbarVerticalFileConfig {
+    #[serde(default = "default_true")]
+    vertical: bool,
+}
+
+impl Default for ScrollbarVerticalFileConfig {
+    fn default() -> Self {
+        Self { vertical: true }
+    }
+}
+
+/// Main-list view settings under `[view.main]`.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+struct ViewMainFileConfig {
+    #[serde(default)]
+    scrollbar: ScrollbarAxesFileConfig,
+}
+
+/// Pane layout settings under `[view]`.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+struct ViewFileConfig {
+    #[serde(default)]
+    main: ViewMainFileConfig,
+    #[serde(default)]
+    details: DetailsFileConfig,
+    #[serde(default)]
+    sidebar: SidebarFileConfig,
 }
 
 /// Timestamp display settings under `[timestamp]` in `config.toml`.
@@ -424,7 +471,7 @@ impl Default for MouseFileConfig {
     }
 }
 
-/// Details overlay settings under `[details]` in `config.toml`.
+/// Details overlay settings under `[view.details]` in `config.toml`.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 struct DetailsFileConfig {
@@ -436,8 +483,8 @@ struct DetailsFileConfig {
     max_height: usize,
     #[serde(default = "default_details_tab_width")]
     tab_width: usize,
-    #[serde(default = "default_true")]
-    scrollbar_vertical: bool,
+    #[serde(default)]
+    scrollbar: ScrollbarVerticalFileConfig,
 }
 
 impl Default for DetailsFileConfig {
@@ -447,12 +494,12 @@ impl Default for DetailsFileConfig {
             json_tree: true,
             max_height: default_details_max_height(),
             tab_width: default_details_tab_width(),
-            scrollbar_vertical: true,
+            scrollbar: ScrollbarVerticalFileConfig::default(),
         }
     }
 }
 
-/// Sidebar settings under `[sidebar]` in `config.toml`.
+/// Sidebar settings under `[view.sidebar]` in `config.toml`.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 struct SidebarFileConfig {
@@ -462,10 +509,8 @@ struct SidebarFileConfig {
     width: usize,
     #[serde(default)]
     position: SidebarPosition,
-    #[serde(default = "default_true")]
-    scrollbar_vertical: bool,
-    #[serde(default = "default_true")]
-    scrollbar_horizontal: bool,
+    #[serde(default)]
+    scrollbar: ScrollbarAxesFileConfig,
 }
 
 impl Default for SidebarFileConfig {
@@ -474,13 +519,12 @@ impl Default for SidebarFileConfig {
             enabled: false,
             width: default_sidebar_width(),
             position: SidebarPosition::default(),
-            scrollbar_vertical: true,
-            scrollbar_horizontal: true,
+            scrollbar: ScrollbarAxesFileConfig::default(),
         }
     }
 }
 
-/// On-disk TOML shape: scalars live under `[main]` / `[config]` / `[persist]` / pane sections.
+/// On-disk TOML shape: scalars live under `[main]` / `[config]` / `[persist]` / `[view]` / …
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct ConfigDocument {
@@ -491,9 +535,7 @@ struct ConfigDocument {
     #[serde(default)]
     persist: PersistFileConfig,
     #[serde(default)]
-    details: DetailsFileConfig,
-    #[serde(default)]
-    sidebar: SidebarFileConfig,
+    view: ViewFileConfig,
     #[serde(default)]
     mouse: MouseFileConfig,
     #[serde(default)]
@@ -522,24 +564,24 @@ impl ConfigDocument {
             levels: self.levels,
             ui: self.ui,
             follow: self.main.follow,
-            wrap_details: self.details.wrap,
-            details_json_tree: self.details.json_tree,
-            details_max_height: self.details.max_height,
-            details_tab_width: self.details.tab_width,
+            wrap_details: self.view.details.wrap,
+            details_json_tree: self.view.details.json_tree,
+            details_max_height: self.view.details.max_height,
+            details_tab_width: self.view.details.tab_width,
             line_numbers: self.line_numbers.enabled,
             relative_line_numbers: self.line_numbers.relative,
-            list_scrollbar_vertical: self.main.list_scrollbar_vertical,
-            list_scrollbar_horizontal: self.main.list_scrollbar_horizontal,
-            sidebar_scrollbar_vertical: self.sidebar.scrollbar_vertical,
-            sidebar_scrollbar_horizontal: self.sidebar.scrollbar_horizontal,
-            details_scrollbar_vertical: self.details.scrollbar_vertical,
+            list_scrollbar_vertical: self.view.main.scrollbar.vertical,
+            list_scrollbar_horizontal: self.view.main.scrollbar.horizontal,
+            sidebar_scrollbar_vertical: self.view.sidebar.scrollbar.vertical,
+            sidebar_scrollbar_horizontal: self.view.sidebar.scrollbar.horizontal,
+            details_scrollbar_vertical: self.view.details.scrollbar.vertical,
             border: self.main.border,
             autosave: self.config.autosave,
             autoreload: self.config.autoreload,
             session_filters: self.persist.filters,
-            sidebar: self.sidebar.enabled,
-            sidebar_width: self.sidebar.width,
-            sidebar_position: self.sidebar.position,
+            sidebar: self.view.sidebar.enabled,
+            sidebar_width: self.view.sidebar.width,
+            sidebar_position: self.view.sidebar.position,
             mouse: self.mouse.enabled,
             scroll_lines: self.mouse.scroll_lines,
             page_lines: self.main.page_lines,
@@ -561,10 +603,8 @@ struct PersistedConfig<'a> {
     config: PersistedConfigMeta,
     #[serde(skip_serializing_if = "PersistedPersist::is_empty")]
     persist: PersistedPersist,
-    #[serde(skip_serializing_if = "PersistedDetails::is_empty")]
-    details: PersistedDetails,
-    #[serde(skip_serializing_if = "PersistedSidebar::is_empty")]
-    sidebar: PersistedSidebar,
+    #[serde(skip_serializing_if = "PersistedView::is_empty")]
+    view: PersistedView,
     #[serde(skip_serializing_if = "PersistedMouse::is_empty")]
     mouse: PersistedMouse,
     #[serde(skip_serializing_if = "PersistedLineNumbers::is_empty")]
@@ -589,10 +629,6 @@ struct PersistedMain {
     #[serde(skip_serializing_if = "Option::is_none")]
     follow: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    list_scrollbar_vertical: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    list_scrollbar_horizontal: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     border: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     page_lines: Option<usize>,
@@ -603,11 +639,63 @@ struct PersistedMain {
 impl PersistedMain {
     fn is_empty(&self) -> bool {
         self.follow.is_none()
-            && self.list_scrollbar_vertical.is_none()
-            && self.list_scrollbar_horizontal.is_none()
             && self.border.is_none()
             && self.page_lines.is_none()
             && self.case_mode.is_none()
+    }
+}
+
+#[derive(Serialize, Default)]
+struct PersistedView {
+    #[serde(skip_serializing_if = "PersistedViewMain::is_empty")]
+    main: PersistedViewMain,
+    #[serde(skip_serializing_if = "PersistedDetails::is_empty")]
+    details: PersistedDetails,
+    #[serde(skip_serializing_if = "PersistedSidebar::is_empty")]
+    sidebar: PersistedSidebar,
+}
+
+impl PersistedView {
+    fn is_empty(&self) -> bool {
+        self.main.is_empty() && self.details.is_empty() && self.sidebar.is_empty()
+    }
+}
+
+#[derive(Serialize, Default)]
+struct PersistedViewMain {
+    #[serde(skip_serializing_if = "PersistedScrollbarAxes::is_empty")]
+    scrollbar: PersistedScrollbarAxes,
+}
+
+impl PersistedViewMain {
+    fn is_empty(&self) -> bool {
+        self.scrollbar.is_empty()
+    }
+}
+
+#[derive(Serialize, Default)]
+struct PersistedScrollbarAxes {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    vertical: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    horizontal: Option<bool>,
+}
+
+impl PersistedScrollbarAxes {
+    fn is_empty(&self) -> bool {
+        self.vertical.is_none() && self.horizontal.is_none()
+    }
+}
+
+#[derive(Serialize, Default)]
+struct PersistedScrollbarVertical {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    vertical: Option<bool>,
+}
+
+impl PersistedScrollbarVertical {
+    fn is_empty(&self) -> bool {
+        self.vertical.is_none()
     }
 }
 
@@ -651,7 +739,7 @@ impl PersistedPersist {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Default)]
 struct PersistedDetails {
     #[serde(skip_serializing_if = "Option::is_none")]
     wrap: Option<bool>,
@@ -661,8 +749,8 @@ struct PersistedDetails {
     max_height: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
     tab_width: Option<usize>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    scrollbar_vertical: Option<bool>,
+    #[serde(skip_serializing_if = "PersistedScrollbarVertical::is_empty")]
+    scrollbar: PersistedScrollbarVertical,
 }
 
 impl PersistedDetails {
@@ -671,11 +759,11 @@ impl PersistedDetails {
             && self.json_tree.is_none()
             && self.max_height.is_none()
             && self.tab_width.is_none()
-            && self.scrollbar_vertical.is_none()
+            && self.scrollbar.is_empty()
     }
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Default)]
 struct PersistedSidebar {
     #[serde(skip_serializing_if = "Option::is_none")]
     enabled: Option<bool>,
@@ -683,10 +771,8 @@ struct PersistedSidebar {
     width: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
     position: Option<SidebarPosition>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    scrollbar_vertical: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    scrollbar_horizontal: Option<bool>,
+    #[serde(skip_serializing_if = "PersistedScrollbarAxes::is_empty")]
+    scrollbar: PersistedScrollbarAxes,
 }
 
 impl PersistedSidebar {
@@ -694,8 +780,7 @@ impl PersistedSidebar {
         self.enabled.is_none()
             && self.width.is_none()
             && self.position.is_none()
-            && self.scrollbar_vertical.is_none()
-            && self.scrollbar_horizontal.is_none()
+            && self.scrollbar.is_empty()
     }
 }
 
@@ -809,12 +894,6 @@ impl<'a> PersistedConfig<'a> {
         Self {
             main: PersistedMain {
                 follow: (config.follow != defaults.follow).then_some(config.follow),
-                list_scrollbar_vertical: (config.list_scrollbar_vertical
-                    != defaults.list_scrollbar_vertical)
-                    .then_some(config.list_scrollbar_vertical),
-                list_scrollbar_horizontal: (config.list_scrollbar_horizontal
-                    != defaults.list_scrollbar_horizontal)
-                    .then_some(config.list_scrollbar_horizontal),
                 border: (config.border != defaults.border).then_some(config.border),
                 page_lines: (config.page_lines != defaults.page_lines).then_some(config.page_lines),
                 case_mode: (config.case_mode != defaults.case_mode).then_some(config.case_mode),
@@ -826,6 +905,47 @@ impl<'a> PersistedConfig<'a> {
             persist: PersistedPersist {
                 filters: (config.session_filters != defaults.session_filters)
                     .then_some(config.session_filters),
+            },
+            view: PersistedView {
+                main: PersistedViewMain {
+                    scrollbar: PersistedScrollbarAxes {
+                        vertical: (config.list_scrollbar_vertical
+                            != defaults.list_scrollbar_vertical)
+                            .then_some(config.list_scrollbar_vertical),
+                        horizontal: (config.list_scrollbar_horizontal
+                            != defaults.list_scrollbar_horizontal)
+                            .then_some(config.list_scrollbar_horizontal),
+                    },
+                },
+                details: PersistedDetails {
+                    wrap: (config.wrap_details != defaults.wrap_details)
+                        .then_some(config.wrap_details),
+                    json_tree: (config.details_json_tree != defaults.details_json_tree)
+                        .then_some(config.details_json_tree),
+                    max_height: (details_max_height != defaults.details_max_height)
+                        .then_some(details_max_height),
+                    tab_width: (details_tab_width != defaults.details_tab_width)
+                        .then_some(details_tab_width),
+                    scrollbar: PersistedScrollbarVertical {
+                        vertical: (config.details_scrollbar_vertical
+                            != defaults.details_scrollbar_vertical)
+                            .then_some(config.details_scrollbar_vertical),
+                    },
+                },
+                sidebar: PersistedSidebar {
+                    enabled: (config.sidebar != defaults.sidebar).then_some(config.sidebar),
+                    width: (sidebar_width != defaults.sidebar_width).then_some(sidebar_width),
+                    position: (config.sidebar_position != defaults.sidebar_position)
+                        .then_some(config.sidebar_position),
+                    scrollbar: PersistedScrollbarAxes {
+                        vertical: (config.sidebar_scrollbar_vertical
+                            != defaults.sidebar_scrollbar_vertical)
+                            .then_some(config.sidebar_scrollbar_vertical),
+                        horizontal: (config.sidebar_scrollbar_horizontal
+                            != defaults.sidebar_scrollbar_horizontal)
+                            .then_some(config.sidebar_scrollbar_horizontal),
+                    },
+                },
             },
             mouse: PersistedMouse {
                 enabled: (config.mouse != defaults.mouse).then_some(config.mouse),
@@ -845,30 +965,6 @@ impl<'a> PersistedConfig<'a> {
                     .then_some(config.timestamp_format.as_str()),
                 localized: (config.timestamp_localized != defaults.timestamp_localized)
                     .then_some(config.timestamp_localized),
-            },
-            details: PersistedDetails {
-                wrap: (config.wrap_details != defaults.wrap_details).then_some(config.wrap_details),
-                json_tree: (config.details_json_tree != defaults.details_json_tree)
-                    .then_some(config.details_json_tree),
-                max_height: (details_max_height != defaults.details_max_height)
-                    .then_some(details_max_height),
-                tab_width: (details_tab_width != defaults.details_tab_width)
-                    .then_some(details_tab_width),
-                scrollbar_vertical: (config.details_scrollbar_vertical
-                    != defaults.details_scrollbar_vertical)
-                    .then_some(config.details_scrollbar_vertical),
-            },
-            sidebar: PersistedSidebar {
-                enabled: (config.sidebar != defaults.sidebar).then_some(config.sidebar),
-                width: (sidebar_width != defaults.sidebar_width).then_some(sidebar_width),
-                position: (config.sidebar_position != defaults.sidebar_position)
-                    .then_some(config.sidebar_position),
-                scrollbar_vertical: (config.sidebar_scrollbar_vertical
-                    != defaults.sidebar_scrollbar_vertical)
-                    .then_some(config.sidebar_scrollbar_vertical),
-                scrollbar_horizontal: (config.sidebar_scrollbar_horizontal
-                    != defaults.sidebar_scrollbar_horizontal)
-                    .then_some(config.sidebar_scrollbar_horizontal),
             },
             theme: &config.theme,
             colors: &config.colors,
@@ -953,8 +1049,7 @@ impl Default for Config {
             main: MainConfig::default(),
             config: ConfigFileConfig::default(),
             persist: PersistFileConfig::default(),
-            details: DetailsFileConfig::default(),
-            sidebar: SidebarFileConfig::default(),
+            view: ViewFileConfig::default(),
             mouse: MouseFileConfig::default(),
             line_numbers: LineNumbersFileConfig::default(),
             timestamp: TimestampFileConfig::default(),
@@ -1028,19 +1123,19 @@ impl Config {
 
     fn validate(&self) -> Result<()> {
         if self.scroll_lines == 0 {
-            bail!("scroll_lines must be >= 1");
+            bail!("mouse.scroll_lines must be >= 1");
         }
         if self.sidebar_width < default_sidebar_width_min() {
             bail!(
-                "sidebar_width must be >= {}",
+                "view.sidebar.width must be >= {}",
                 default_sidebar_width_min()
             );
         }
         if self.details_max_height < 4 {
-            bail!("details_max_height must be >= 4");
+            bail!("view.details.max_height must be >= 4");
         }
         if self.details_tab_width < 2 {
-            bail!("details_tab_width must be >= 2");
+            bail!("view.details.tab_width must be >= 2");
         }
         if self.timestamp_format.trim().is_empty() {
             bail!("timestamp.format must not be empty");

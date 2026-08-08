@@ -9,11 +9,46 @@ Default path: `~/.config/teleminator/config.toml`.
 | Option | Values | Default | Description |
 |--------|--------|---------|-------------|
 | `follow` | `true` \| `false` | `true` | Live-tail as the file or pipe grows |
-| `list_scrollbar_vertical` | `true` \| `false` | `true` | List vertical scrollbar |
-| `list_scrollbar_horizontal` | `true` \| `false` | `true` | List horizontal scrollbar |
 | `border` | `true` \| `false` | `true` | Draw vertical rules between list columns (overridable per column) |
 | `page_lines` | integer `≥ 0` | `0` | Page up/down step (`0` = viewport height) |
 | `case_mode` | `"sensitive"` \| `"insensitive"` \| `"smart"` | `"smart"` | Case matching for `/` search and `:filter` (`"smartcase"` accepted as an alias for `"smart"`) |
+
+## `[view.main.scrollbar]`
+
+| Option | Values | Default | Description |
+|--------|--------|---------|-------------|
+| `vertical` | `true` \| `false` | `true` | List vertical scrollbar |
+| `horizontal` | `true` \| `false` | `true` | List horizontal scrollbar |
+
+## `[view.details]`
+
+| Option | Values | Default | Description |
+|--------|--------|---------|-------------|
+| `wrap` | `true` \| `false` | `true` | Wrap text in the details overlay |
+| `json_tree` | `true` \| `false` | `true` | Tree-view nested JSON in details |
+| `max_height` | integer `≥ 4` | `24` | Max details overlay height in rows (relative `+N`/`-N` are layout/content-capped) |
+| `tab_width` | integer `≥ 2` | `4` | Details tree indent width |
+
+## `[view.details.scrollbar]`
+
+| Option | Values | Default | Description |
+|--------|--------|---------|-------------|
+| `vertical` | `true` \| `false` | `true` | Details vertical scrollbar |
+
+## `[view.sidebar]`
+
+| Option | Values | Default | Description |
+|--------|--------|---------|-------------|
+| `enabled` | `true` \| `false` | `false` | Show filters/hidden sidebar |
+| `width` | integer `≥ 12` | `28` | Preferred sidebar width in columns (relative adjusts show the sidebar) |
+| `position` | `"left"` \| `"right"` | `"right"` | Place the filters sidebar on the left or right of the main pane |
+
+## `[view.sidebar.scrollbar]`
+
+| Option | Values | Default | Description |
+|--------|--------|---------|-------------|
+| `vertical` | `true` \| `false` | `true` | Sidebar vertical scrollbar |
+| `horizontal` | `true` \| `false` | `true` | Sidebar horizontal scrollbar |
 
 ## `[timestamp]`
 
@@ -34,26 +69,6 @@ Default path: `~/.config/teleminator/config.toml`.
 | Option | Values | Default | Description |
 |--------|--------|---------|-------------|
 | `filters` | `true` \| `false` | `true` | Persist filters for log files and stdin under `~/.local/share/teleminator/sessions/` |
-
-## `[details]`
-
-| Option | Values | Default | Description |
-|--------|--------|---------|-------------|
-| `wrap` | `true` \| `false` | `true` | Wrap text in the details overlay |
-| `json_tree` | `true` \| `false` | `true` | Tree-view nested JSON in details |
-| `max_height` | integer `≥ 4` | `24` | Max details overlay height in rows (relative `+N`/`-N` are layout/content-capped) |
-| `tab_width` | integer `≥ 2` | `4` | Details tree indent width |
-| `scrollbar_vertical` | `true` \| `false` | `true` | Details vertical scrollbar |
-
-## `[sidebar]`
-
-| Option | Values | Default | Description |
-|--------|--------|---------|-------------|
-| `enabled` | `true` \| `false` | `false` | Show filters/hidden sidebar |
-| `width` | integer `≥ 12` | `28` | Preferred sidebar width in columns (relative adjusts show the sidebar) |
-| `position` | `"left"` \| `"right"` | `"right"` | Place the filters sidebar on the left or right of the main pane |
-| `scrollbar_vertical` | `true` \| `false` | `true` | Sidebar vertical scrollbar |
-| `scrollbar_horizontal` | `true` \| `false` | `true` | Sidebar horizontal scrollbar |
 
 ## `[mouse]`
 

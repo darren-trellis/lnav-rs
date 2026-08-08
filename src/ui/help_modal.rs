@@ -65,16 +65,16 @@ const CHEATSHEET: &[Entry] = &[
     Entry::Item {
         context: Context::Base,
         groups: &[
-            "config set sidebar.width +1",
-            "config set sidebar.width -1",
+            "config set view.sidebar.width +1",
+            "config set view.sidebar.width -1",
         ],
         description: "resize sidebar (← grow · → shrink)",
     },
     Entry::Item {
         context: Context::Base,
         groups: &[
-            "config set details.max_height +1",
-            "config set details.max_height -1",
+            "config set view.details.max_height +1",
+            "config set view.details.max_height -1",
         ],
         description: "resize details max height",
     },

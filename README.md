@@ -68,8 +68,8 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 | `d` | `hide` operator — `dd` current, `dj`/`dG`/… range; in sidebar `dd` deletes filter / unhides line (`dj`/`dG`/… range over sidebar rows) |
 | `Backspace` | `hide line` (same as `dd`; accepts a count); in sidebar `filter delete line` (unhides if on a hidden row) |
 | `Shift+Backspace` | `delete line` (same as `DD`; accepts a count); in sidebar deletes the selected hidden line |
-| `Alt+Shift+←/→` / `h`/`l` | `config set sidebar.width +1` / `-1` (← grows, → shrinks; accepts a count) |
-| `Alt+Shift+↑/↓` / `k`/`j` | `config set details.max_height +1` / `-1` (capped by content/layout; accepts a count) |
+| `Alt+Shift+←/→` / `h`/`l` | `config set view.sidebar.width +1` / `-1` (← grows, → shrinks; accepts a count) |
+| `Alt+Shift+↑/↓` / `k`/`j` | `config set view.details.max_height +1` / `-1` (capped by content/layout; accepts a count) |
 | `p` | `pin` — toggle sticky pin at top of list (accepts a count) |
 | `D` | `delete` operator — `DD` current, `Dj`/`DG`/… range (in-place; safe with `tee -a`); in sidebar `DD`/`Dj`/`DG`/… deletes hidden lines or lines matching selected filter(s) |
 | `Ctrl+L` | `delete all` — clear every line (rewrites the file, or drops the in-memory stdin buffer) |
@@ -111,11 +111,31 @@ Default path: `~/.config/teleminator/config.toml`
 ```toml
 [main]
 follow = true
-list_scrollbar_vertical = true
-list_scrollbar_horizontal = true
 border = true
 page_lines = 0
 case_mode = "smart"   # or "sensitive" | "insensitive"
+
+[view.main.scrollbar]
+vertical = true
+horizontal = true
+
+[view.details]
+wrap = true
+json_tree = true
+max_height = 24
+tab_width = 4
+
+[view.details.scrollbar]
+vertical = true
+
+[view.sidebar]
+enabled = false
+width = 28
+position = "right"   # or "left"
+
+[view.sidebar.scrollbar]
+vertical = true
+horizontal = true
 
 [timestamp]
 format = "%H:%M:%S"
@@ -136,20 +156,6 @@ relative = false
 enabled = true
 scroll_lines = 1
 scroll_moves_selection = true
-
-[details]
-wrap = true
-json_tree = true
-max_height = 24
-tab_width = 4
-scrollbar_vertical = true
-
-[sidebar]
-enabled = false
-width = 28
-position = "right"   # or "left"
-scrollbar_vertical = true
-scrollbar_horizontal = true
 
 [theme]
 name = "catppuccin"
@@ -225,11 +231,21 @@ Log lines that carry both a `trace_id` and `span_id` (OpenTelemetry / Datadog-st
 |-----|------|---------|-------------|
 | `theme.name` | name | `catppuccin` | Color theme (see [Themes](#themes)) |
 | `main.follow` | `on` \| `off` \| `toggle` | `on` | Live-tail as the file or pipe grows |
-| `main.list_scrollbar_vertical` | `on` \| `off` \| `toggle` | `on` | List vertical scrollbar |
-| `main.list_scrollbar_horizontal` | `on` \| `off` \| `toggle` | `on` | List horizontal scrollbar |
 | `main.border` | `on` \| `off` \| `toggle` | `on` | Draw vertical rules between list columns |
 | `main.page_lines` | number | `0` | Page up/down step (`0` = viewport height) |
 | `main.case_mode` | `sensitive` \| `insensitive` \| `smart` | `smart` | Case matching for `/` search and `:filter` |
+| `view.main.scrollbar.vertical` | `on` \| `off` \| `toggle` | `on` | List vertical scrollbar |
+| `view.main.scrollbar.horizontal` | `on` \| `off` \| `toggle` | `on` | List horizontal scrollbar |
+| `view.details.wrap` | `on` \| `off` \| `toggle` | `on` | Wrap text in the details overlay |
+| `view.details.json_tree` | `on` \| `off` \| `toggle` | `on` | Tree-view nested JSON in details |
+| `view.details.max_height` | number \| `+N`/`-N` | `24` | Max details overlay height in rows (relative adjusts are layout/content-capped) |
+| `view.details.tab_width` | number | `4` | Details tree indent width (min `2`) |
+| `view.details.scrollbar.vertical` | `on` \| `off` \| `toggle` | `on` | Details vertical scrollbar |
+| `view.sidebar.enabled` | `on` \| `off` \| `toggle` | `off` | Show filters/hidden sidebar (same as `:view sidebar`) |
+| `view.sidebar.width` | number \| `+N`/`-N` | `28` | Preferred sidebar width in columns (min `12`; relative adjusts show the sidebar) |
+| `view.sidebar.position` | `left` \| `right` | `right` | Place the filters sidebar on the left or right of the main pane |
+| `view.sidebar.scrollbar.vertical` | `on` \| `off` \| `toggle` | `on` | Sidebar vertical scrollbar |
+| `view.sidebar.scrollbar.horizontal` | `on` \| `off` \| `toggle` | `on` | Sidebar horizontal scrollbar |
 | `timestamp.format` | strftime \| `raw` | `%H:%M:%S` | Timestamp column format (`raw` keeps the log string) |
 | `timestamp.localized` | `on` \| `off` \| `toggle` | `on` | Convert timestamps to the local timezone (`off` keeps UTC) |
 | `config.autosave` | `on` \| `off` \| `toggle` | `on` | Write `config.toml` after successful `:config set` |
@@ -240,16 +256,6 @@ Log lines that carry both a `trace_id` and `span_id` (OpenTelemetry / Datadog-st
 | `mouse.enabled` | `on` \| `off` \| `toggle` | `on` | Enable terminal mouse capture |
 | `mouse.scroll_lines` | number | `1` | Mouse wheel step |
 | `mouse.scroll_moves_selection` | `on` \| `off` \| `toggle` | `on` | Wheel moves selection (`off` scrolls the viewport only) |
-| `details.wrap` | `on` \| `off` \| `toggle` | `on` | Wrap text in the details overlay |
-| `details.json_tree` | `on` \| `off` \| `toggle` | `on` | Tree-view nested JSON in details |
-| `details.max_height` | number \| `+N`/`-N` | `24` | Max details overlay height in rows (relative adjusts are layout/content-capped) |
-| `details.tab_width` | number | `4` | Details tree indent width (min `2`) |
-| `details.scrollbar_vertical` | `on` \| `off` \| `toggle` | `on` | Details vertical scrollbar |
-| `sidebar.enabled` | `on` \| `off` \| `toggle` | `off` | Show filters/hidden sidebar (same as `:view sidebar`) |
-| `sidebar.width` | number \| `+N`/`-N` | `28` | Preferred sidebar width in columns (min `12`; relative adjusts show the sidebar) |
-| `sidebar.position` | `left` \| `right` | `right` | Place the filters sidebar on the left or right of the main pane |
-| `sidebar.scrollbar_vertical` | `on` \| `off` \| `toggle` | `on` | Sidebar vertical scrollbar |
-| `sidebar.scrollbar_horizontal` | `on` \| `off` \| `toggle` | `on` | Sidebar horizontal scrollbar |
 
 ## Themes
 

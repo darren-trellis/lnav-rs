@@ -33,19 +33,19 @@ fn encodes_alt_shift_chords() {
 fn default_resize_bindings() {
     assert_eq!(
         defaults().get("A-S-left").map(String::as_str),
-        Some("config set sidebar.width +1")
+        Some("config set view.sidebar.width +1")
     );
     assert_eq!(
         defaults().get("A-S-right").map(String::as_str),
-        Some("config set sidebar.width -1")
+        Some("config set view.sidebar.width -1")
     );
     assert_eq!(
         defaults().get("A-S-j").map(String::as_str),
-        Some("config set details.max_height -1")
+        Some("config set view.details.max_height -1")
     );
     assert_eq!(
         details_defaults().get("A-S-up").map(String::as_str),
-        Some("config set details.max_height +1")
+        Some("config set view.details.max_height +1")
     );
 }
 
