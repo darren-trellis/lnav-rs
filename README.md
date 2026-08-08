@@ -155,6 +155,9 @@ name = "catppuccin"
 
 # [colors]
 # background = "#11111b"
+# selection = { fg = "#cdd6f4", bg = "#45475a" }
+# overlay = { fg = "#cdd6f4", bg = "#181825" }
+# status = { fg = "#a6adc8", bg = "#11111b" }
 # dim = { fg = "#6c7086", bg = "#313244" }
 
 # [levels]

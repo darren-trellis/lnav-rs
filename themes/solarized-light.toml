@@ -3,11 +3,9 @@ name = "solarized-light"
 [colors]
 background = "#fdf6e3"
 foreground = "#657b83"
-selection_bg = "#eee8d5"
-selection_fg = "#586e75"
-overlay_bg = "#eee8d5"
-status_bg = "#eee8d5"
-status_fg = "#93a1a1"
+selection = { fg = "#586e75", bg = "#eee8d5" }
+overlay = { fg = "#657b83", bg = "#eee8d5" }
+status = { fg = "#93a1a1", bg = "#eee8d5" }
 border = "#93a1a1"
 window_focus_border = "#b58900"
 search_match = { fg = "#fdf6e3", bg = "#b58900" }

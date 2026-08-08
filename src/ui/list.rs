@@ -394,7 +394,7 @@ fn render_line<'a>(app: &'a App, entry: &'a LogEntry, options: LineRenderOptions
 
 fn row_bg(theme: &Theme, selected: bool) -> Color {
     if selected {
-        theme.selection_bg
+        theme.selection_bg()
     } else {
         theme.background
     }
@@ -421,7 +421,7 @@ fn segment_style(theme: &Theme, entry: &LogEntry, segment: &Segment, selected: b
             .and_then(|spec| spec.parse().ok())
             .unwrap_or(theme.column_border);
         if selected {
-            return Style::default().fg(tone.fg).bg(theme.selection_bg);
+            return Style::default().fg(tone.fg).bg(theme.selection_bg());
         }
         return apply_tone(theme, tone, false, row_bg, false);
     }

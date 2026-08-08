@@ -55,6 +55,27 @@ impl ColorSpec {
     }
 }
 
+/// Required `{ fg, bg }` surface color (selection, overlay, status).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct FgBgSpec {
+    pub fg: String,
+    pub bg: String,
+}
+
+impl FgBgSpec {
+    pub fn parse(&self) -> Result<Tone> {
+        Ok(Tone {
+            fg: parse_color(&self.fg)?,
+            bg: Some(parse_color(&self.bg)?),
+        })
+    }
+
+    pub fn validate(&self) -> Result<()> {
+        self.parse().map(|_| ())
+    }
+}
+
 fn apply_optional<T, P: ?Sized>(
     target: &mut T,
     patch: Option<&P>,
@@ -97,11 +118,9 @@ pub struct Theme {
     pub name: String,
     pub background: Color,
     pub foreground: Tone,
-    pub selection_bg: Color,
-    pub selection_fg: Color,
-    pub overlay_bg: Color,
-    pub status_bg: Color,
-    pub status_fg: Color,
+    pub selection: Tone,
+    pub overlay: Tone,
+    pub status: Tone,
     pub border: Tone,
     /// Border for the focused pane (list or details).
     pub window_focus_border: Tone,
@@ -163,10 +182,30 @@ impl Theme {
         self.tone_style(self.field_value_tone(value), fallback_bg)
     }
 
+    pub fn selection_bg(&self) -> Color {
+        self.selection.bg.unwrap_or(self.background)
+    }
+
+    pub fn selection_fg(&self) -> Color {
+        self.selection.fg
+    }
+
+    pub fn overlay_bg(&self) -> Color {
+        self.overlay.bg.unwrap_or(self.background)
+    }
+
+    pub fn status_bg(&self) -> Color {
+        self.status.bg.unwrap_or(self.background)
+    }
+
+    pub fn status_fg(&self) -> Color {
+        self.status.fg
+    }
+
     pub fn selection_style(&self) -> Style {
         Style::default()
-            .bg(self.selection_bg)
-            .fg(self.selection_fg)
+            .bg(self.selection_bg())
+            .fg(self.selection_fg())
             .add_modifier(Modifier::BOLD)
     }
 
@@ -203,11 +242,9 @@ struct ThemeFile {
 struct ThemeColors {
     background: String,
     foreground: ColorSpec,
-    selection_bg: String,
-    selection_fg: String,
-    overlay_bg: String,
-    status_bg: String,
-    status_fg: String,
+    selection: FgBgSpec,
+    overlay: FgBgSpec,
+    status: FgBgSpec,
     border: ColorSpec,
     window_focus_border: ColorSpec,
     search_match: ColorSpec,
@@ -318,19 +355,9 @@ impl Theme {
             c.foreground.as_ref(),
             ColorSpec::parse,
         )?;
-        apply_optional(
-            &mut self.selection_bg,
-            c.selection_bg.as_deref(),
-            parse_color,
-        )?;
-        apply_optional(
-            &mut self.selection_fg,
-            c.selection_fg.as_deref(),
-            parse_color,
-        )?;
-        apply_optional(&mut self.overlay_bg, c.overlay_bg.as_deref(), parse_color)?;
-        apply_optional(&mut self.status_bg, c.status_bg.as_deref(), parse_color)?;
-        apply_optional(&mut self.status_fg, c.status_fg.as_deref(), parse_color)?;
+        apply_optional(&mut self.selection, c.selection.as_ref(), FgBgSpec::parse)?;
+        apply_optional(&mut self.overlay, c.overlay.as_ref(), FgBgSpec::parse)?;
+        apply_optional(&mut self.status, c.status.as_ref(), FgBgSpec::parse)?;
         apply_optional(&mut self.border, c.border.as_ref(), ColorSpec::parse)?;
         apply_optional(
             &mut self.window_focus_border,
@@ -396,11 +423,9 @@ impl Theme {
             name: file.name,
             background: parse_color(&file.colors.background)?,
             foreground: file.colors.foreground.parse()?,
-            selection_bg: parse_color(&file.colors.selection_bg)?,
-            selection_fg: parse_color(&file.colors.selection_fg)?,
-            overlay_bg: parse_color(&file.colors.overlay_bg)?,
-            status_bg: parse_color(&file.colors.status_bg)?,
-            status_fg: parse_color(&file.colors.status_fg)?,
+            selection: file.colors.selection.parse()?,
+            overlay: file.colors.overlay.parse()?,
+            status: file.colors.status.parse()?,
             border: file.colors.border.parse()?,
             window_focus_border: file.colors.window_focus_border.parse()?,
             search_match: file.colors.search_match.parse()?,
@@ -505,15 +530,11 @@ pub struct ColorOverrides {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub foreground: Option<ColorSpec>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub selection_bg: Option<String>,
+    pub selection: Option<FgBgSpec>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub selection_fg: Option<String>,
+    pub overlay: Option<FgBgSpec>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub overlay_bg: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub status_bg: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub status_fg: Option<String>,
+    pub status: Option<FgBgSpec>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub border: Option<ColorSpec>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -528,11 +549,9 @@ impl ColorOverrides {
     pub fn is_empty(&self) -> bool {
         self.background.is_none()
             && self.foreground.is_none()
-            && self.selection_bg.is_none()
-            && self.selection_fg.is_none()
-            && self.overlay_bg.is_none()
-            && self.status_bg.is_none()
-            && self.status_fg.is_none()
+            && self.selection.is_none()
+            && self.overlay.is_none()
+            && self.status.is_none()
             && self.border.is_none()
             && self.window_focus_border.is_none()
             && self.search_match.is_none()
@@ -540,14 +559,17 @@ impl ColorOverrides {
     }
 
     pub fn validate(&self) -> Result<()> {
-        validate_color_strings([
-            ("colors.background", self.background.as_deref()),
-            ("colors.selection_bg", self.selection_bg.as_deref()),
-            ("colors.selection_fg", self.selection_fg.as_deref()),
-            ("colors.overlay_bg", self.overlay_bg.as_deref()),
-            ("colors.status_bg", self.status_bg.as_deref()),
-            ("colors.status_fg", self.status_fg.as_deref()),
-        ])?;
+        validate_color_strings([("colors.background", self.background.as_deref())])?;
+        for (path, spec) in [
+            ("colors.selection", self.selection.as_ref()),
+            ("colors.overlay", self.overlay.as_ref()),
+            ("colors.status", self.status.as_ref()),
+        ] {
+            if let Some(spec) = spec {
+                spec.validate()
+                    .with_context(|| format!("invalid {path}"))?;
+            }
+        }
         validate_specs([
             ("colors.foreground", self.foreground.as_ref()),
             ("colors.border", self.border.as_ref()),

@@ -3,11 +3,9 @@ name = "github-dark"
 [colors]
 background = "#0d1117"
 foreground = "#e6edf3"
-selection_bg = "#264f78"
-selection_fg = "#e6edf3"
-overlay_bg = "#161b22"
-status_bg = "#010409"
-status_fg = "#848d97"
+selection = { fg = "#e6edf3", bg = "#264f78" }
+overlay = { fg = "#e6edf3", bg = "#161b22" }
+status = { fg = "#848d97", bg = "#010409" }
 border = "#30363d"
 window_focus_border = "#d29922"
 search_match = { fg = "#0d1117", bg = "#d29922" }

@@ -3,11 +3,9 @@ name = "dayfox"
 [colors]
 background = "#f6f2ee"
 foreground = "#3d2b5a"
-selection_bg = "#e7d2be"
-selection_fg = "#3d2b5a"
-overlay_bg = "#e4dcd4"
-status_bg = "#e4dcd4"
-status_fg = "#643f61"
+selection = { fg = "#3d2b5a", bg = "#e7d2be" }
+overlay = { fg = "#3d2b5a", bg = "#e4dcd4" }
+status = { fg = "#643f61", bg = "#e4dcd4" }
 border = "#aab0ad"
 window_focus_border = "#AC5402"
 search_match = { fg = "#f6f2ee", bg = "#AC5402" }

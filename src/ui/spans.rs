@@ -87,8 +87,8 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
     let mut lines = Vec::with_capacity(end.saturating_sub(app.spans.scroll));
     let scroll_x = app.spans.scroll_x;
     let list_focused = app.is_list_focused();
-    let selection_bg = app.theme.selection_bg;
-    let selection_fg = app.theme.selection_fg;
+    let selection_bg = app.theme.selection_bg();
+    let selection_fg = app.theme.selection_fg();
     let background = app.theme.background;
 
     for idx in app.spans.scroll..end {

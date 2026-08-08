@@ -3,11 +3,9 @@ name = "monokai"
 [colors]
 background = "#272822"
 foreground = "#f8f8f2"
-selection_bg = "#49483e"
-selection_fg = "#f8f8f2"
-overlay_bg = "#1e1f1c"
-status_bg = "#1e1f1c"
-status_fg = "#cfcfc2"
+selection = { fg = "#f8f8f2", bg = "#49483e" }
+overlay = { fg = "#f8f8f2", bg = "#1e1f1c" }
+status = { fg = "#cfcfc2", bg = "#1e1f1c" }
 border = "#75715e"
 window_focus_border = "#e6db74"
 search_match = { fg = "#272822", bg = "#e6db74" }

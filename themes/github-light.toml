@@ -3,11 +3,9 @@ name = "github-light"
 [colors]
 background = "#ffffff"
 foreground = "#1f2328"
-selection_bg = "#ddf4ff"
-selection_fg = "#1f2328"
-overlay_bg = "#f6f8fa"
-status_bg = "#f6f8fa"
-status_fg = "#656d76"
+selection = { fg = "#1f2328", bg = "#ddf4ff" }
+overlay = { fg = "#1f2328", bg = "#f6f8fa" }
+status = { fg = "#656d76", bg = "#f6f8fa" }
 border = "#d0d7de"
 window_focus_border = "#9a6700"
 search_match = { fg = "#ffffff", bg = "#9a6700" }

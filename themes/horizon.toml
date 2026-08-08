@@ -3,11 +3,9 @@ name = "horizon"
 [colors]
 background = "#1c1e26"
 foreground = "#d5d0db"
-selection_bg = "#2e303e"
-selection_fg = "#d5d0db"
-overlay_bg = "#16161c"
-status_bg = "#16161c"
-status_fg = "#6c6f93"
+selection = { fg = "#d5d0db", bg = "#2e303e" }
+overlay = { fg = "#d5d0db", bg = "#16161c" }
+status = { fg = "#6c6f93", bg = "#16161c" }
 border = "#6c6f93"
 window_focus_border = "#fab795"
 search_match = { fg = "#1c1e26", bg = "#fab795" }

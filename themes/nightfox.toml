@@ -3,11 +3,9 @@ name = "nightfox"
 [colors]
 background = "#192330"
 foreground = "#cdcecf"
-selection_bg = "#2b3b51"
-selection_fg = "#cdcecf"
-overlay_bg = "#212e3f"
-status_bg = "#131a24"
-status_fg = "#aeafb0"
+selection = { fg = "#cdcecf", bg = "#2b3b51" }
+overlay = { fg = "#cdcecf", bg = "#212e3f" }
+status = { fg = "#aeafb0", bg = "#131a24" }
 border = "#39506d"
 window_focus_border = "#dbc074"
 search_match = { fg = "#192330", bg = "#dbc074" }

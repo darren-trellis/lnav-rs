@@ -332,7 +332,7 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
         .title(" help ")
         .style(
             Style::default()
-                .bg(app.theme.overlay_bg)
+                .bg(app.theme.overlay_bg())
                 .fg(app.theme.foreground.fg),
         );
     let inner = block.inner(popup);
@@ -360,10 +360,10 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
         let is_heading = !line.is_empty() && !line.starts_with('-');
         let style = if is_heading {
             app.theme
-                .tone_style(app.theme.search_match, app.theme.overlay_bg)
+                .tone_style(app.theme.search_match, app.theme.overlay_bg())
                 .add_modifier(Modifier::BOLD)
         } else {
-            app.theme.tone_style(app.theme.foreground, app.theme.overlay_bg)
+            app.theme.tone_style(app.theme.foreground, app.theme.overlay_bg())
         };
         let display = text::slice_width(line, scroll_x, viewport_w);
         let used = UnicodeWidthStr::width(display.as_str());
@@ -371,14 +371,14 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
         if used < viewport_w {
             spans.push(Span::styled(
                 " ".repeat(viewport_w - used),
-                Style::default().bg(app.theme.overlay_bg),
+                Style::default().bg(app.theme.overlay_bg()),
             ));
         }
         out.push(Line::from(spans));
     }
 
     frame.render_widget(
-        Paragraph::new(out).style(Style::default().bg(app.theme.overlay_bg)),
+        Paragraph::new(out).style(Style::default().bg(app.theme.overlay_bg())),
         inner,
     );
 }

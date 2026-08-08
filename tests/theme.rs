@@ -117,11 +117,9 @@ name = "test"
 [colors]
 background = "#000000"
 foreground = "#ffffff"
-selection_bg = "#333333"
-selection_fg = "#ffffff"
-overlay_bg = "#111111"
-status_bg = "#222222"
-status_fg = "#aaaaaa"
+selection = { fg = "#ffffff", bg = "#333333" }
+overlay = { fg = "#ffffff", bg = "#111111" }
+status = { fg = "#aaaaaa", bg = "#222222" }
 border = "#444444"
 window_focus_border = "#ffff00"
 search_match = "#ffff00"

@@ -3,11 +3,9 @@ name = "palenight"
 [colors]
 background = "#292d3e"
 foreground = "#a6accd"
-selection_bg = "#444267"
-selection_fg = "#a6accd"
-overlay_bg = "#1b1e2b"
-status_bg = "#1b1e2b"
-status_fg = "#8796b0"
+selection = { fg = "#a6accd", bg = "#444267" }
+overlay = { fg = "#a6accd", bg = "#1b1e2b" }
+status = { fg = "#8796b0", bg = "#1b1e2b" }
 border = "#676e95"
 window_focus_border = "#ffcb6b"
 search_match = { fg = "#292d3e", bg = "#ffcb6b" }

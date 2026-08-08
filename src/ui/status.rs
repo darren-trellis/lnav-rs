@@ -54,8 +54,8 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
     };
 
     let style = Style::default()
-        .bg(theme.status_bg)
-        .fg(theme.status_fg)
+        .bg(theme.status_bg())
+        .fg(theme.status_fg())
         .add_modifier(Modifier::BOLD);
 
     let mut cursor_col: Option<u16> = None;
@@ -97,7 +97,7 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
                 spans.push(Span::styled(
                     format!("{n}"),
                     theme
-                        .tone_style(theme.search_match, theme.status_bg)
+                        .tone_style(theme.search_match, theme.status_bg())
                         .add_modifier(Modifier::BOLD),
                 ));
             }
@@ -109,7 +109,7 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
                 spans.push(Span::styled(
                     format!("{tag} "),
                     theme
-                        .tone_style(theme.search_match, theme.status_bg)
+                        .tone_style(theme.search_match, theme.status_bg())
                         .add_modifier(Modifier::BOLD),
                 ));
             } else if app.count.is_some() {
@@ -158,7 +158,7 @@ fn command_spans<'a>(app: &'a App, style: Style) -> Vec<Span<'a>> {
             spans.push(Span::styled(
                 ghost,
                 theme
-                    .tone_style(theme.dim, theme.status_bg)
+                    .tone_style(theme.dim, theme.status_bg())
                     .add_modifier(Modifier::DIM),
             ));
         }

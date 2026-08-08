@@ -30,7 +30,7 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
             .title(" completions · Tab cycle · ↑↓ then Tab/Enter · click ")
             .style(
                 Style::default()
-                    .bg(theme.overlay_bg)
+                    .bg(theme.overlay_bg())
                     .fg(theme.foreground.fg),
             )
     };
@@ -60,12 +60,12 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
         let style = if selected {
             theme.selection_style()
         } else {
-            theme.tone_style(theme.foreground, theme.overlay_bg)
+            theme.tone_style(theme.foreground, theme.overlay_bg())
         };
         let help_style = if selected {
             style
         } else {
-            theme.tone_style(theme.dim, theme.overlay_bg)
+            theme.tone_style(theme.dim, theme.overlay_bg())
         };
 
         let mut spans = vec![
@@ -84,7 +84,7 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
     }
 
     frame.render_widget(
-        Paragraph::new(lines).style(Style::default().bg(theme.overlay_bg)),
+        Paragraph::new(lines).style(Style::default().bg(theme.overlay_bg())),
         inner,
     );
 }

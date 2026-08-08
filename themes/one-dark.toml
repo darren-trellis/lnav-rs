@@ -3,11 +3,9 @@ name = "one-dark"
 [colors]
 background = "#282c34"
 foreground = "#abb2bf"
-selection_bg = "#3e4452"
-selection_fg = "#abb2bf"
-overlay_bg = "#21252b"
-status_bg = "#21252b"
-status_fg = "#9da5b4"
+selection = { fg = "#abb2bf", bg = "#3e4452" }
+overlay = { fg = "#abb2bf", bg = "#21252b" }
+status = { fg = "#9da5b4", bg = "#21252b" }
 border = "#4b5263"
 window_focus_border = "#e5c07b"
 search_match = { fg = "#282c34", bg = "#e5c07b" }

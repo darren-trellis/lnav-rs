@@ -3,11 +3,9 @@ name = "kanagawa"
 [colors]
 background = "#1f1f28"
 foreground = "#dcd7ba"
-selection_bg = "#2d4f67"
-selection_fg = "#dcd7ba"
-overlay_bg = "#16161d"
-status_bg = "#16161d"
-status_fg = "#c8c093"
+selection = { fg = "#dcd7ba", bg = "#2d4f67" }
+overlay = { fg = "#dcd7ba", bg = "#16161d" }
+status = { fg = "#c8c093", bg = "#16161d" }
 border = "#54546d"
 window_focus_border = "#e6c384"
 search_match = { fg = "#1f1f28", bg = "#e6c384" }

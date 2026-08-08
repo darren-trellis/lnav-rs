@@ -76,17 +76,15 @@ Default path: `~/.config/teleminator/config.toml`.
 
 Optional patches over the selected theme. Omit a key to keep the theme default.
 
-Text colors accept a hex string (`"#cdd6f4"`, fg only) or `{ fg = "...", bg = "..." }`. Surface keys are plain color strings.
+Text colors accept a hex string (`"#cdd6f4"`, fg only) or `{ fg = "...", bg = "..." }`. Surface keys (`selection`, `overlay`, `status`) require `{ fg, bg }`.
 
 | Option | Values | Default | Description |
 |--------|--------|---------|-------------|
 | `background` | color string | theme | Main background |
 | `foreground` | color / `{ fg, bg }` | theme | Default text |
-| `selection_bg` | color string | theme | Selection background |
-| `selection_fg` | color string | theme | Selection foreground |
-| `overlay_bg` | color string | theme | Details / modal overlay background |
-| `status_bg` | color string | theme | Status line background |
-| `status_fg` | color string | theme | Status line foreground |
+| `selection` | `{ fg, bg }` | theme | Selection highlight |
+| `overlay` | `{ fg, bg }` | theme | Details / modal overlay surface |
+| `status` | `{ fg, bg }` | theme | Status line / tab bar surface |
 | `border` | color / `{ fg, bg }` | theme | Unfocused pane border |
 | `window_focus_border` | color / `{ fg, bg }` | theme | Focused pane border |
 | `search_match` | color / `{ fg, bg }` | theme | Search match highlight |

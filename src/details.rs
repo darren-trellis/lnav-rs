@@ -78,7 +78,7 @@ pub fn build_lines(
     config: &Config,
     folded: &HashSet<String>,
 ) -> Vec<DetailLine> {
-    let surface = theme.overlay_bg;
+    let surface = theme.overlay_bg();
     let mut lines = Vec::new();
 
     lines.push(DetailLine {
@@ -178,7 +178,7 @@ fn push_field(
 ) {
     let theme = context.theme;
     let tab = context.tab;
-    let surface = theme.overlay_bg;
+    let surface = theme.overlay_bg();
     let branch = if prefix.is_empty() {
         String::new()
     } else {
@@ -330,7 +330,7 @@ fn push_json_value(
         }
         other => {
             let fv = json_value_to_field(other);
-            let style = theme.field_value_style(&fv, theme.overlay_bg);
+            let style = theme.field_value_style(&fv, theme.overlay_bg());
             let text = match &fv {
                 FieldValue::String(s) => format!("\"{s}\""),
                 _ => fv.display(),
@@ -356,7 +356,7 @@ fn push_json_entry(
 ) {
     let theme = context.theme;
     let tab = context.tab;
-    let surface = theme.overlay_bg;
+    let surface = theme.overlay_bg();
     let branch = branch_connector(is_last, tab);
     let key_style = theme
         .tone_style(theme.key, surface)

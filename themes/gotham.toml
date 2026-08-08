@@ -3,11 +3,9 @@ name = "gotham"
 [colors]
 background = "#0c1014"
 foreground = "#99d1ce"
-selection_bg = "#091f2e"
-selection_fg = "#d3ebe9"
-overlay_bg = "#11151c"
-status_bg = "#0a0f14"
-status_fg = "#599cab"
+selection = { fg = "#d3ebe9", bg = "#091f2e" }
+overlay = { fg = "#99d1ce", bg = "#11151c" }
+status = { fg = "#599cab", bg = "#0a0f14" }
 border = "#245361"
 window_focus_border = "#edb443"
 search_match = { fg = "#0c1014", bg = "#edb443" }

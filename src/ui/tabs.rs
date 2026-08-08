@@ -10,7 +10,7 @@ use crate::app::{App, PrimaryTab};
 pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
     app.pointer.hit.tabs = area;
     let theme = &app.theme;
-    let bg = theme.status_bg;
+    let bg = theme.status_bg();
     let inactive = Style::default().bg(bg).fg(theme.dim.fg);
     let active = Style::default()
         .bg(bg)

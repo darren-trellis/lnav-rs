@@ -66,7 +66,7 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
         .title(title)
         .style(
             Style::default()
-                .bg(app.theme.overlay_bg)
+                .bg(app.theme.overlay_bg())
                 .fg(app.theme.foreground.fg),
         );
 
@@ -94,9 +94,9 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
     if items.is_empty() {
         let empty = Paragraph::new(Line::from(Span::styled(
             " no filters · no hidden ",
-            app.theme.tone_style(app.theme.dim, app.theme.overlay_bg),
+            app.theme.tone_style(app.theme.dim, app.theme.overlay_bg()),
         )))
-        .style(Style::default().bg(app.theme.overlay_bg));
+        .style(Style::default().bg(app.theme.overlay_bg()));
         frame.render_widget(empty, content);
     } else {
         let end = (app.sidebar_scroll + viewport).min(items.len());
@@ -116,11 +116,11 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
             let style = if selected {
                 app.theme.selection_style()
             } else if dim {
-                app.theme.tone_style(app.theme.dim, app.theme.overlay_bg)
+                app.theme.tone_style(app.theme.dim, app.theme.overlay_bg())
             } else {
                 Style::default()
                     .fg(app.theme.foreground.fg)
-                    .bg(app.theme.overlay_bg)
+                    .bg(app.theme.overlay_bg())
             };
             let mut spans = vec![Span::styled(display.clone(), style)];
             let used = UnicodeWidthStr::width(display.as_str());
@@ -130,7 +130,7 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
             lines.push(Line::from(spans));
         }
 
-        let paragraph = Paragraph::new(lines).style(Style::default().bg(app.theme.overlay_bg));
+        let paragraph = Paragraph::new(lines).style(Style::default().bg(app.theme.overlay_bg()));
         frame.render_widget(paragraph, content);
     }
 
@@ -162,6 +162,6 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
         );
     }
     if let Some(corner) = bars.corner {
-        super::draw_scrollbar_corner(frame, corner, Style::default().bg(theme.overlay_bg));
+        super::draw_scrollbar_corner(frame, corner, Style::default().bg(theme.overlay_bg()));
     }
 }

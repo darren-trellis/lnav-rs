@@ -24,10 +24,10 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect, content: &[DetailLine]
         None
     };
     let cursor = app.details.cursor;
-    let overlay_bg = app.theme.overlay_bg;
+    let overlay_bg = app.theme.overlay_bg();
     let foreground = app.theme.foreground.fg;
-    let selection_bg = app.theme.selection_bg;
-    let selection_fg = app.theme.selection_fg;
+    let selection_bg = app.theme.selection_bg();
+    let selection_fg = app.theme.selection_fg();
     let fg_tone = app.theme.foreground;
     let border_tone = if focused {
         app.theme.window_focus_border

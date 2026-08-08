@@ -3,11 +3,9 @@ name = "synthwave"
 [colors]
 background = "#262335"
 foreground = "#ffffff"
-selection_bg = "#463465"
-selection_fg = "#ffffff"
-overlay_bg = "#241b2f"
-status_bg = "#241b2f"
-status_fg = "#b6b1b1"
+selection = { fg = "#ffffff", bg = "#463465" }
+overlay = { fg = "#ffffff", bg = "#241b2f" }
+status = { fg = "#b6b1b1", bg = "#241b2f" }
 border = "#495495"
 window_focus_border = "#fede5d"
 search_match = { fg = "#262335", bg = "#fede5d" }

@@ -3,11 +3,9 @@ name = "zenburn"
 [colors]
 background = "#3f3f3f"
 foreground = "#dcdccc"
-selection_bg = "#2f2f2f"
-selection_fg = "#dcdccc"
-overlay_bg = "#2b2b2b"
-status_bg = "#2b2b2b"
-status_fg = "#9f9f9f"
+selection = { fg = "#dcdccc", bg = "#2f2f2f" }
+overlay = { fg = "#dcdccc", bg = "#2b2b2b" }
+status = { fg = "#9f9f9f", bg = "#2b2b2b" }
 border = "#6f6f6f"
 window_focus_border = "#f0dfaf"
 search_match = { fg = "#3f3f3f", bg = "#f0dfaf" }

@@ -3,11 +3,9 @@ name = "gruvbox-light"
 [colors]
 background = "#fbf1c7"
 foreground = "#3c3836"
-selection_bg = "#d5c4a1"
-selection_fg = "#3c3836"
-overlay_bg = "#f2e5bc"
-status_bg = "#ebdbb2"
-status_fg = "#504945"
+selection = { fg = "#3c3836", bg = "#d5c4a1" }
+overlay = { fg = "#3c3836", bg = "#f2e5bc" }
+status = { fg = "#504945", bg = "#ebdbb2" }
 border = "#bdae93"
 window_focus_border = "#b57614"
 search_match = { fg = "#fbf1c7", bg = "#b57614" }

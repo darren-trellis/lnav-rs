@@ -3,11 +3,9 @@ name = "neovim"
 [colors]
 background = "#14161b"
 foreground = "#e0e2ea"
-selection_bg = "#4f5258"
-selection_fg = "#e0e2ea"
-overlay_bg = "#07080d"
-status_bg = "#4f5258"
-status_fg = "#e0e2ea"
+selection = { fg = "#e0e2ea", bg = "#4f5258" }
+overlay = { fg = "#e0e2ea", bg = "#07080d" }
+status = { fg = "#e0e2ea", bg = "#4f5258" }
 border = "#4f5258"
 window_focus_border = "#8cf8f7"
 search_match = { fg = "#07080d", bg = "#fce094" }

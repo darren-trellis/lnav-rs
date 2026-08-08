@@ -3,11 +3,9 @@ name = "night-owl"
 [colors]
 background = "#011627"
 foreground = "#d6deeb"
-selection_bg = "#1d3b53"
-selection_fg = "#d6deeb"
-overlay_bg = "#011221"
-status_bg = "#011221"
-status_fg = "#a1aebf"
+selection = { fg = "#d6deeb", bg = "#1d3b53" }
+overlay = { fg = "#d6deeb", bg = "#011221" }
+status = { fg = "#a1aebf", bg = "#011221" }
 border = "#5f7e97"
 window_focus_border = "#ecc48d"
 search_match = { fg = "#011627", bg = "#ecc48d" }

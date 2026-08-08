@@ -3,11 +3,9 @@ name = "catppuccin"
 [colors]
 background = "#1e1e2e"
 foreground = "#cdd6f4"
-selection_bg = "#45475a"
-selection_fg = "#cdd6f4"
-overlay_bg = "#181825"
-status_bg = "#11111b"
-status_fg = "#a6adc8"
+selection = { fg = "#cdd6f4", bg = "#45475a" }
+overlay = { fg = "#cdd6f4", bg = "#181825" }
+status = { fg = "#a6adc8", bg = "#11111b" }
 border = "#585b70"
 window_focus_border = "#f9e2af"
 search_match = { fg = "#1e1e2e", bg = "#f9e2af" }

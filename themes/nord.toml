@@ -3,11 +3,9 @@ name = "nord"
 [colors]
 background = "#2e3440"
 foreground = "#eceff4"
-selection_bg = "#434c5e"
-selection_fg = "#eceff4"
-overlay_bg = "#3b4252"
-status_bg = "#232831"
-status_fg = "#d8dee9"
+selection = { fg = "#eceff4", bg = "#434c5e" }
+overlay = { fg = "#eceff4", bg = "#3b4252" }
+status = { fg = "#d8dee9", bg = "#232831" }
 border = "#4c566a"
 window_focus_border = "#ebcb8b"
 search_match = { fg = "#2e3440", bg = "#ebcb8b" }

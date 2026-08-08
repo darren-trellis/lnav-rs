@@ -3,11 +3,9 @@ name = "everforest"
 [colors]
 background = "#2d353b"
 foreground = "#d3c6aa"
-selection_bg = "#503946"
-selection_fg = "#d3c6aa"
-overlay_bg = "#232a2e"
-status_bg = "#232a2e"
-status_fg = "#9da9a0"
+selection = { fg = "#d3c6aa", bg = "#503946" }
+overlay = { fg = "#d3c6aa", bg = "#232a2e" }
+status = { fg = "#9da9a0", bg = "#232a2e" }
 border = "#4f585e"
 window_focus_border = "#dbbc7f"
 search_match = { fg = "#2d353b", bg = "#dbbc7f" }

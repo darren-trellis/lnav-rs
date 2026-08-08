@@ -55,7 +55,7 @@ fn draw_picker(frame: &mut Frame, app: &mut App, area: Rect) {
             .title(title)
             .style(
                 Style::default()
-                    .bg(theme.overlay_bg)
+                    .bg(theme.overlay_bg())
                     .fg(theme.foreground.fg),
             )
     };
@@ -85,7 +85,7 @@ fn draw_picker(frame: &mut Frame, app: &mut App, area: Rect) {
         let style = if is_sel {
             theme.selection_style()
         } else {
-            theme.tone_style(theme.foreground, theme.overlay_bg)
+            theme.tone_style(theme.foreground, theme.overlay_bg())
         };
         let text = format!("{marker}{name}{mark}");
         let used = UnicodeWidthStr::width(text.as_str());
@@ -97,7 +97,7 @@ fn draw_picker(frame: &mut Frame, app: &mut App, area: Rect) {
     }
 
     frame.render_widget(
-        Paragraph::new(lines).style(Style::default().bg(theme.overlay_bg)),
+        Paragraph::new(lines).style(Style::default().bg(theme.overlay_bg())),
         inner,
     );
 }
@@ -167,7 +167,7 @@ fn draw_editor(frame: &mut Frame, app: &mut App, area: Rect) {
             .title(title)
             .style(
                 Style::default()
-                    .bg(theme.overlay_bg)
+                    .bg(theme.overlay_bg())
                     .fg(theme.foreground.fg),
             )
     };
@@ -183,9 +183,9 @@ fn draw_editor(frame: &mut Frame, app: &mut App, area: Rect) {
     frame.render_widget(
         Paragraph::new(Line::from(Span::styled(
             display,
-            theme.tone_style(theme.foreground, theme.overlay_bg),
+            theme.tone_style(theme.foreground, theme.overlay_bg()),
         )))
-        .style(Style::default().bg(theme.overlay_bg)),
+        .style(Style::default().bg(theme.overlay_bg())),
         inner,
     );
 }

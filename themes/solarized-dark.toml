@@ -3,11 +3,9 @@ name = "solarized-dark"
 [colors]
 background = "#002b36"
 foreground = "#839496"
-selection_bg = "#073642"
-selection_fg = "#93a1a1"
-overlay_bg = "#073642"
-status_bg = "#001e26"
-status_fg = "#586e75"
+selection = { fg = "#93a1a1", bg = "#073642" }
+overlay = { fg = "#839496", bg = "#073642" }
+status = { fg = "#586e75", bg = "#001e26" }
 border = "#586e75"
 window_focus_border = "#b58900"
 search_match = { fg = "#002b36", bg = "#b58900" }

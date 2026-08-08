@@ -3,11 +3,9 @@ name = "oxocarbon"
 [colors]
 background = "#161616"
 foreground = "#f2f4f8"
-selection_bg = "#393939"
-selection_fg = "#f2f4f8"
-overlay_bg = "#262626"
-status_bg = "#262626"
-status_fg = "#dde1e6"
+selection = { fg = "#f2f4f8", bg = "#393939" }
+overlay = { fg = "#f2f4f8", bg = "#262626" }
+status = { fg = "#dde1e6", bg = "#262626" }
 border = "#525252"
 window_focus_border = "#ffe97b"
 search_match = { fg = "#161616", bg = "#ffe97b" }

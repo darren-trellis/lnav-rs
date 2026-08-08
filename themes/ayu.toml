@@ -3,11 +3,9 @@ name = "ayu"
 [colors]
 background = "#0b0e14"
 foreground = "#bfbdb6"
-selection_bg = "#1b3a5f"
-selection_fg = "#bfbdb6"
-overlay_bg = "#0d1017"
-status_bg = "#0d1017"
-status_fg = "#acb6bf"
+selection = { fg = "#bfbdb6", bg = "#1b3a5f" }
+overlay = { fg = "#bfbdb6", bg = "#0d1017" }
+status = { fg = "#acb6bf", bg = "#0d1017" }
 border = "#565b66"
 window_focus_border = "#ffb454"
 search_match = { fg = "#0b0e14", bg = "#ffb454" }
