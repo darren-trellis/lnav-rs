@@ -365,6 +365,8 @@ fn scroll_command(app: &mut App, rest: &str) {
         "left" => {
             if app.is_sidebar_focused() && app.config.sidebar {
                 app.scroll_sidebar_x(-n);
+            } else if app.is_details_focused() && app.details.visible {
+                app.scroll_details_x(-n);
             } else {
                 app.scroll_list_x(-n);
             }
@@ -372,6 +374,8 @@ fn scroll_command(app: &mut App, rest: &str) {
         "right" => {
             if app.is_sidebar_focused() && app.config.sidebar {
                 app.scroll_sidebar_x(n);
+            } else if app.is_details_focused() && app.details.visible {
+                app.scroll_details_x(n);
             } else {
                 app.scroll_list_x(n);
             }

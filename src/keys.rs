@@ -116,6 +116,10 @@ pub fn details_defaults() -> BTreeMap<String, String> {
     BTreeMap::from([
         ("space".into(), "fold toggle".into()),
         ("esc".into(), "view current off".into()),
+        ("h".into(), "scroll left".into()),
+        ("left".into(), "scroll left".into()),
+        ("l".into(), "scroll right".into()),
+        ("right".into(), "scroll right".into()),
         // Re-declare resize chords so Alt+Shift+↑/↓/j/k still win over nav while focused.
         ("A-S-up".into(), "config set view.details.max_height +1".into()),
         ("A-S-k".into(), "config set view.details.max_height +1".into()),

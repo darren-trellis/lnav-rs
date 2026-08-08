@@ -228,6 +228,13 @@ const OPTIONS: &[ConfigOption] = &[
         setter: set_details_scrollbar_vertical,
     },
     ConfigOption {
+        name: "view.details.scrollbar.horizontal",
+        help: "on|off|toggle",
+        value_kind: ValueKind::Bool,
+        getter: get_details_scrollbar_horizontal,
+        setter: set_details_scrollbar_horizontal,
+    },
+    ConfigOption {
         name: "view.sidebar.enabled",
         help: "on|off|toggle",
         value_kind: ValueKind::Bool,
@@ -363,7 +370,12 @@ fn set_wrap_details(app: &mut App, value: &str) -> bool {
         "view.details.wrap",
         value,
         |app| app.config.wrap_details,
-        |app, enabled| app.config.wrap_details = enabled,
+        |app, enabled| {
+            app.config.wrap_details = enabled;
+            if enabled {
+                app.details.scroll_x = 0;
+            }
+        },
         false,
     )
 }
@@ -381,6 +393,7 @@ fn set_details_json_tree(app: &mut App, value: &str) -> bool {
         |app, enabled| {
             app.config.details_json_tree = enabled;
             app.details.scroll = 0;
+            app.details.scroll_x = 0;
         },
         false,
     )
@@ -545,6 +558,21 @@ fn set_details_scrollbar_vertical(app: &mut App, value: &str) -> bool {
         value,
         |app| app.config.details_scrollbar_vertical,
         |app, enabled| app.config.details_scrollbar_vertical = enabled,
+        false,
+    )
+}
+
+fn get_details_scrollbar_horizontal(app: &App) -> String {
+    on_off(app.config.details_scrollbar_horizontal)
+}
+
+fn set_details_scrollbar_horizontal(app: &mut App, value: &str) -> bool {
+    set_bool(
+        app,
+        "view.details.scrollbar.horizontal",
+        value,
+        |app| app.config.details_scrollbar_horizontal,
+        |app, enabled| app.config.details_scrollbar_horizontal = enabled,
         false,
     )
 }

@@ -3,8 +3,9 @@ use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph, ScrollbarOrientation, Wrap};
+use unicode_width::UnicodeWidthStr;
 
-use super::{draw_scrollbar, split_scrollbar};
+use super::{draw_scrollbar, draw_scrollbar_corner, split_scrollbars};
 
 use crate::app::App;
 use crate::details::DetailLine;
@@ -49,7 +50,7 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect, content: &[DetailLine]
             Some(&app.config.keys.details),
             command,
         )
-            .unwrap_or(fallback)
+        .unwrap_or(fallback)
     };
     let hint = format!(
         " {}/{} move · {} fold · {} focus · {} copy · {} search · {} close · {} hide ",
@@ -79,10 +80,31 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect, content: &[DetailLine]
 
     let inner = block.inner(area);
     frame.render_widget(block, area);
-    let show_bar = app.config.details_scrollbar_vertical;
-    let (content_area, bar_area) = split_scrollbar(inner, show_bar);
-    app.pointer.hit.overlay_scrollbar = bar_area.unwrap_or_default();
+    let show_h_bar = app.config.details_scrollbar_horizontal && !wrap;
+    let bars = split_scrollbars(
+        inner,
+        app.config.details_scrollbar_vertical,
+        show_h_bar,
+    );
+    let content_area = bars.content;
+    app.pointer.hit.overlay_inner = content_area;
+    app.pointer.hit.overlay_scrollbar_vertical = bars.vertical.unwrap_or_default();
+    app.pointer.hit.overlay_scrollbar_horizontal = bars.horizontal.unwrap_or_default();
     app.details.viewport_height = content_area.height as usize;
+
+    let content_w = if wrap {
+        0
+    } else {
+        content
+            .iter()
+            .map(|line| UnicodeWidthStr::width(line.plain_text().as_str()))
+            .max()
+            .unwrap_or(0)
+    };
+    app.details.content_width = content_w;
+    let viewport_w = content_area.width as usize;
+    app.clamp_details_scroll_x(viewport_w, content_w);
+    let scroll_x = if wrap { 0 } else { app.details.scroll_x };
 
     if focused {
         app.ensure_overlay_cursor_visible(app.config.scroll_moves_selection);
@@ -102,6 +124,11 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect, content: &[DetailLine]
     let cursor_match_style = app.theme.search_highlight_style(selection_bg);
     let base_style = Style::default().fg(fg_tone.fg).bg(overlay_bg);
 
+    let cursor_pad = if wrap {
+        viewport_w
+    } else {
+        content_w.max(scroll_x + viewport_w)
+    };
     let lines: Vec<Line> = content
         .iter()
         .enumerate()
@@ -116,20 +143,20 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect, content: &[DetailLine]
                     match_style,
                     cursor_style,
                     cursor_match_style,
-                    width: content_area.width as usize,
+                    width: cursor_pad,
                 },
             )
         })
         .collect();
     let mut paragraph = Paragraph::new(lines)
         .style(Style::default().bg(overlay_bg))
-        .scroll((scroll as u16, 0));
+        .scroll((scroll as u16, scroll_x as u16));
     if wrap {
         paragraph = paragraph.wrap(Wrap { trim: false });
     }
     frame.render_widget(paragraph, content_area);
 
-    if let Some(bar) = bar_area {
+    if let Some(bar) = bars.vertical {
         draw_scrollbar(
             frame,
             bar,
@@ -140,6 +167,21 @@ pub fn draw(frame: &mut Frame, app: &mut App, area: Rect, content: &[DetailLine]
             thumb,
             track,
         );
+    }
+    if let Some(bar) = bars.horizontal {
+        draw_scrollbar(
+            frame,
+            bar,
+            content_w,
+            scroll_x,
+            viewport_w.max(1),
+            ScrollbarOrientation::HorizontalBottom,
+            thumb,
+            track,
+        );
+    }
+    if let Some(corner) = bars.corner {
+        draw_scrollbar_corner(frame, corner, Style::default().bg(overlay_bg));
     }
 }
 

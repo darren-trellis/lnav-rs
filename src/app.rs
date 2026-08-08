@@ -124,7 +124,9 @@ pub(crate) struct HitAreas {
     /// Number of sticky pinned rows currently drawn at the top of the list.
     pub(crate) list_pin_rows: usize,
     pub(crate) overlay: Rect,
-    pub(crate) overlay_scrollbar: Rect,
+    pub(crate) overlay_inner: Rect,
+    pub(crate) overlay_scrollbar_vertical: Rect,
+    pub(crate) overlay_scrollbar_horizontal: Rect,
     pub(crate) sidebar_inner: Rect,
     pub(crate) sidebar_scrollbar_vertical: Rect,
     pub(crate) sidebar_scrollbar_horizontal: Rect,
@@ -152,7 +154,8 @@ enum ScrollbarDrag {
     ListHorizontal,
     SidebarVertical,
     SidebarHorizontal,
-    Overlay,
+    OverlayVertical,
+    OverlayHorizontal,
 }
 
 pub(crate) struct ViewState {
@@ -172,7 +175,9 @@ pub(crate) struct DetailsState {
     pub(crate) visible: bool,
     pub(crate) cursor: usize,
     pub(crate) scroll: usize,
+    pub(crate) scroll_x: usize,
     pub(crate) content_len: usize,
+    pub(crate) content_width: usize,
     pub(crate) viewport_height: usize,
     pub(crate) folded: HashSet<String>,
     pub(crate) help: bool,
@@ -306,7 +311,9 @@ impl App {
                 visible: false,
                 cursor: 0,
                 scroll: 0,
+                scroll_x: 0,
                 content_len: 0,
+                content_width: 0,
                 viewport_height: 0,
                 folded: HashSet::new(),
                 help: false,
@@ -898,6 +905,27 @@ impl App {
             (self.list_scroll_x as isize + delta).clamp(0, max as isize) as usize;
     }
 
+    pub fn clamp_details_scroll_x(&mut self, viewport_width: usize, content_width: usize) {
+        if self.config.wrap_details {
+            self.details.scroll_x = 0;
+            return;
+        }
+        let max = content_width.saturating_sub(viewport_width.max(1));
+        if self.details.scroll_x > max {
+            self.details.scroll_x = max;
+        }
+    }
+
+    pub fn scroll_details_x(&mut self, delta: isize) {
+        if self.config.wrap_details {
+            return;
+        }
+        let viewport = self.pointer.hit.overlay_inner.width.max(1) as usize;
+        let max = self.details.content_width.saturating_sub(viewport);
+        self.details.scroll_x =
+            (self.details.scroll_x as isize + delta).clamp(0, max as isize) as usize;
+    }
+
     pub fn toggle_details(&mut self) {
         self.cancel_pending_op();
         if !self.details.visible {
@@ -922,6 +950,7 @@ impl App {
             self.details.visible = true;
             self.details.cursor = 0;
             self.details.scroll = 0;
+            self.details.scroll_x = 0;
         }
         self.focus_details();
     }
@@ -951,6 +980,7 @@ impl App {
             self.details.visible = true;
             self.details.cursor = 0;
             self.details.scroll = 0;
+            self.details.scroll_x = 0;
         }
         self.focus_details();
         self.status_message = Some("opened span log".into());
@@ -964,6 +994,7 @@ impl App {
         self.details.help = false;
         self.details.cursor = 0;
         self.details.scroll = 0;
+        self.details.scroll_x = 0;
         if self.search.in_details {
             self.search.in_details = false;
             if !self.search.query.is_empty() {
@@ -1100,6 +1131,7 @@ impl App {
     fn reset_overlay_for_selection_change(&mut self) {
         self.details.cursor = 0;
         self.details.scroll = 0;
+        self.details.scroll_x = 0;
         self.details.folded.clear();
     }
 

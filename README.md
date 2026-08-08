@@ -53,8 +53,8 @@ Keys are commands, configured under `[keys]` in the config (defaults below).
 | `PgUp` | `page up` |
 | `g` / `Home` | `nav top` |
 | `G` / `End` | `nav bottom` |
-| `h` / `←` | `scroll left` (list; sidebar when focused) |
-| `l` / `→` | `scroll right` (list; sidebar when focused) |
+| `h` / `←` | `scroll left` (list; details when focused and unwrap; sidebar when focused) |
+| `l` / `→` | `scroll right` (list; details when focused and unwrap; sidebar when focused) |
 | `Enter` | `view details on` (list); in Spans opens the span's log; in sidebar `hide reveal` (unhide + jump) |
 | `Tab` | `focus toggle` (cycle list → details → sidebar) |
 | `[` / `]` | `view tab prev` / `view tab next` (Logs ↔ Spans) |
@@ -129,6 +129,7 @@ tab_width = 4
 
 [view.details.scrollbar]
 vertical = true
+horizontal = true
 
 [view.sidebar]
 enabled = false
@@ -202,6 +203,8 @@ l = "scroll right"
 
 [keys.details]
 space = "fold toggle"
+h = "scroll left"
+l = "scroll right"
 d = "hide"
 D = "delete"
 C-l = "delete all"
@@ -243,6 +246,7 @@ Log lines that carry both a `trace_id` and `span_id` (OpenTelemetry / Datadog-st
 | `view.details.max_height` | number \| `+N`/`-N` | `24` | Max details overlay height in rows (relative adjusts are layout/content-capped) |
 | `view.details.tab_width` | number | `4` | Details tree indent width (min `2`) |
 | `view.details.scrollbar.vertical` | `on` \| `off` \| `toggle` | `on` | Details vertical scrollbar |
+| `view.details.scrollbar.horizontal` | `on` \| `off` \| `toggle` | `on` | Details horizontal scrollbar (when wrap is off) |
 | `view.sidebar.enabled` | `on` \| `off` \| `toggle` | `off` | Show filters/hidden sidebar (same as `:view sidebar`) |
 | `view.sidebar.width` | number \| `+N`/`-N` | `28` | Preferred sidebar width in columns (min `12`; relative adjusts show the sidebar) |
 | `view.sidebar.position` | `left` \| `right` | `right` | Place the filters sidebar on the left or right of the main pane |

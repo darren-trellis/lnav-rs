@@ -79,8 +79,9 @@ impl App {
             }
         } else if self.details.visible
             && (self.is_details_focused()
-                || contains(self.pointer.hit.overlay, col, row)
-                || contains(self.pointer.hit.overlay_scrollbar, col, row))
+                || contains(self.pointer.hit.overlay_inner, col, row)
+                || contains(self.pointer.hit.overlay_scrollbar_vertical, col, row)
+                || contains(self.pointer.hit.overlay_scrollbar_horizontal, col, row))
         {
             if self.config.scroll_moves_selection {
                 self.move_overlay_cursor(n);
@@ -111,6 +112,13 @@ impl App {
                 || contains(self.pointer.hit.sidebar_scrollbar_horizontal, col, row))
         {
             self.scroll_sidebar_x(n);
+        } else if self.details.visible
+            && (self.is_details_focused()
+                || contains(self.pointer.hit.overlay_inner, col, row)
+                || contains(self.pointer.hit.overlay_scrollbar_vertical, col, row)
+                || contains(self.pointer.hit.overlay_scrollbar_horizontal, col, row))
+        {
+            self.scroll_details_x(n);
         } else {
             self.scroll_list_x(n);
         }
@@ -118,9 +126,14 @@ impl App {
 
     fn handle_scrollbar_pointer(&mut self, col: u16, row: u16, is_down: bool) -> bool {
         if is_down {
-            if contains(self.pointer.hit.overlay_scrollbar, col, row) {
-                self.pointer.scrollbar_drag = Some(ScrollbarDrag::Overlay);
-                self.apply_overlay_scrollbar(row);
+            if contains(self.pointer.hit.overlay_scrollbar_vertical, col, row) {
+                self.pointer.scrollbar_drag = Some(ScrollbarDrag::OverlayVertical);
+                self.apply_overlay_scrollbar_vertical(row);
+                return true;
+            }
+            if contains(self.pointer.hit.overlay_scrollbar_horizontal, col, row) {
+                self.pointer.scrollbar_drag = Some(ScrollbarDrag::OverlayHorizontal);
+                self.apply_overlay_scrollbar_horizontal(col);
                 return true;
             }
             if contains(self.pointer.hit.list_scrollbar_vertical, col, row) {
@@ -169,8 +182,12 @@ impl App {
                 self.apply_sidebar_scrollbar_horizontal(col);
                 true
             }
-            Some(ScrollbarDrag::Overlay) => {
-                self.apply_overlay_scrollbar(row);
+            Some(ScrollbarDrag::OverlayVertical) => {
+                self.apply_overlay_scrollbar_vertical(row);
+                true
+            }
+            Some(ScrollbarDrag::OverlayHorizontal) => {
+                self.apply_overlay_scrollbar_horizontal(col);
                 true
             }
             None => false,
@@ -297,8 +314,8 @@ impl App {
         self.sidebar_scroll_x = new_scroll.min(max_scroll);
     }
 
-    fn apply_overlay_scrollbar(&mut self, row: u16) {
-        let bar = self.pointer.hit.overlay_scrollbar;
+    fn apply_overlay_scrollbar_vertical(&mut self, row: u16) {
+        let bar = self.pointer.hit.overlay_scrollbar_vertical;
         let viewport = self.details.viewport_height;
         if viewport == 0 || bar.height == 0 || self.details.content_len == 0 {
             return;
@@ -319,6 +336,22 @@ impl App {
                 self.details.cursor = self.details.scroll + viewport - 1;
             }
         }
+    }
+
+    fn apply_overlay_scrollbar_horizontal(&mut self, col: u16) {
+        if self.config.wrap_details {
+            return;
+        }
+        let bar = self.pointer.hit.overlay_scrollbar_horizontal;
+        let viewport = self.pointer.hit.overlay_inner.width.max(1) as usize;
+        if bar.width == 0 {
+            return;
+        }
+        let content_w = self.details.content_width.max(1);
+        let new_scroll = scroll_index_at(bar.width, col.saturating_sub(bar.x), content_w, viewport);
+        let max_scroll = content_w.saturating_sub(viewport);
+        self.details.scroll_x = new_scroll.min(max_scroll);
+        self.focus_details();
     }
 
     fn handle_left_click(&mut self, col: u16, row: u16) {
@@ -361,13 +394,15 @@ impl App {
         }
 
         if contains(self.pointer.hit.overlay, col, row) {
-            if contains(self.pointer.hit.overlay_scrollbar, col, row) {
+            if contains(self.pointer.hit.overlay_scrollbar_vertical, col, row)
+                || contains(self.pointer.hit.overlay_scrollbar_horizontal, col, row)
+            {
                 return;
             }
             self.focus_details();
-            let inner_y = self.pointer.hit.overlay.y.saturating_add(1);
-            if row >= inner_y {
-                let row_off = (row - inner_y) as usize;
+            let area = self.pointer.hit.overlay_inner;
+            if area.height > 0 && contains(area, col, row) {
+                let row_off = (row - area.y) as usize;
                 let idx = self.details.scroll + row_off;
                 if idx < self.details.content_len {
                     self.jump_overlay_cursor(idx);

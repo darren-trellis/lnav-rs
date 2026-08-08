@@ -17,6 +17,7 @@
 
 # [view.details.scrollbar]
 # vertical = true
+# horizontal = true
 
 # [view.sidebar]
 # enabled = true

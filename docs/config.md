@@ -39,6 +39,7 @@ Default path: `~/.config/teleminator/config.toml`.
 | Option | Values | Default | Description |
 |--------|--------|---------|-------------|
 | `vertical` | `true` \| `false` | `true` | Details vertical scrollbar |
+| `horizontal` | `true` \| `false` | `true` | Details horizontal scrollbar (shown when `wrap` is `false`) |
 
 ## `[view.sidebar]`
 

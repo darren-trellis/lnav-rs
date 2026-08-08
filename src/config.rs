@@ -259,6 +259,8 @@ pub struct Config {
     pub sidebar_scrollbar_horizontal: bool,
     /// Vertical scrollbar on the details overlay.
     pub details_scrollbar_vertical: bool,
+    /// Horizontal scrollbar on the details overlay (when wrap is off).
+    pub details_scrollbar_horizontal: bool,
 
     /// Draw vertical rules between list columns (theme/column width still apply when on).
     pub border: bool,
@@ -348,20 +350,6 @@ impl Default for ScrollbarAxesFileConfig {
             vertical: true,
             horizontal: true,
         }
-    }
-}
-
-/// Vertical-only scrollbar (`[view.details.scrollbar]`).
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(deny_unknown_fields)]
-struct ScrollbarVerticalFileConfig {
-    #[serde(default = "default_true")]
-    vertical: bool,
-}
-
-impl Default for ScrollbarVerticalFileConfig {
-    fn default() -> Self {
-        Self { vertical: true }
     }
 }
 
@@ -493,7 +481,7 @@ struct DetailsFileConfig {
     #[serde(default = "default_details_tab_width")]
     tab_width: usize,
     #[serde(default)]
-    scrollbar: ScrollbarVerticalFileConfig,
+    scrollbar: ScrollbarAxesFileConfig,
 }
 
 impl Default for DetailsFileConfig {
@@ -503,7 +491,7 @@ impl Default for DetailsFileConfig {
             json_tree: true,
             max_height: default_details_max_height(),
             tab_width: default_details_tab_width(),
-            scrollbar: ScrollbarVerticalFileConfig::default(),
+            scrollbar: ScrollbarAxesFileConfig::default(),
         }
     }
 }
@@ -584,6 +572,7 @@ impl ConfigDocument {
             sidebar_scrollbar_vertical: self.view.sidebar.scrollbar.vertical,
             sidebar_scrollbar_horizontal: self.view.sidebar.scrollbar.horizontal,
             details_scrollbar_vertical: self.view.details.scrollbar.vertical,
+            details_scrollbar_horizontal: self.view.details.scrollbar.horizontal,
             border: self.main.border,
             autosave: self.config.autosave,
             autoreload: self.config.autoreload,
@@ -693,18 +682,6 @@ impl PersistedScrollbarAxes {
     }
 }
 
-#[derive(Serialize, Default)]
-struct PersistedScrollbarVertical {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    vertical: Option<bool>,
-}
-
-impl PersistedScrollbarVertical {
-    fn is_empty(&self) -> bool {
-        self.vertical.is_none()
-    }
-}
-
 #[derive(Serialize)]
 struct PersistedTimestamp<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -755,8 +732,8 @@ struct PersistedDetails {
     max_height: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
     tab_width: Option<usize>,
-    #[serde(skip_serializing_if = "PersistedScrollbarVertical::is_empty")]
-    scrollbar: PersistedScrollbarVertical,
+    #[serde(skip_serializing_if = "PersistedScrollbarAxes::is_empty")]
+    scrollbar: PersistedScrollbarAxes,
 }
 
 impl PersistedDetails {
@@ -932,10 +909,13 @@ impl<'a> PersistedConfig<'a> {
                         .then_some(details_max_height),
                     tab_width: (details_tab_width != defaults.details_tab_width)
                         .then_some(details_tab_width),
-                    scrollbar: PersistedScrollbarVertical {
+                    scrollbar: PersistedScrollbarAxes {
                         vertical: (config.details_scrollbar_vertical
                             != defaults.details_scrollbar_vertical)
                             .then_some(config.details_scrollbar_vertical),
+                        horizontal: (config.details_scrollbar_horizontal
+                            != defaults.details_scrollbar_horizontal)
+                            .then_some(config.details_scrollbar_horizontal),
                     },
                 },
                 sidebar: PersistedSidebar {

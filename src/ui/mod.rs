@@ -92,12 +92,6 @@ pub(crate) fn split_scrollbars(area: Rect, vertical: bool, horizontal: bool) -> 
     }
 }
 
-/// Backward-compatible vertical-only split used by the details overlay.
-pub(crate) fn split_scrollbar(area: Rect, enabled: bool) -> (Rect, Option<Rect>) {
-    let layout = split_scrollbars(area, enabled, false);
-    (layout.content, layout.vertical)
-}
-
 pub(crate) fn draw_scrollbar(
     frame: &mut Frame,
     area: Rect,

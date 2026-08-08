@@ -628,6 +628,7 @@ tab_width = 2
 
 [view.details.scrollbar]
 vertical = false
+horizontal = false
 "#,
     )
     .unwrap();
@@ -637,6 +638,7 @@ vertical = false
     assert_eq!(cfg.details_max_height, 12);
     assert_eq!(cfg.details_tab_width, 2);
     assert!(!cfg.details_scrollbar_vertical);
+    assert!(!cfg.details_scrollbar_horizontal);
     let _ = fs::remove_dir_all(&dir);
 }
 
@@ -671,6 +673,7 @@ fn write_emits_view_details_section_not_legacy_keys() {
     cfg.details_max_height = 12;
     cfg.details_tab_width = 2;
     cfg.details_scrollbar_vertical = false;
+    cfg.details_scrollbar_horizontal = false;
     cfg.write_to(&path).unwrap();
     let raw = fs::read_to_string(&path).unwrap();
     assert!(raw.contains("[view.details]"));
@@ -680,6 +683,7 @@ fn write_emits_view_details_section_not_legacy_keys() {
     assert!(raw.contains("tab_width = 2"));
     assert!(raw.contains("[view.details.scrollbar]"));
     assert!(raw.contains("vertical = false"));
+    assert!(raw.contains("horizontal = false"));
     assert!(!raw.contains("wrap_details = "));
     assert!(!raw.contains("details_json_tree = "));
     assert!(!raw.contains("details_max_height = "));
